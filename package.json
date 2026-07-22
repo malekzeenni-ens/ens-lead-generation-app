@@ -1,0 +1,24 @@
+{
+  "name": "ens-lead-generation",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/frontend",
+    "apps/desktop"
+  ],
+  "scripts": {
+    "frontend:dev": "npm run dev --workspace @ens/frontend",
+    "frontend:build": "npm run build --workspace @ens/frontend",
+    "frontend:lint": "npm run lint --workspace @ens/frontend",
+    "frontend:typecheck": "npm run typecheck --workspace @ens/frontend",
+    "frontend:test": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-frontend.ps1",
+    "desktop:check": "npm run check --workspace @ens/desktop",
+    "quality": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/quality.ps1",
+    "desktop:sidecar": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-backend-sidecar.ps1",
+    "desktop:dev": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-desktop-dev.ps1",
+    "desktop:build": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-desktop.ps1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,4 @@
+Handle,Title,Body (HTML),Product Category,Type,Tags,Published,Variant Price,Image Src,Status
+personalised-cake-topper,Personalised Cake Topper,<p>Mirror acrylic celebration topper</p>,Home & Garden,Cake toppers,"segment:Bakeries and home bakers,use-case:Celebration cakes,sample-eligible",TRUE,12.50,https://example.test/topper.jpg,active
+personalised-cake-topper,,,,,,,15.00,,
+cake-charm,Cake Charm,Small personalised acrylic charm,Home & Garden,Cake charms,"segment:Bakeries and home bakers,use-case:Premium cake presentation",TRUE,4.00,,active

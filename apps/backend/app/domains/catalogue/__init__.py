@@ -1,0 +1,1 @@
+"""Editable local product catalogue."""

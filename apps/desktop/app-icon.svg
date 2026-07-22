@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Etch N Shine monogram">
+  <rect width="1024" height="1024" rx="190" fill="#07131E"/>
+  <circle cx="512" cy="512" r="350" fill="#0D1D2A" stroke="#DDBF93" stroke-width="30"/>
+  <path d="M308 298h250v62H378v119h160v62H378v123h188v62H308z" fill="#F5F3EE"/>
+  <path d="M640 325c45-35 113-43 169-20v72c-47-28-104-22-104 20 0 28 25 42 65 62 62 31 93 67 93 126 0 90-76 151-183 139-30-4-57-13-80-27v-78c31 24 70 38 105 38 48 0 80-24 80-59 0-31-25-49-71-72-58-29-87-64-87-118 0-32 5-59 13-83z" fill="#DDBF93"/>
+</svg>

@@ -1,0 +1,50 @@
+name: Quality
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-quality:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+      - name: Install locked dependencies
+        shell: pwsh
+        run: |
+          uv sync --all-packages --dev --locked
+          npm ci
+      - name: Run quality gates
+        shell: pwsh
+        run: npm.cmd run quality
+      - name: Audit Python dependencies
+        shell: pwsh
+        working-directory: apps/backend
+        run: |
+          uv export --no-dev --no-emit-project --format requirements-txt -o requirements-audit.txt
+          uv run --with pip-audit pip-audit -r requirements-audit.txt --strict
+          Remove-Item requirements-audit.txt
+      - name: Install cargo-audit
+        shell: pwsh
+        run: cargo install cargo-audit --locked
+      - name: Audit Rust dependencies
+        shell: pwsh
+        working-directory: apps/desktop/src-tauri
+        run: cargo audit
