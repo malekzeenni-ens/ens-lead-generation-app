@@ -19,6 +19,8 @@ target/
 *.sqlite
 *.sqlite3
 backups/
+!apps/backend/app/domains/backups/
+!apps/backend/app/domains/backups/**
 logs/
 playwright-report/
 test-results/
