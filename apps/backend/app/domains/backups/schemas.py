@@ -33,4 +33,3 @@ class VerificationResult(BaseModel):
     checksum_matches: bool
     integrity_result: str
     schema_version: str
-
