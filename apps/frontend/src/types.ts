@@ -23,6 +23,15 @@ export interface Campaign {
   updated_at: string;
 }
 
+export interface CampaignDeleteResult {
+  deleted: boolean;
+  campaign_id: string;
+  associated_leads: number;
+  leads_deleted: number;
+  shared_leads_retained: number;
+  outreach_batches_deleted: number;
+}
+
 export interface SourceObservation {
   id: string;
   source_name: string;

@@ -1,4 +1,15 @@
-import { Copy, Edit3, Megaphone, Pause, Play, RefreshCw, Search } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Copy,
+  Edit3,
+  Megaphone,
+  Pause,
+  Play,
+  RefreshCw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 
 import { usePagination } from "../pagination";
@@ -6,6 +17,7 @@ import type {
   AutomationCapabilities,
   Campaign,
   CampaignRun,
+  Lead,
   ProductFamily,
   Template,
 } from "../types";
@@ -23,6 +35,7 @@ import type { CampaignUpdate } from "../api";
 interface CampaignRegisterTabProps {
   campaigns: Campaign[];
   campaignRuns: CampaignRun[];
+  leads: Lead[];
   capabilities: AutomationCapabilities | null;
   productFamilies: ProductFamily[];
   templates: Template[];
@@ -31,6 +44,7 @@ interface CampaignRegisterTabProps {
 export function CampaignRegisterTab({
   campaigns,
   campaignRuns,
+  leads,
   capabilities,
   productFamilies,
   templates,
@@ -40,20 +54,26 @@ export function CampaignRegisterTab({
     busy,
     updateCampaign: onUpdate,
     duplicateCampaign: onDuplicate,
+    deleteCampaign: onDelete,
     runCampaign: onRunCampaign,
   } = useWorkspaceActions();
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = campaigns.filter((campaign) => campaign.status === "inactive").length;
+  const currentCampaignCount = campaigns.length - archivedCount;
   const filteredCampaigns = useMemo(() => {
     const search = query.toLocaleLowerCase();
-    return campaigns.filter((campaign) =>
-      [campaign.name, campaign.segment, campaign.primary_location].some((value) =>
-        value.toLocaleLowerCase().includes(search),
-      ),
+    return campaigns.filter(
+      (campaign) =>
+        (showArchived || campaign.status !== "inactive") &&
+        [campaign.name, campaign.segment, campaign.primary_location].some((value) =>
+          value.toLocaleLowerCase().includes(search),
+        ),
     );
-  }, [campaigns, query]);
-  const campaignPages = usePagination(filteredCampaigns, 6, query);
+  }, [campaigns, query, showArchived]);
+  const campaignPages = usePagination(filteredCampaigns, 6, `${query}:${showArchived}`);
   const runningCampaignIds = new Set(
     campaignRuns
       .filter((run) => ["queued", "running"].includes(run.status))
@@ -142,7 +162,6 @@ export function CampaignRegisterTab({
       weekly_shortlist_size: Number(formValue(form, "edit-shortlist")),
       minimum_score_threshold: Number(formValue(form, "edit-minimum-score")),
       discovery_mode: discoverySources.length > 1 ? "combined" : "manual",
-      status: formValue(form, "edit-status") as CampaignUpdate["status"],
       weekly_outreach_enabled: weeklyEnabled,
       weekly_outreach_template_id: weeklyTemplateId,
       weekly_outreach_provider: weeklyProvider,
@@ -160,15 +179,39 @@ export function CampaignRegisterTab({
     if (saved) setDuplicatingId(null);
   }
 
+  function confirmCampaignDeletion(campaign: Campaign): void {
+    const associatedLeads = leads.filter((lead) => lead.campaign_ids.includes(campaign.id));
+    const exclusiveLeadCount = associatedLeads.filter(
+      (lead) => lead.campaign_ids.length === 1,
+    ).length;
+    const sharedLeadCount = associatedLeads.length - exclusiveLeadCount;
+    const sharedDetail =
+      sharedLeadCount > 0
+        ? `\n\n${sharedLeadCount} shared lead${sharedLeadCount === 1 ? "" : "s"} will be retained in their other campaigns.`
+        : "";
+    const confirmed = window.confirm(
+      `Delete campaign "${campaign.name}"?\n\nThis permanently deletes ${exclusiveLeadCount} lead${exclusiveLeadCount === 1 ? "" : "s"} that belong only to this campaign, including their activity, drafts and follow-ups.${sharedDetail}\n\nThis cannot be undone.`,
+    );
+    if (confirmed) void onDelete(campaign.id);
+  }
+
+  function confirmCampaignArchive(campaign: Campaign): void {
+    const linkedLeadCount = leads.filter((lead) => lead.campaign_ids.includes(campaign.id)).length;
+    const confirmed = window.confirm(
+      `Archive campaign "${campaign.name}"?\n\nThis hides it from current campaigns and stops its runs and weekly automation. ${linkedLeadCount} linked lead${linkedLeadCount === 1 ? "" : "s"}, drafts and all history will be kept.\n\nYou can unarchive it later; it will return as Paused.`,
+    );
+    if (confirmed) void onUpdate(campaign.id, { status: "inactive" });
+  }
+
   return (
     <section className="workspace-section" aria-labelledby="campaign-heading">
       <SectionHeading
         id="campaign-heading"
         eyebrow="Controlled discovery"
         title="Campaign register"
-        description="Search and manage local definitions without the creation form competing for attention."
+        description="Manage current campaigns while archived campaigns stay safely stored and out of automation."
         icon={Megaphone}
-        count={campaigns.length}
+        count={currentCampaignCount}
       />
 
       <div className="section-layout section-layout--single">
@@ -178,26 +221,47 @@ export function CampaignRegisterTab({
               <h3>Campaign register</h3>
               <p>Search and manage local definitions</p>
             </div>
-            <label className="search-control">
-              <span className="visually-hidden">Search campaigns</span>
-              <Search size={16} aria-hidden="true" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search campaigns"
-              />
-            </label>
+            <div className="records-heading__actions">
+              <label className="search-control">
+                <span className="visually-hidden">Search campaigns</span>
+                <Search size={16} aria-hidden="true" />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search campaigns"
+                />
+              </label>
+              {archivedCount > 0 ? (
+                <button
+                  className="tertiary-action"
+                  type="button"
+                  aria-pressed={showArchived}
+                  onClick={() => setShowArchived((current) => !current)}
+                >
+                  <Archive size={16} aria-hidden="true" />
+                  {showArchived ? "Hide archived" : `Show archived (${archivedCount})`}
+                </button>
+              ) : null}
+            </div>
           </div>
 
           {loading ? (
             <LoadingState label="Loading campaigns" />
           ) : filteredCampaigns.length === 0 ? (
             <EmptyState
-              title={campaigns.length === 0 ? "No campaigns yet" : "No campaigns match"}
+              title={
+                campaigns.length === 0
+                  ? "No campaigns yet"
+                  : currentCampaignCount === 0 && !showArchived && !query
+                    ? "No current campaigns"
+                    : "No campaigns match"
+              }
               description={
                 campaigns.length === 0
                   ? "Create a focused campaign to unlock manual lead entry."
-                  : "Try a broader campaign, segment or location search."
+                  : currentCampaignCount === 0 && !showArchived && !query
+                    ? `${archivedCount} archived campaign${archivedCount === 1 ? " is" : "s are"} safely stored. Use Show archived to view or restore them.`
+                    : "Try a broader campaign, segment or location search."
               }
             />
           ) : (
@@ -217,7 +281,11 @@ export function CampaignRegisterTab({
                               : ""
                         }`}
                       >
-                        {campaign.status}
+                        {campaign.status === "inactive"
+                          ? "Archived"
+                          : campaign.status === "active"
+                            ? "Active"
+                            : "Paused"}
                       </span>
                     </div>
                     <p>{campaign.segment}</p>
@@ -246,11 +314,12 @@ export function CampaignRegisterTab({
                     <p className="campaign-categories">
                       <strong>Weekly outreach:</strong>{" "}
                       {campaign.weekly_outreach_enabled
-                        ? `${templates.find((template) => template.id === campaign.weekly_outreach_template_id)?.topic ?? "Template missing"} · ${campaign.weekly_outreach_provider.replaceAll("_", " ")}`
+                        ? `${templates.find((template) => template.id === campaign.weekly_outreach_template_id)?.topic ?? "Template missing"} · ${campaign.weekly_outreach_provider.replaceAll("_", " ")}${campaign.status === "inactive" ? " · stopped while archived" : ""}`
                         : "Manual only"}
                     </p>
                     <div className="record-actions">
-                      <div className="record-actions__group" aria-label="Execution actions">
+                      {campaign.status !== "inactive" ? (
+                        <div className="record-actions__group" aria-label="Execution actions">
                         {campaign.discovery_sources.includes("google_places") ? (
                           <button
                             className="secondary-action"
@@ -309,7 +378,8 @@ export function CampaignRegisterTab({
                             ? "Run in progress"
                             : "Refresh scoring only"}
                         </button>
-                      </div>
+                        </div>
+                      ) : null}
                       <div className="record-actions__group" aria-label="Management actions">
                         <button
                           className="tertiary-action"
@@ -318,19 +388,50 @@ export function CampaignRegisterTab({
                         >
                           <Edit3 size={16} aria-hidden="true" /> Edit
                         </button>
-                        <button
-                          className="tertiary-action"
-                          type="button"
-                          disabled={busy || campaign.status === "inactive"}
-                          onClick={() =>
-                            void onUpdate(campaign.id, {
-                              status: campaign.status === "active" ? "paused" : "active",
-                            })
-                          }
-                        >
-                          {campaign.status === "active" ? <Pause size={16} /> : <Play size={16} />}
-                          {campaign.status === "active" ? "Pause" : "Resume"}
-                        </button>
+                        {campaign.status === "inactive" ? (
+                          <button
+                            className="tertiary-action"
+                            type="button"
+                            disabled={busy}
+                            title="Restore this campaign as Paused so you can review it before restarting"
+                            onClick={() => void onUpdate(campaign.id, { status: "paused" })}
+                          >
+                            <ArchiveRestore size={16} aria-hidden="true" /> Unarchive
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className="tertiary-action"
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void onUpdate(campaign.id, {
+                                  status: campaign.status === "active" ? "paused" : "active",
+                                })
+                              }
+                            >
+                              {campaign.status === "active" ? (
+                                <Pause size={16} aria-hidden="true" />
+                              ) : (
+                                <Play size={16} aria-hidden="true" />
+                              )}
+                              {campaign.status === "active" ? "Pause" : "Resume"}
+                            </button>
+                            <button
+                              className="tertiary-action"
+                              type="button"
+                              disabled={busy || runningCampaignIds.has(campaign.id)}
+                              title={
+                                runningCampaignIds.has(campaign.id)
+                                  ? "Wait for the active run to finish or cancel it before archiving"
+                                  : "Hide this campaign and stop its automation without deleting anything"
+                              }
+                              onClick={() => confirmCampaignArchive(campaign)}
+                            >
+                              <Archive size={16} aria-hidden="true" /> Archive
+                            </button>
+                          </>
+                        )}
                         <button
                           className="tertiary-action"
                           type="button"
@@ -339,6 +440,19 @@ export function CampaignRegisterTab({
                           }
                         >
                           <Copy size={16} aria-hidden="true" /> Duplicate
+                        </button>
+                        <button
+                          className="danger-action"
+                          type="button"
+                          disabled={busy || runningCampaignIds.has(campaign.id)}
+                          title={
+                            runningCampaignIds.has(campaign.id)
+                              ? "Wait for the active run to finish or cancel it before deletion"
+                              : "Permanently delete this campaign and its exclusively linked leads"
+                          }
+                          onClick={() => confirmCampaignDeletion(campaign)}
+                        >
+                          <Trash2 size={16} aria-hidden="true" /> Delete campaign
                         </button>
                       </div>
                     </div>
@@ -506,13 +620,6 @@ export function CampaignRegisterTab({
                             External providers must also be enabled above. Campaign capacity stays
                             at {campaign.weekly_shortlist_size} leads.
                           </small>
-                        </label>
-                        <label>Status
-                          <select name="edit-status" defaultValue={campaign.status}>
-                            <option value="active">Active</option>
-                            <option value="paused">Paused</option>
-                            <option value="inactive">Inactive</option>
-                          </select>
                         </label>
                         <label>Description<textarea name="edit-description" rows={2} defaultValue={campaign.description ?? ""} /></label>
                         <button className="primary-action" type="submit" disabled={busy}>Save campaign</button>

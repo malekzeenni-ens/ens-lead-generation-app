@@ -53,9 +53,11 @@ class BackupService:
         manifest_path = target / f"{stem}.manifest.json"
 
         try:
-            with closing(sqlite3.connect(self.database_path)) as source:
-                with closing(sqlite3.connect(temporary_path)) as destination:
-                    source.backup(destination)
+            with (
+                closing(sqlite3.connect(self.database_path)) as source,
+                closing(sqlite3.connect(temporary_path)) as destination,
+            ):
+                source.backup(destination)
             integrity, schema_version = _inspect_database(temporary_path)
             if integrity != "ok":
                 raise DomainError(
@@ -103,7 +105,9 @@ class BackupService:
         manifest_path = resolved.with_name(resolved.name.replace(".sqlite3", ".manifest.json"))
         if not resolved.is_file() or not manifest_path.is_file():
             raise DomainError(
-                "BACKUP_NOT_FOUND", "The backup database or its manifest was not found.", status_code=404
+                "BACKUP_NOT_FOUND",
+                "The backup database or its manifest was not found.",
+                status_code=404,
             )
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         actual_checksum = _checksum(resolved)
@@ -121,12 +125,17 @@ class BackupService:
     ) -> VerificationResult:
         verification = self.verify(backup_path)
         if not verification.valid:
-            raise DomainError("BACKUP_INVALID", "The backup failed verification and was not restored.")
+            raise DomainError(
+                "BACKUP_INVALID", "The backup failed verification and was not restored."
+            )
         destination = destination_path.expanduser().resolve()
         if destination == self.database_path:
             raise DomainError(
                 "ACTIVE_DATABASE_RESTORE_BLOCKED",
-                "Stop the application and use the maintenance restore command for the active database.",
+                (
+                    "Stop the application and use the maintenance restore command for the "
+                    "active database."
+                ),
             )
         if destination.exists() and not replace:
             raise DomainError(
@@ -137,9 +146,11 @@ class BackupService:
         destination.parent.mkdir(parents=True, exist_ok=True)
         temporary = destination.with_name(f".{destination.name}.{uuid4().hex}.tmp")
         try:
-            with closing(sqlite3.connect(backup_path.expanduser().resolve())) as source:
-                with closing(sqlite3.connect(temporary)) as target:
-                    source.backup(target)
+            with (
+                closing(sqlite3.connect(backup_path.expanduser().resolve())) as source,
+                closing(sqlite3.connect(temporary)) as target,
+            ):
+                source.backup(target)
             restored_integrity, restored_version = _inspect_database(temporary)
             if restored_integrity != "ok":
                 raise DomainError("RESTORE_INTEGRITY_FAILED", "The restored database is not valid.")

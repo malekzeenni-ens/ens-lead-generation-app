@@ -6,7 +6,9 @@ from app.domains.audit.service import record_audit_event
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.campaigns.schemas import (
     CampaignCreate,
+    CampaignDeleteResult,
     CampaignDuplicate,
+    CampaignStatus,
     CampaignUpdate,
     DiscoveryMode,
 )
@@ -136,6 +138,19 @@ class CampaignService:
     ) -> Campaign:
         campaign = self.get(session, campaign_id)
         changes = data.model_dump(exclude_unset=True)
+        is_archiving = (
+            changes.get("status") == CampaignStatus.INACTIVE
+            and campaign.status != CampaignStatus.INACTIVE.value
+        )
+        if is_archiving and self.repository.has_active_run(session, campaign_id):
+            raise DomainError(
+                "CAMPAIGN_ARCHIVE_RUN_ACTIVE",
+                (
+                    "Wait for the active campaign run to finish or cancel it before archiving "
+                    "this campaign."
+                ),
+                status_code=409,
+            )
         if "name" in changes and changes["name"] != campaign.name:
             existing = self.repository.get_by_name(session, str(changes["name"]))
             if existing is not None:
@@ -207,4 +222,67 @@ class CampaignService:
             correlation_id,
             action="campaign.duplicated",
             source_campaign_id=source.id,
+        )
+
+    def delete(
+        self,
+        session: Session,
+        campaign_id: str,
+        correlation_id: str,
+    ) -> CampaignDeleteResult:
+        campaign = self.get(session, campaign_id)
+        if self.repository.has_active_run(session, campaign_id):
+            raise DomainError(
+                "CAMPAIGN_DELETE_RUN_ACTIVE",
+                (
+                    "Wait for the active campaign run to finish or cancel it before deleting "
+                    "this campaign."
+                ),
+                status_code=409,
+            )
+
+        exclusive_leads, shared_count = self.repository.deletion_leads(session, campaign_id)
+        exclusive_lead_ids = [lead_id for lead_id, _ in exclusive_leads]
+        associated_count = len(exclusive_lead_ids) + shared_count
+
+        for lead_id, suppression_evidence_retained in exclusive_leads:
+            record_audit_event(
+                session,
+                action="lead.deleted",
+                entity_type="lead",
+                entity_id=lead_id,
+                correlation_id=correlation_id,
+                summary={
+                    "campaign_id": campaign_id,
+                    "deletion_mode": "campaign_cascade",
+                    "suppression_evidence_retained": suppression_evidence_retained,
+                },
+            )
+
+        record_audit_event(
+            session,
+            action="campaign.deleted",
+            entity_type="campaign",
+            entity_id=campaign_id,
+            correlation_id=correlation_id,
+            summary={
+                "name": campaign.name,
+                "associated_leads": associated_count,
+                "leads_deleted": len(exclusive_lead_ids),
+                "shared_leads_retained": shared_count,
+            },
+        )
+        outreach_batches_deleted = self.repository.delete_cascade(
+            session,
+            campaign_id,
+            exclusive_lead_ids,
+        )
+        session.commit()
+        return CampaignDeleteResult(
+            deleted=True,
+            campaign_id=campaign_id,
+            associated_leads=associated_count,
+            leads_deleted=len(exclusive_lead_ids),
+            shared_leads_retained=shared_count,
+            outreach_batches_deleted=outreach_batches_deleted,
         )

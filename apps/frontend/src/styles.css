@@ -1939,6 +1939,14 @@ td small {
   align-items: center;
 }
 
+.records-heading__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ens-space-2);
+}
+
 .search-control {
   display: flex;
   width: min(230px, 100%);
@@ -3750,6 +3758,12 @@ td small {
 
   .records-heading--stackable,
   .lead-detail-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .records-heading__actions {
+    width: 100%;
     align-items: stretch;
     flex-direction: column;
   }

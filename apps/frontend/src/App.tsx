@@ -439,10 +439,14 @@ export default function App() {
   }
 
   async function updateCampaign(campaignId: string, data: CampaignUpdate): Promise<boolean> {
+    const successMessage =
+      data.status === "inactive"
+        ? "Campaign archived. Leads, drafts and history were kept."
+        : "Campaign changes saved with audit history.";
     return (
       (await perform(
         () => api.updateCampaign(campaignId, data),
-        "Campaign changes saved with audit history.",
+        successMessage,
         ["campaigns", "summary"],
       )) !== null
     );
@@ -454,6 +458,25 @@ export default function App() {
         () => api.duplicateCampaign(campaignId, name),
         "Paused campaign copy created.",
         ["campaigns", "summary"],
+      )) !== null
+    );
+  }
+
+  async function deleteCampaign(campaignId: string): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.deleteCampaign(campaignId),
+        "Campaign and its exclusively linked leads were permanently deleted.",
+        [
+          "campaigns",
+          "leads",
+          "summary",
+          "scores",
+          "shortlists",
+          "campaignRuns",
+          "outreachLeadOptions",
+          "outreachBatches",
+        ],
       )) !== null
     );
   }
@@ -1153,6 +1176,7 @@ export default function App() {
     createCampaign,
     updateCampaign,
     duplicateCampaign,
+    deleteCampaign,
     runCampaign,
     runAllCampaigns,
     runWeeklyOutreach,
@@ -1224,6 +1248,7 @@ export default function App() {
         initialTask={campaignLandingTask}
         campaigns={campaigns}
         campaignRuns={campaignRuns}
+        leads={leads}
         capabilities={automationCapabilities}
         settings={settings}
         productFamilies={productFamilies}

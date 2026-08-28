@@ -137,6 +137,30 @@ describe("api.ts request handling", () => {
     expect(init.body).toBe(JSON.stringify({ reason: "no longer relevant" }));
   });
 
+  it("maps campaign deletion to the guarded cascade endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          deleted: true,
+          campaign_id: "campaign-1",
+          associated_leads: 2,
+          leads_deleted: 2,
+          shared_leads_retained: 0,
+          outreach_batches_deleted: 1,
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { api } = await import("./api");
+
+    await api.deleteCampaign("campaign-1");
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://127.0.0.1:8765/api/v1/campaigns/campaign-1");
+    expect(init.method).toBe("DELETE");
+  });
+
   it("throws an ApiError carrying the parsed error body on a non-ok response", async () => {
     const errorBody: ApiErrorShape = {
       code: "SESSION_TOKEN_INVALID",

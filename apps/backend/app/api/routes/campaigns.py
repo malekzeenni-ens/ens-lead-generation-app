@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query, Request, status
 from app.api.dependencies import Authenticated, DatabaseSession
 from app.domains.campaigns.schemas import (
     CampaignCreate,
+    CampaignDeleteResult,
     CampaignDuplicate,
     CampaignRead,
     CampaignStatus,
@@ -63,6 +64,16 @@ def duplicate_campaign(
 ) -> CampaignRead:
     campaign = service.duplicate(session, campaign_id, data, request.state.correlation_id)
     return CampaignRead.model_validate(campaign)
+
+
+@router.delete("/{campaign_id}", response_model=CampaignDeleteResult)
+def delete_campaign(
+    campaign_id: str,
+    request: Request,
+    _: Authenticated,
+    session: DatabaseSession,
+) -> CampaignDeleteResult:
+    return service.delete(session, campaign_id, request.state.correlation_id)
 
 
 @router.get("/{campaign_id}", response_model=CampaignRead)

@@ -4,6 +4,7 @@ import type {
   AutomationCapabilities,
   Campaign,
   CampaignRun,
+  Lead,
   ProductFamily,
   Template,
   WorkspaceSettings,
@@ -18,6 +19,7 @@ interface CampaignWorkspaceProps {
   initialTask?: "campaigns" | "create";
   campaigns: Campaign[];
   campaignRuns: CampaignRun[];
+  leads: Lead[];
   capabilities: AutomationCapabilities | null;
   settings: WorkspaceSettings | null;
   productFamilies: ProductFamily[];
@@ -30,6 +32,7 @@ export function CampaignWorkspace({
   initialTask = "campaigns",
   campaigns,
   campaignRuns,
+  leads,
   capabilities,
   settings,
   productFamilies,
@@ -42,7 +45,7 @@ export function CampaignWorkspace({
       <PageHeader
         eyebrow="Campaign management"
         title="Campaigns"
-        description="Create, revise, pause and duplicate focused local campaign definitions."
+        description="Create, revise, pause, archive or safely delete focused local campaign definitions."
       />
 
       <TaskTabs
@@ -51,7 +54,11 @@ export function CampaignWorkspace({
         activeId={activeTask}
         onChange={(task) => setActiveTask(task as CampaignTask)}
         items={[
-          { id: "campaigns", label: "Campaigns", count: campaigns.length },
+          {
+            id: "campaigns",
+            label: "Campaigns",
+            count: campaigns.filter((campaign) => campaign.status !== "inactive").length,
+          },
           { id: "create", label: "Create campaign" },
           { id: "automation", label: "Run automation", count: campaignRuns.length },
           { id: "social", label: "Social leads" },
@@ -74,6 +81,7 @@ export function CampaignWorkspace({
           <CampaignRegisterTab
             campaigns={campaigns}
             campaignRuns={campaignRuns}
+            leads={leads}
             capabilities={capabilities}
             productFamilies={productFamilies}
             templates={templates}

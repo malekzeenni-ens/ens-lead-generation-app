@@ -53,6 +53,7 @@ vi.mock("./api", () => {
       createCampaign: vi.fn(),
       updateCampaign: vi.fn(),
       duplicateCampaign: vi.fn(),
+      deleteCampaign: vi.fn(),
       automationCapabilities: vi.fn(),
       campaignRuns: vi.fn(),
       startCampaignRun: vi.fn(),
@@ -557,6 +558,14 @@ describe("local operating workbench", () => {
     vi.mocked(api.createCampaign).mockResolvedValue(campaign);
     vi.mocked(api.updateCampaign).mockResolvedValue(campaign);
     vi.mocked(api.duplicateCampaign).mockResolvedValue(campaign);
+    vi.mocked(api.deleteCampaign).mockResolvedValue({
+      deleted: true,
+      campaign_id: campaign.id,
+      associated_leads: 1,
+      leads_deleted: 1,
+      shared_leads_retained: 0,
+      outreach_batches_deleted: 0,
+    });
     vi.mocked(api.automationCapabilities).mockResolvedValue(automationCapabilities);
     vi.mocked(api.metaConnection).mockResolvedValue(metaConnection);
     vi.mocked(api.campaignRuns).mockResolvedValue([]);
@@ -1152,6 +1161,116 @@ describe("local operating workbench", () => {
     } finally {
       confirm.mockRestore();
     }
+  });
+
+  it("confirms campaign deletion with its lead impact before deleting", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm");
+
+    try {
+      render(<App />);
+      await screen.findByText("API connected");
+      await user.click(screen.getByRole("link", { name: /Campaigns/ }));
+      const campaignRecord = screen.getByRole("heading", { name: campaign.name }).closest("article");
+      if (!campaignRecord) throw new Error("Campaign record is missing.");
+
+      confirm.mockReturnValueOnce(false);
+      await user.click(
+        within(campaignRecord).getByRole("button", { name: "Delete campaign" }),
+      );
+      expect(api.deleteCampaign).not.toHaveBeenCalled();
+      expect(confirm).toHaveBeenLastCalledWith(
+        expect.stringContaining("permanently deletes 1 lead"),
+      );
+
+      confirm.mockReturnValueOnce(true);
+      await user.click(
+        within(campaignRecord).getByRole("button", { name: "Delete campaign" }),
+      );
+      await waitFor(() => expect(api.deleteCampaign).toHaveBeenCalledWith(campaign.id));
+      expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining("cannot be undone"));
+      expect(
+        await screen.findByText(
+          "Campaign and its exclusively linked leads were permanently deleted.",
+        ),
+      ).toBeInTheDocument();
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
+  it("hides archived campaigns and supports confirmed archive and safe unarchive", async () => {
+    const user = userEvent.setup();
+    const archivedCampaign: Campaign = {
+      ...campaign,
+      id: "13131313-1313-1313-1313-131313131313",
+      name: "Archived Bakery Partnerships",
+      status: "inactive",
+    };
+    vi.mocked(api.campaigns).mockResolvedValue([campaign, archivedCampaign]);
+    const confirm = vi.spyOn(window, "confirm");
+
+    try {
+      render(<App />);
+      await screen.findByText("API connected");
+      await user.click(screen.getByRole("link", { name: /Campaigns/ }));
+
+      expect(screen.queryByRole("heading", { name: archivedCampaign.name })).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Show archived (1)" }));
+      const archivedRecord = screen
+        .getByRole("heading", { name: archivedCampaign.name })
+        .closest("article");
+      const currentRecord = screen.getByRole("heading", { name: campaign.name }).closest("article");
+      if (!archivedRecord || !currentRecord) throw new Error("Campaign record is missing.");
+      expect(within(archivedRecord).getByText("Archived")).toBeInTheDocument();
+      expect(within(archivedRecord).queryByLabelText("Execution actions")).not.toBeInTheDocument();
+
+      confirm.mockReturnValueOnce(false);
+      await user.click(within(currentRecord).getByRole("button", { name: "Archive" }));
+      expect(api.updateCampaign).not.toHaveBeenCalled();
+      expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining("all history will be kept"));
+
+      confirm.mockReturnValueOnce(true);
+      await user.click(within(currentRecord).getByRole("button", { name: "Archive" }));
+      await waitFor(() =>
+        expect(api.updateCampaign).toHaveBeenCalledWith(campaign.id, { status: "inactive" }),
+      );
+      expect(await screen.findByText(/Campaign archived/)).toHaveTextContent(
+        "Leads, drafts and history were kept",
+      );
+
+      await user.click(within(archivedRecord).getByRole("button", { name: "Unarchive" }));
+      await waitFor(() =>
+        expect(api.updateCampaign).toHaveBeenCalledWith(archivedCampaign.id, {
+          status: "paused",
+        }),
+      );
+      expect(confirm).toHaveBeenCalledTimes(2);
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
+  it("does not assign new leads to archived campaigns", async () => {
+    const user = userEvent.setup();
+    const archivedCampaign: Campaign = {
+      ...campaign,
+      id: "14141414-1414-1414-1414-141414141414",
+      name: "Archived Lead Source Campaign",
+      status: "inactive",
+    };
+    vi.mocked(api.campaigns).mockResolvedValue([campaign, archivedCampaign]);
+
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /All leads/ }));
+    await user.click(screen.getByRole("tab", { name: "Add lead" }));
+
+    const campaignSelect = screen.getByRole("combobox", { name: "Campaign" });
+    expect(within(campaignSelect).getByRole("option", { name: campaign.name })).toBeInTheDocument();
+    expect(
+      within(campaignSelect).queryByRole("option", { name: archivedCampaign.name }),
+    ).not.toBeInTheDocument();
   });
 
   it("submits an evidence-backed lead", async () => {

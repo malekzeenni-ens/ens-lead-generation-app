@@ -5,6 +5,7 @@ import type {
   BackupResult,
   AutomationCapabilities,
   Campaign,
+  CampaignDeleteResult,
   CampaignRun,
   DiscoveryCandidate,
   Diagnostics,
@@ -261,6 +262,8 @@ export const api = {
     request<Campaign>(`/campaigns/${campaignId}`, jsonBody("PATCH", data)),
   duplicateCampaign: (campaignId: string, name: string) =>
     request<Campaign>(`/campaigns/${campaignId}/duplicate`, jsonBody("POST", { name })),
+  deleteCampaign: (campaignId: string) =>
+    request<CampaignDeleteResult>(`/campaigns/${campaignId}`, { method: "DELETE" }),
   automationCapabilities: () =>
     request<AutomationCapabilities>("/campaign-runs/capabilities"),
   campaignRuns: () => request<CampaignRun[]>("/campaign-runs"),

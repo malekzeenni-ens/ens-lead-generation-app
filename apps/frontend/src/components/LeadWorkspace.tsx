@@ -72,6 +72,7 @@ export function LeadWorkspace({
   const [stage, setStage] = useState("");
   const [suppression, setSuppression] = useState("all");
   const [reviewFilter, setReviewFilter] = useState(initialClassificationFilter);
+  const currentCampaigns = campaigns.filter((campaign) => campaign.status !== "inactive");
   const sourceOptions = useMemo(
     () => {
       const discoveredTypes = new Set(leads.flatMap(leadSourceTypes));
@@ -200,12 +201,17 @@ export function LeadWorkspace({
             <form className="form-grid" onSubmit={(event) => void createLead(event)}>
               <label>
                 Campaign
-                <select name="lead-campaign" required disabled={campaigns.length === 0}>
+                <select name="lead-campaign" required disabled={currentCampaigns.length === 0}>
                   <option value="">Select a campaign</option>
-                  {campaigns.map((campaign) => (
+                  {currentCampaigns.map((campaign) => (
                     <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
                   ))}
                 </select>
+                {currentCampaigns.length === 0 && campaigns.length > 0 ? (
+                  <small className="field-hint">
+                    Unarchive a campaign before assigning new leads to it.
+                  </small>
+                ) : null}
               </label>
               <div className="field-pair">
                 <label>Business name<input name="lead-name" required maxLength={200} /></label>

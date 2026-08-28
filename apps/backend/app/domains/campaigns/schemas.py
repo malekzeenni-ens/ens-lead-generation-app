@@ -93,6 +93,15 @@ class CampaignRead(BaseModel):
     updated_at: datetime
 
 
+class CampaignDeleteResult(BaseModel):
+    deleted: bool
+    campaign_id: str
+    associated_leads: int
+    leads_deleted: int
+    shared_leads_retained: int
+    outreach_batches_deleted: int
+
+
 class CampaignUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

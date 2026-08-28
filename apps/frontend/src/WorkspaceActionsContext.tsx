@@ -46,6 +46,7 @@ export interface WorkspaceActions {
   createCampaign: (data: CampaignInput) => Promise<boolean>;
   updateCampaign: (campaignId: string, data: CampaignUpdate) => Promise<boolean>;
   duplicateCampaign: (campaignId: string, name: string) => Promise<boolean>;
+  deleteCampaign: (campaignId: string) => Promise<boolean>;
   runCampaign: (campaignId: string, provider: CampaignRunProvider) => Promise<boolean>;
   runAllCampaigns: (provider: CampaignRunProvider) => Promise<boolean>;
   runWeeklyOutreach: () => Promise<boolean>;
