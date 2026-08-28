@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  emailAddressFor,
   instagramDmUrl,
   instagramHandleFor,
   mailtoUrl,
@@ -40,6 +41,16 @@ function buildLead(overrides: Partial<Lead> = {}): Lead {
     social_profile: null,
     phone_number: null,
     public_email: null,
+    contact_first_name: null,
+    contact_last_name: null,
+    contact_role: null,
+    contact_email: null,
+    contact_source_reference: null,
+    personalisation_observation: null,
+    relevance_opportunity: null,
+    offer_angle: null,
+    desired_next_step: null,
+    avoid_mentioning: null,
     social_identities: [],
     contact_classification: "unknown",
     pipeline_stage: "new",
@@ -53,6 +64,8 @@ function buildLead(overrides: Partial<Lead> = {}): Lead {
     sample_status: "not_started",
     quote_status: "not_started",
     retention_review_date: null,
+    outreach_hold_until: null,
+    outreach_hold_reason: null,
     current_score: null,
     score_updated_at: null,
     campaign_ids: [],
@@ -61,6 +74,7 @@ function buildLead(overrides: Partial<Lead> = {}): Lead {
     notes: [],
     follow_ups: [],
     communications: [],
+    outreach_activities: [],
     suppression_records: [],
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
@@ -94,6 +108,35 @@ describe("renderTemplate", () => {
     expect(renderTemplate("Hi {{unknown_token}}.", lead)).toBe("Hi {{unknown_token}}.");
   });
 
+  it("fills named-contact and reusable email-context fields", () => {
+    const lead = buildLead({
+      contact_first_name: "Amira",
+      contact_last_name: "Khan",
+      contact_role: "Owner",
+      personalisation_observation: "your hand-painted wedding cakes",
+      relevance_opportunity: "the acrylic details can match each cake palette",
+      offer_angle: "a small personalised sample set",
+      desired_next_step: "Would you like me to send three examples?",
+    });
+
+    expect(
+      renderTemplate(
+        "Hi {{greeting_name}} ({{contact_full_name}}, {{contact_role}}). " +
+          "I noticed {{personalisation_observation}}; {{relevance_opportunity}}. " +
+          "I can offer {{offer_angle}}. {{desired_next_step}}",
+        lead,
+      ),
+    ).toBe(
+      "Hi Amira (Amira Khan, Owner). I noticed your hand-painted wedding cakes; " +
+        "the acrylic details can match each cake palette. I can offer a small personalised " +
+        "sample set. Would you like me to send three examples?",
+    );
+  });
+
+  it("uses the business name as the greeting when the contact first name is blank", () => {
+    expect(renderTemplate("Hi {{greeting_name}}", buildLead())).toBe("Hi Example Cakes");
+  });
+
   it("substitutes {{products}} with one product per line, including pricing when set", () => {
     const lead = buildLead();
     const products = [
@@ -108,6 +151,25 @@ describe("renderTemplate", () => {
   it("substitutes {{products}} with an empty string when no products are supplied", () => {
     const lead = buildLead();
     expect(renderTemplate("Take a look:\n{{products}}", lead)).toBe("Take a look:\n");
+  });
+});
+
+describe("emailAddressFor", () => {
+  it("prefers the direct contact email", () => {
+    expect(
+      emailAddressFor(
+        buildLead({
+          contact_email: "amira@example.test",
+          public_email: "hello@example.test",
+        }),
+      ),
+    ).toBe("amira@example.test");
+  });
+
+  it("falls back to the public business email", () => {
+    expect(emailAddressFor(buildLead({ public_email: "hello@example.test" }))).toBe(
+      "hello@example.test",
+    );
   });
 });
 

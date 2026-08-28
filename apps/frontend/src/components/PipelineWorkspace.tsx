@@ -17,6 +17,7 @@ import {
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  emailAddressFor,
   instagramDmUrl,
   instagramHandleFor,
   mailtoUrl,
@@ -73,6 +74,45 @@ interface TimelineItem {
   createdAt: string;
 }
 
+function outreachActivityText(
+  action: Lead["outreach_activities"][number]["action"],
+  version: number | null,
+  reason: string | null,
+  recipientEmail: string | null,
+): Pick<TimelineItem, "title" | "detail"> {
+  const versionLabel = version === null ? "Draft" : `Draft version ${version}`;
+  switch (action) {
+    case "outreach.draft_generated":
+      return { title: "Draft generated", detail: `${versionLabel} created for review.` };
+    case "outreach.draft_edited":
+      return { title: "Draft edited", detail: `${versionLabel} saved and requires approval.` };
+    case "outreach.draft_approved":
+      return {
+        title: "Draft approved",
+        detail: `${versionLabel} approved locally; no email was sent.`,
+      };
+    case "outreach.draft_rejected":
+      return {
+        title: "Draft rejected",
+        detail: reason
+          ? `Reason: ${reason}`
+          : "Rejected locally without a reason; no email was sent.",
+      };
+    case "outreach.draft_reopened":
+      return { title: "Draft reopened", detail: "Returned to the review queue." };
+    case "outreach.zoho_open_clicked":
+      return {
+        title: "Open in Zoho clicked",
+        detail: `${versionLabel} prepared${recipientEmail ? ` for ${recipientEmail}` : ""}; sending is not confirmed.`,
+      };
+    case "outreach.zoho_open_failed":
+      return {
+        title: "Zoho composer failed to open",
+        detail: reason ?? "The composer could not be opened; no sending was confirmed.",
+      };
+  }
+}
+
 function timelineFor(lead: Lead): TimelineItem[] {
   return [
     ...lead.stage_events.map((event) => ({
@@ -102,6 +142,17 @@ function timelineFor(lead: Lead): TimelineItem[] {
       title: `${humanize(communication.channel)} · ${humanize(communication.sent_status)}`,
       detail: communication.subject ?? communication.content,
       createdAt: communication.created_at,
+    })),
+    ...(lead.outreach_activities ?? []).map((activity) => ({
+      id: activity.id,
+      type: "Email draft",
+      ...outreachActivityText(
+        activity.action,
+        activity.version,
+        activity.reason,
+        activity.recipient_email,
+      ),
+      createdAt: activity.created_at,
     })),
     ...lead.suppression_records.map((record) => ({
       id: record.id,
@@ -144,9 +195,15 @@ export function PipelineWorkspace({
   const filteredLeads = useMemo(() => {
     const query = leadQuery.toLocaleLowerCase();
     return leads.filter((lead) =>
-      [lead.business_name, lead.location, lead.phone_number ?? "", lead.public_email ?? ""].some(
-        (value) => value.toLocaleLowerCase().includes(query),
-      ),
+      [
+        lead.business_name,
+        lead.location,
+        lead.phone_number ?? "",
+        lead.public_email ?? "",
+        lead.contact_first_name ?? "",
+        lead.contact_last_name ?? "",
+        lead.contact_email ?? "",
+      ].some((value) => value.toLocaleLowerCase().includes(query)),
     );
   }, [leadQuery, leads]);
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null;
@@ -169,8 +226,9 @@ export function PipelineWorkspace({
     : "";
   const instagramHandle = selectedLead ? instagramHandleFor(selectedLead) : null;
   const whatsappHref = selectedLead ? whatsappUrl(selectedLead.phone_number, renderedBody) : null;
+  const emailRecipient = selectedLead ? emailAddressFor(selectedLead) : null;
   const emailHref = selectedLead
-    ? mailtoUrl(selectedLead.public_email, renderedSubject, renderedBody)
+    ? mailtoUrl(emailRecipient, renderedSubject, renderedBody)
     : null;
   const instagramHref = instagramDmUrl(instagramHandle);
   const timeline = selectedLead ? timelineFor(selectedLead) : [];
@@ -214,6 +272,24 @@ export function PipelineWorkspace({
       public_email: formValue(form, "detail-email") || null,
       contact_classification: formValue(form, "detail-classification"),
       retention_review_date: formValue(form, "detail-retention") || null,
+    });
+  }
+
+  async function submitContext(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!selectedLead) return;
+    const form = new FormData(event.currentTarget);
+    await onUpdate(selectedLead.id, {
+      contact_first_name: formValue(form, "context-first-name") || null,
+      contact_last_name: formValue(form, "context-last-name") || null,
+      contact_role: formValue(form, "context-role") || null,
+      contact_email: formValue(form, "context-email") || null,
+      contact_source_reference: formValue(form, "context-source") || null,
+      personalisation_observation: formValue(form, "context-observation") || null,
+      relevance_opportunity: formValue(form, "context-relevance") || null,
+      offer_angle: formValue(form, "context-offer") || null,
+      desired_next_step: formValue(form, "context-next-step") || null,
+      avoid_mentioning: formValue(form, "context-avoid") || null,
     });
   }
 
@@ -284,6 +360,10 @@ export function PipelineWorkspace({
   async function submitSuppression(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!selectedLead) return;
+    const confirmed = window.confirm(
+      `Apply suppression to "${selectedLead.business_name}"?\n\nThis immediately blocks all outreach and cancels open follow-ups. Minimized suppression evidence may be retained after lead deletion to prevent accidental re-contact.`,
+    );
+    if (!confirmed) return;
     const form = new FormData(event.currentTarget);
     await onSuppress(selectedLead.id, {
       suppression_type: formValue(form, "suppression-type"),
@@ -370,6 +450,14 @@ export function PipelineWorkspace({
                   <div>
                     <p className="eyebrow">Selected lead</p>
                     <h2>{selectedLead.business_name}</h2>
+                    {selectedLead.contact_first_name || selectedLead.contact_last_name ? (
+                      <p>
+                        Contact: {[selectedLead.contact_first_name, selectedLead.contact_last_name]
+                          .filter(Boolean)
+                          .join(" ")}
+                        {selectedLead.contact_role ? ` · ${selectedLead.contact_role}` : ""}
+                      </p>
+                    ) : null}
                     <p>{selectedLead.segment} · {selectedLead.location}</p>
                     <div className="lead-contact-routes">
                       {selectedLead.website ? (
@@ -380,8 +468,8 @@ export function PipelineWorkspace({
                       {selectedLead.phone_number ? (
                         <a href={`tel:${selectedLead.phone_number}`}>{selectedLead.phone_number}</a>
                       ) : null}
-                      {selectedLead.public_email ? (
-                        <a href={`mailto:${selectedLead.public_email}`}>{selectedLead.public_email}</a>
+                      {emailRecipient ? (
+                        <a href={`mailto:${emailRecipient}`}>{emailRecipient}</a>
                       ) : null}
                       {selectedLead.social_identities.map((identity) => (
                         <a
@@ -423,6 +511,7 @@ export function PipelineWorkspace({
                   onChange={setActiveTask}
                   items={[
                     { id: "overview", label: "Overview" },
+                    { id: "context", label: "Context" },
                     { id: "contact", label: "Contact" },
                     { id: "score", label: "Score & products" },
                     { id: "opportunity", label: "Opportunity" },
@@ -519,8 +608,8 @@ export function PipelineWorkspace({
                   {!selectedLead.phone_number ? (
                     <p className="form-hint">No phone number on file — WhatsApp is unavailable for this lead.</p>
                   ) : null}
-                  {!selectedLead.public_email ? (
-                    <p className="form-hint">No public email on file — Email is unavailable for this lead.</p>
+                  {!emailRecipient ? (
+                    <p className="form-hint">No direct contact or public business email on file — Email is unavailable for this lead.</p>
                   ) : null}
                   {!instagramHandle ? (
                     <p className="form-hint">No Instagram profile on file — Instagram is unavailable for this lead.</p>
@@ -530,6 +619,81 @@ export function PipelineWorkspace({
                     paste the text above once it does.
                   </p>
                 </section>
+                </TaskPanel>
+                ) : null}
+
+                {activeTask === "context" ? (
+                <TaskPanel id="lead-pipeline-tasks" tabId="context">
+                  <form className="context-form" onSubmit={(event) => void submitContext(event)}>
+                    <div className="pipeline-card-grid">
+                      <section className="operation-card" aria-labelledby="primary-contact-heading">
+                        <div className="operation-card__heading">
+                          <UserRoundCog size={18} aria-hidden="true" />
+                          <div>
+                            <h3 id="primary-contact-heading">Primary contact</h3>
+                            <p>Who the message is for and where the details came from.</p>
+                          </div>
+                        </div>
+                        <div className="form-grid form-grid--compact">
+                          <div className="field-pair">
+                            <label>First name<input name="context-first-name" maxLength={100} defaultValue={selectedLead.contact_first_name ?? ""} /></label>
+                            <label>Last name<input name="context-last-name" maxLength={100} defaultValue={selectedLead.contact_last_name ?? ""} /></label>
+                          </div>
+                          <label>Role or title<input name="context-role" maxLength={100} defaultValue={selectedLead.contact_role ?? ""} placeholder="Owner, studio manager, buyer…" /></label>
+                          <label>
+                            Direct email
+                            <input name="context-email" type="email" maxLength={320} defaultValue={selectedLead.contact_email ?? ""} />
+                            <small className="field-hint">Used before the public business email when preparing an email draft.</small>
+                          </label>
+                          <label>
+                            Contact source or reference
+                            <textarea name="context-source" rows={3} maxLength={2_000} defaultValue={selectedLead.contact_source_reference ?? ""} placeholder="LinkedIn URL, website team page, event note…" />
+                          </label>
+                        </div>
+                      </section>
+
+                      <section className="operation-card" aria-labelledby="email-context-heading">
+                        <div className="operation-card__heading">
+                          <MessageSquareText size={18} aria-hidden="true" />
+                          <div>
+                            <h3 id="email-context-heading">Email context</h3>
+                            <p>Reusable facts that make each draft relevant and specific.</p>
+                          </div>
+                        </div>
+                        <div className="form-grid form-grid--compact">
+                          <label>
+                            Personalisation observation
+                            <textarea name="context-observation" rows={3} maxLength={4_000} defaultValue={selectedLead.personalisation_observation ?? ""} placeholder="A specific, verifiable detail about their business or recent work." />
+                            <small className="field-hint">Use a publicly verifiable fact, such as a product style, service or recent project—not an assumption.</small>
+                          </label>
+                          <label>
+                            Why it is relevant
+                            <textarea name="context-relevance" rows={3} maxLength={4_000} defaultValue={selectedLead.relevance_opportunity ?? ""} placeholder="How that detail connects to a useful opportunity or need." />
+                            <small className="field-hint">Explain the practical connection between your observation and something Etch N Shine could help with.</small>
+                          </label>
+                          <label>
+                            Offer angle
+                            <textarea name="context-offer" rows={3} maxLength={4_000} defaultValue={selectedLead.offer_angle ?? ""} placeholder="The product, sample or idea most relevant to this lead." />
+                            <small className="field-hint">Choose one relevant idea or offer rather than listing the whole catalogue.</small>
+                          </label>
+                          <label>
+                            Desired next step
+                            <textarea name="context-next-step" rows={2} maxLength={2_000} defaultValue={selectedLead.desired_next_step ?? ""} placeholder="One simple ask, such as permission to send examples." />
+                            <small className="field-hint">Keep the ask specific and low-friction, for example permission to send two examples.</small>
+                          </label>
+                          <label>
+                            Avoid mentioning
+                            <textarea name="context-avoid" rows={2} maxLength={2_000} defaultValue={selectedLead.avoid_mentioning ?? ""} placeholder="Sensitive, outdated or irrelevant points to leave out." />
+                            <small className="field-hint">Kept as an internal guardrail; it is not inserted into templates.</small>
+                          </label>
+                        </div>
+                      </section>
+                    </div>
+                    <div className="context-form__actions">
+                      <p className="form-hint">Context is applied when a draft is created. Saving changes returns any approved, unsent draft to review.</p>
+                      <button className="primary-action" type="submit" disabled={busy}><Save size={16} /> Save context</button>
+                    </div>
+                  </form>
                 </TaskPanel>
                 ) : null}
 

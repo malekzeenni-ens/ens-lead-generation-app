@@ -124,7 +124,9 @@ describe("api.ts request handling", () => {
   it("serializes POST bodies as JSON and sends the configured HTTP method", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      .mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify({}), { status: 200 })),
+      );
     vi.stubGlobal("fetch", fetchMock);
     const { api } = await import("./api");
 
@@ -153,6 +155,52 @@ describe("api.ts request handling", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as InstanceType<typeof ApiError>).details).toEqual(errorBody);
     expect((error as Error).message).toBe(errorBody.message);
+  });
+
+  it("maps outreach review and Zoho handoff actions to their API routes", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify({}), { status: 200 })),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { api } = await import("./api");
+
+    await api.createOutreachBatch({
+      lead_ids: ["lead-1"],
+      template_id: "template-1",
+      campaign_id: "campaign-1",
+    });
+    await api.editOutreachDraft("draft-1", { subject: "Hello", body: "Personal note" });
+    await api.approveOutreachDraft("draft-1");
+    await api.rejectOutreachDraft("draft-1", "Not this week");
+    await api.reopenOutreachDraft("draft-1");
+    await api.prepareOutreachZohoHandoff("draft-1");
+    await api.recordOutreachZohoOpenFailure("draft-1", "Composer unavailable");
+    await api.confirmOutreachDraftSent("draft-1");
+
+    const calls = fetchMock.mock.calls as Array<[string, RequestInit]>;
+    expect(calls.map(([url]) => url)).toEqual([
+      "http://127.0.0.1:8765/api/v1/outreach/batches",
+      "http://127.0.0.1:8765/api/v1/outreach/drafts/draft-1",
+      "http://127.0.0.1:8765/api/v1/outreach/drafts/draft-1/approve",
+      "http://127.0.0.1:8765/api/v1/outreach/drafts/draft-1/reject",
+      "http://127.0.0.1:8765/api/v1/outreach/drafts/draft-1/reopen",
+      "http://127.0.0.1:8765/api/v1/outreach/drafts/draft-1/zoho-open",
+      "http://127.0.0.1:8765/api/v1/outreach/drafts/draft-1/zoho-open-failed",
+      "http://127.0.0.1:8765/api/v1/outreach/drafts/draft-1/sent-confirmed",
+    ]);
+    expect(calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({
+        lead_ids: ["lead-1"],
+        template_id: "template-1",
+        campaign_id: "campaign-1",
+      }),
+    });
+    expect(calls[1]?.[1]).toMatchObject({ method: "PATCH" });
+    expect(calls[3]?.[1].body).toBe(JSON.stringify({ reason: "Not this week" }));
+    expect(calls[6]?.[1].body).toBe(JSON.stringify({ reason: "Composer unavailable" }));
   });
 });
 

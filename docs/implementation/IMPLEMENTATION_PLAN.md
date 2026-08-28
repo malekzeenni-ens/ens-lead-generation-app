@@ -58,7 +58,7 @@ Capture contact classification and source/date on manual entry. Suppression will
 
 ## 10. Integration-adapter plan
 
-Provider-neutral discovery batches feed one staged-candidate pipeline. Google uses field-mask/radius controls. Instagram uses direct campaign hashtag links for operator selection followed by professional-profile Business Discovery, plus bulk refresh of saved handles; Facebook retains assisted capture. Website enrichment remains same-domain and SSRF protected; Zoho is draft-first in Phase 2. Shopify API sync is deferred; the implemented Shopify boundary is an operator-selected local product-export CSV only.
+Provider-neutral discovery batches feed one staged-candidate pipeline. Google uses field-mask/radius controls. Instagram uses direct campaign hashtag links for operator selection followed by professional-profile Business Discovery, plus bulk refresh of saved handles; Facebook retains assisted capture. Website enrichment remains same-domain and SSRF protected; approved email drafts use an operator-controlled `mailto:` handoff while Zoho API sync remains deferred. Shopify API sync is deferred; the implemented Shopify boundary is an operator-selected local product-export CSV only.
 
 ## 11. AI plan
 
@@ -121,4 +121,36 @@ The assisted Meta sequence is now implemented: campaign-generated Instagram/Face
 
 The official Instagram sequence is implemented for app-role testing: DPAPI-protected Meta OAuth, Page/professional-account selection, profile URL preview/import, bulk saved-handle refresh, Business Discovery, website/contact enrichment, cross-run deduplication and the same deterministic qualification pipeline. Campaign-derived hashtag links assist the operator in selecting profiles because Meta does not expose a dependable author identity from hashtag media. It does not scrape, access consumer profiles, verify an exact social radius or send messages.
 
-The Stage 3 remainder is unattended scheduling, general-purpose leased jobs/retries, provider budgets/kill switch and richer merge tooling. AI evidence packets, message recommendations and draft approval remain Stage 4; no AI inference or outbound message is enabled by these sequences.
+The Stage 3 remainder is unattended scheduling, general-purpose leased jobs/retries, provider budgets/kill switch and richer merge tooling. AI evidence packets and AI message recommendations remain Stage 4; no AI inference or outbound message is enabled by these sequences.
+
+## 21. Phase 1 local email-draft outcome
+
+Implemented a deliberately small two-step workspace: **Prepare drafts** and **Review drafts**. The operator filters leads, selects up to 50 eligible contacts and an existing template, then reviews each generated subject/body with recent lead notes visible. Every edit creates a new immutable revision. Drafts may be approved individually or in a reviewed group, rejected with an optional reason, and reopened; editing approved content always clears its approval.
+
+Eligibility is enforced by the backend at generation and approval: suppression, contact-ready stage, a valid direct-contact or public business email, resolved contact classification, structured outreach hold and duplicate active draft. Direct contact email takes priority over public business email. Contact, reusable email context, stage, hold or suppression changes invalidate prior approval. Rejection affects only the draft and never the lead.
+
+Phase 1 is local-only: it does not call AI, Zoho or a scheduler, and it cannot send email.
+
+## 22. Phase 2 assisted Zoho handoff outcome
+
+Implemented the deliberately small operator-controlled handoff. Only the current approved draft version can be opened through the computer's default `mailto:` composer. The backend repeats eligibility and version/hash approval checks immediately before returning recipient, subject and body, then records every **Open in Zoho** click before the desktop attempts to open the composer. The body is also copied to the clipboard as a fallback.
+
+Opening a composer is never treated as proof of sending. The draft remains visibly unconfirmed until the operator uses **Mark as sent** after sending in Zoho. That explicit action creates one user-confirmed email communication on the lead timeline and closes that draft without changing the pipeline stage. Composer-open failures are recorded and return the draft to its approved local state.
+
+This phase adds no OAuth, Zoho API, scheduler, background worker or automatic send. Direct Zoho draft synchronisation and unattended scheduling remain deferred; any later external side effect must preserve the same fresh eligibility and version-bound approval checks.
+
+## 23. Lead email-context outcome
+
+Implemented a focused **Context** tab on each lead rather than a separate contact-management module. It stores one primary contact's first name, last name, role, direct email and source/reference, plus five reusable drafting fields: personalisation observation, relevance, offer angle, desired next step and an internal avoid-mentioning guardrail.
+
+Templates expose explicit named-contact and context placeholders. `greeting_name` falls back to the business name, direct email takes recipient priority over the public business address, and the internal source/avoid fields are not inserted into messages. Any saved contact or context change returns an approved unsent draft to review.
+
+## 24. First-open weekly automation and dashboard outcome
+
+Implemented the hands-off local workflow without an operating-system scheduler. On the first successful app opening in each local calendar week, every active opted-in campaign is queued once. If the app is first opened on Tuesday or later, it catches up the current week; it never creates a backlog for missed weeks. A manual **Run due campaigns** check uses the same idempotent path.
+
+Each campaign owns its weekly template, refresh provider and shortlist capacity. Campaigns execute sequentially and a failure is isolated to that campaign with a same-run dashboard retry. The weekly preparation step rechecks contact status, suppression, holds, recent/replied communications, active drafts and every Context field referenced by the selected template. Items that need judgment are surfaced as attention instead of generating a draft.
+
+When a lead appears in several campaign shortlists, only the strongest campaign-specific score can create a draft. A workspace-wide weekly cap is applied after deduplication. All generated messages remain local pending mandatory edit/approve/reject review; approved content still opens through the assisted Zoho handoff and is never sent automatically.
+
+The existing Overview is now the control centre rather than a new navigation section. It shows week status, per-campaign progress and retry, draft capacity, review/approved/Zoho action counts, attention groups, and the current discovery-to-send funnel. Campaign editing owns enablement/template/provider controls, while Settings owns the global safety cap.

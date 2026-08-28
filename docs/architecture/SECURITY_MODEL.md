@@ -34,7 +34,7 @@ Runtime data is stored in local AppData, not the synchronised source tree. Logs 
 - Suppression as a hard server-side invariant at every selection, drafting, approval, and send boundary.
 - Signed release artefacts and a clean-profile Windows installation test.
 
-Official, operator-triggered Instagram profile lookup is authorised only for the professional-account path in ADR-016. The Meta OAuth request is limited to Page listing, Page read access and basic Instagram access. Instagram messaging, publishing, comments, insights, advertising, business administration, automated browser activity, AI, Zoho and autonomous sending remain disabled.
+Official, operator-triggered Instagram profile lookup is authorised only for the professional-account path in ADR-016. The Meta OAuth request is limited to Page listing, Page read access and basic Instagram access. Instagram messaging, publishing, comments, insights, advertising, business administration, automated browser activity, AI, Zoho API access and autonomous sending remain disabled. The email-draft workspace can open a version-bound approved message through the OS `mailto:` handler; the operator remains responsible for sending and explicitly confirming that fact afterward.
 
 ## Incident handling
 

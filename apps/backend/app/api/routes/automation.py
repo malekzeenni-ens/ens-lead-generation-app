@@ -161,6 +161,23 @@ def list_campaign_runs(
     )
 
 
+@router.post("/campaign-runs/weekly/ensure", response_model=list[CampaignRunRead])
+def ensure_weekly_campaign_runs(
+    request: Request, _: Authenticated, session: DatabaseSession
+) -> list[CampaignRunRead]:
+    run_ids = _manager(request).queue_weekly_due(request.state.correlation_id)
+    service = CampaignAutomationService(request.app.state.settings)
+    return [service.get_run(session, run_id) for run_id in run_ids]
+
+
+@router.post("/campaign-runs/{run_id}/weekly-retry", response_model=CampaignRunRead)
+def retry_weekly_campaign_run(
+    run_id: str, request: Request, _: Authenticated, session: DatabaseSession
+) -> CampaignRunRead:
+    _manager(request).retry_weekly(run_id, request.state.correlation_id)
+    return CampaignAutomationService(request.app.state.settings).get_run(session, run_id)
+
+
 @router.get("/campaign-runs/{run_id}", response_model=CampaignRunRead)
 def get_campaign_run(
     run_id: str, request: Request, _: Authenticated, session: DatabaseSession

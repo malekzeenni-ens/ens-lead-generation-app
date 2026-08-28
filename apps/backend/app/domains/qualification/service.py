@@ -40,7 +40,7 @@ from app.domains.qualification.schemas import (
     ShortlistRead,
 )
 
-RULE_VERSION = "deterministic-local-v4"
+RULE_VERSION = "deterministic-local-v5"
 EXCLUDED_STAGES = {"won", "lost", "not_suitable", "do_not_contact"}
 
 
@@ -322,7 +322,12 @@ class QualificationService:
         )
         contact_route_count = sum(
             bool(route)
-            for route in (lead.website, lead.social_profile, lead.public_email, lead.phone_number)
+            for route in (
+                lead.website,
+                lead.social_profile,
+                lead.contact_email or lead.public_email,
+                lead.phone_number,
+            )
         )
         local_area = local_token or "the campaign area"
         category_values = {
@@ -347,11 +352,12 @@ class QualificationService:
                             lead.website
                             or lead.social_profile
                             or lead.phone_number
+                            or lead.contact_email
                             or lead.public_email
                         ),
                         1,
-                        "Lead has a public contact route (website, social, phone or email)",
-                        "No public contact route on file yet",
+                        "Lead has a contact route (website, social, phone or email)",
+                        "No contact route on file yet",
                     ),
                 ],
             ),
@@ -477,10 +483,10 @@ class QualificationService:
                         "No social profile available as a message route",
                     ),
                     (
-                        bool(lead.public_email),
+                        bool(lead.contact_email or lead.public_email),
                         1,
-                        "Public email address on file",
-                        "No public email address on file",
+                        "Email address on file",
+                        "No email address on file",
                     ),
                     (
                         bool(lead.phone_number),
@@ -576,6 +582,7 @@ class QualificationService:
                 "social_profile": lead.social_profile,
                 "phone_number": lead.phone_number,
                 "public_email": lead.public_email,
+                "contact_email": lead.contact_email,
                 "contact_classification": lead.contact_classification,
                 "pipeline_stage": lead.pipeline_stage,
                 "estimated_order_value": lead.estimated_order_value,
@@ -704,8 +711,12 @@ class QualificationService:
                 continue
             product_names = [item["product_name"] for item in run.product_matches[:2]]
             contact = (
-                "public contact route"
-                if lead.website or lead.social_profile or lead.public_email or lead.phone_number
+                "contact route"
+                if lead.website
+                or lead.social_profile
+                or lead.contact_email
+                or lead.public_email
+                or lead.phone_number
                 else "contact route missing"
             )
             reason = f"Score {run.final_score}/100; {contact}"
@@ -915,8 +926,12 @@ class QualificationService:
                 continue
             product_names = [item["product_name"] for item in run.product_matches[:2]]
             contact = (
-                "public contact route"
-                if lead.website or lead.social_profile or lead.public_email or lead.phone_number
+                "contact route"
+                if lead.website
+                or lead.social_profile
+                or lead.contact_email
+                or lead.public_email
+                or lead.phone_number
                 else "contact route missing"
             )
             reason = f"Score {run.final_score}/100; {contact}"

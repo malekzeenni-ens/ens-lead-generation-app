@@ -19,6 +19,7 @@ def settings(tmp_path: Path) -> Settings:
         session_token=SESSION_TOKEN,
         database_path=tmp_path / "data" / "ens-leads.db",
         log_directory=tmp_path / "logs",
+        google_places_api_key=None,
         campaign_run_inline=True,
     )
 

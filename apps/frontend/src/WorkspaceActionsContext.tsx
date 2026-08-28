@@ -6,6 +6,8 @@ import type {
   CampaignUpdate,
   LeadInput,
   LeadUpdate,
+  OutreachBatchInput,
+  OutreachDraftEditInput,
   ProductFamilyInput,
   ProductFamilyUpdate,
   ProductInput,
@@ -40,11 +42,14 @@ export interface WorkspaceActions {
   goToLeads: () => void;
   goToLeadsNeedingReview: () => void;
   goToCatalogue: () => void;
+  goToEmailDrafts: () => void;
   createCampaign: (data: CampaignInput) => Promise<boolean>;
   updateCampaign: (campaignId: string, data: CampaignUpdate) => Promise<boolean>;
   duplicateCampaign: (campaignId: string, name: string) => Promise<boolean>;
   runCampaign: (campaignId: string, provider: CampaignRunProvider) => Promise<boolean>;
   runAllCampaigns: (provider: CampaignRunProvider) => Promise<boolean>;
+  runWeeklyOutreach: () => Promise<boolean>;
+  retryWeeklyOutreach: (runId: string) => Promise<boolean>;
   openSocialSearch: (url: string) => Promise<boolean>;
   captureSocialCandidate: (data: SocialCandidateInput) => Promise<boolean>;
   previewInstagramProfile: (profileUrl: string) => Promise<InstagramProfilePreview | null>;
@@ -90,6 +95,14 @@ export interface WorkspaceActions {
   createTemplate: (data: TemplateInput) => Promise<boolean>;
   updateTemplate: (templateId: string, data: TemplateUpdate) => Promise<boolean>;
   deleteTemplate: (templateId: string) => Promise<boolean>;
+  createOutreachBatch: (data: OutreachBatchInput) => Promise<string | null>;
+  editOutreachDraft: (draftId: string, data: OutreachDraftEditInput) => Promise<boolean>;
+  approveOutreachDraft: (draftId: string) => Promise<boolean>;
+  approveOutreachDrafts: (draftIds: string[]) => Promise<boolean>;
+  rejectOutreachDraft: (draftId: string, reason?: string) => Promise<boolean>;
+  reopenOutreachDraft: (draftId: string) => Promise<boolean>;
+  openOutreachDraftInZoho: (draftId: string) => Promise<boolean>;
+  confirmOutreachDraftSent: (draftId: string) => Promise<boolean>;
   createProductFamily: (data: ProductFamilyInput) => Promise<boolean>;
   updateProductFamily: (familyId: string, data: ProductFamilyUpdate) => Promise<boolean>;
   deleteProductFamily: (familyId: string) => Promise<boolean>;

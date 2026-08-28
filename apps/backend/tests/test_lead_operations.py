@@ -117,6 +117,48 @@ def test_pipeline_notes_follow_ups_communications_and_summary(
     assert communication.json()["communications"][0]["user_confirmed"] is True
 
 
+def test_lead_contact_and_email_context_round_trip_search_validation_and_export(
+    client: TestClient, campaign_payload: dict[str, object]
+) -> None:
+    lead = _create_lead(client, campaign_payload)
+    lead_id = str(lead["id"])
+    context = {
+        "contact_first_name": "Amira",
+        "contact_last_name": "Khan",
+        "contact_role": "Owner",
+        "contact_email": "Amira@Example.test",
+        "contact_source_reference": "https://example.test/about",
+        "personalisation_observation": "Hand-painted wedding cakes",
+        "relevance_opportunity": "Matching acrylic details can complete the design",
+        "offer_angle": "A personalised sample set",
+        "desired_next_step": "Ask permission to send three examples",
+        "avoid_mentioning": "An outdated product range",
+    }
+
+    response = client.patch(f"/api/v1/leads/{lead_id}", json=context)
+    assert response.status_code == 200, response.text
+    stored = response.json()
+    assert stored["contact_email"] == "amira@example.test"
+    assert {key: stored[key] for key in context if key != "contact_email"} == {
+        key: value for key, value in context.items() if key != "contact_email"
+    }
+
+    search = client.get("/api/v1/leads", params={"query": "amira@example"})
+    assert search.status_code == 200
+    assert [item["id"] for item in search.json()] == [lead_id]
+
+    invalid = client.patch(f"/api/v1/leads/{lead_id}", json={"contact_email": "not-an-email"})
+    assert invalid.status_code == 422
+
+    exported_json = client.get("/api/v1/leads/export", params={"format": "json"}).json()[0]
+    assert exported_json["contact_first_name"] == "Amira"
+    assert exported_json["personalisation_observation"] == "Hand-painted wedding cakes"
+    exported_csv = client.get("/api/v1/leads/export", params={"format": "csv"}).text
+    assert "contact_first_name" in exported_csv
+    assert "personalisation_observation" in exported_csv
+    assert "Hand-painted wedding cakes" in exported_csv
+
+
 def test_suppression_blocks_operations_and_survives_privacy_deletion(
     client: TestClient, campaign_payload: dict[str, object]
 ) -> None:
@@ -215,7 +257,7 @@ def test_export_settings_diagnostics_and_formula_protection(
     diagnostics = client.get("/api/v1/system/diagnostics")
     assert diagnostics.status_code == 200
     body = diagnostics.json()
-    assert body["schema_version"] == "0008_template_product_families"
+    assert body["schema_version"] == "0011_weekly_outreach_automation"
     assert body["journal_mode"] == "wal"
     assert body["foreign_keys_enabled"] is True
     assert body["provider_mode"] == "disabled"

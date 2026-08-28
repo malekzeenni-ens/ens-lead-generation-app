@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowRight, Plus, Search, UserRoundSearch } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 
+import { emailAddressFor } from "../contact";
 import { PIPELINE_STAGES, humanize } from "../domain";
 import { usePagination } from "../pagination";
 import type { Campaign, Lead } from "../types";
@@ -90,6 +91,9 @@ export function LeadWorkspace({
         lead.location,
         lead.phone_number ?? "",
         lead.public_email ?? "",
+        lead.contact_first_name ?? "",
+        lead.contact_last_name ?? "",
+        lead.contact_email ?? "",
         ...leadSourceTypes(lead).map(sourceLabel),
       ].some((value) => value.toLocaleLowerCase().includes(search));
       const matchesCampaign = !campaignId || lead.campaign_ids.includes(campaignId);
@@ -356,9 +360,16 @@ export function LeadWorkspace({
                             )}
                           </td>
                           <td data-label="Contact">
+                            {lead.contact_first_name || lead.contact_last_name ? (
+                              <small>
+                                {[lead.contact_first_name, lead.contact_last_name]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              </small>
+                            ) : null}
                             {lead.phone_number ? <small>{lead.phone_number}</small> : null}
-                            {lead.public_email ? <small>{lead.public_email}</small> : null}
-                            {!lead.phone_number && !lead.public_email ? (
+                            {emailAddressFor(lead) ? <small>{emailAddressFor(lead)}</small> : null}
+                            {!lead.phone_number && !emailAddressFor(lead) ? (
                               <small className="supporting-copy">Not on file</small>
                             ) : null}
                           </td>

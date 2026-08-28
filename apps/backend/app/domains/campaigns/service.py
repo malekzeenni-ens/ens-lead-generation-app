@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.core.errors import DomainError
-from app.db.models import Campaign
+from app.db.models import Campaign, Template
 from app.domains.audit.service import record_audit_event
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.campaigns.schemas import (
@@ -28,6 +28,28 @@ class CampaignService:
                 "PRODUCT_FAMILY_NOT_FOUND", "Product family not found.", status_code=404
             )
 
+    @staticmethod
+    def _validate_weekly_outreach(
+        session: Session,
+        *,
+        enabled: bool,
+        template_id: str | None,
+        provider: str,
+        discovery_sources: list[str],
+    ) -> None:
+        if enabled and template_id is None:
+            raise DomainError(
+                "WEEKLY_OUTREACH_TEMPLATE_REQUIRED",
+                "Choose an email template before enabling weekly outreach.",
+            )
+        if template_id is not None and session.get(Template, template_id) is None:
+            raise DomainError("TEMPLATE_NOT_FOUND", "Template not found.", status_code=404)
+        if provider != "scoring" and provider not in discovery_sources:
+            raise DomainError(
+                "WEEKLY_OUTREACH_PROVIDER_NOT_SELECTED",
+                "The weekly provider must also be selected as a campaign discovery source.",
+            )
+
     def create(self, session: Session, data: CampaignCreate, correlation_id: str) -> Campaign:
         return self._create(session, data, correlation_id, action="campaign.created")
 
@@ -48,6 +70,13 @@ class CampaignService:
             )
         if data.product_family_id is not None:
             self._require_family(session, data.product_family_id)
+        self._validate_weekly_outreach(
+            session,
+            enabled=data.weekly_outreach_enabled,
+            template_id=data.weekly_outreach_template_id,
+            provider=data.weekly_outreach_provider,
+            discovery_sources=data.discovery_sources,
+        )
         campaign = Campaign(
             name=data.name,
             description=data.description,
@@ -64,6 +93,9 @@ class CampaignService:
             preferred_channels=data.preferred_channels,
             offer_settings=data.offer_settings,
             discovery_mode=data.discovery_mode.value,
+            weekly_outreach_enabled=data.weekly_outreach_enabled,
+            weekly_outreach_template_id=data.weekly_outreach_template_id,
+            weekly_outreach_provider=data.weekly_outreach_provider,
             status=data.status.value,
         )
         self.repository.add(session, campaign)
@@ -114,6 +146,17 @@ class CampaignService:
                 )
         if changes.get("product_family_id") is not None:
             self._require_family(session, changes["product_family_id"])
+        self._validate_weekly_outreach(
+            session,
+            enabled=bool(changes.get("weekly_outreach_enabled", campaign.weekly_outreach_enabled)),
+            template_id=changes.get(
+                "weekly_outreach_template_id", campaign.weekly_outreach_template_id
+            ),
+            provider=str(
+                changes.get("weekly_outreach_provider", campaign.weekly_outreach_provider)
+            ),
+            discovery_sources=list(changes.get("discovery_sources", campaign.discovery_sources)),
+        )
         before = {field: getattr(campaign, field) for field in changes}
         for field, value in changes.items():
             setattr(campaign, field, value.value if hasattr(value, "value") else value)
@@ -153,6 +196,9 @@ class CampaignService:
             preferred_channels=source.preferred_channels,
             offer_settings=source.offer_settings,
             discovery_mode=DiscoveryMode(source.discovery_mode),
+            weekly_outreach_enabled=False,
+            weekly_outreach_template_id=source.weekly_outreach_template_id,
+            weekly_outreach_provider=source.weekly_outreach_provider,
             status=data.status,
         )
         return self._create(

@@ -18,6 +18,7 @@ from app.api.routes import (
     catalogue,
     health,
     leads,
+    outreach,
     qualification,
     system,
     templates,
@@ -168,4 +169,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(backups.router, prefix=prefix)
     app.include_router(system.router, prefix=prefix)
     app.include_router(templates.router, prefix=prefix)
+    app.include_router(outreach.router, prefix=prefix)
     return app

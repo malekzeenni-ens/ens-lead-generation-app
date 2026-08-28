@@ -5,6 +5,7 @@ import {
   GitBranch,
   LayoutDashboard,
   ListChecks,
+  MailCheck,
   Megaphone,
   PackageSearch,
   RefreshCw,
@@ -25,6 +26,8 @@ import {
   type CampaignUpdate,
   type LeadInput,
   type LeadUpdate,
+  type OutreachBatchInput,
+  type OutreachDraftEditInput,
   type ProductFamilyInput,
   type ProductFamilyUpdate,
   type ProductInput,
@@ -37,12 +40,14 @@ import { CatalogueWorkspace } from "./components/CatalogueWorkspace";
 import { CampaignWorkspace } from "./components/CampaignWorkspace";
 import { ConnectionBadge, type HealthState, NavigationItem } from "./components/DesignSystem";
 import { DashboardWorkspace } from "./components/DashboardWorkspace";
+import { EmailDraftsWorkspace } from "./components/EmailDraftsWorkspace";
 import { LeadWorkspace } from "./components/LeadWorkspace";
 import { PipelineWorkspace } from "./components/PipelineWorkspace";
 import { SettingsWorkspace } from "./components/SettingsWorkspace";
 import { ShortlistWorkspace } from "./components/ShortlistWorkspace";
 import { TemplatesWorkspace } from "./components/TemplatesWorkspace";
 import { BAKERY_SEGMENT, type WorkspaceSection } from "./domain";
+import { mailtoUrl } from "./contact";
 import { WorkspaceActionsContext, type WorkspaceActions } from "./WorkspaceActionsContext";
 import type {
   AutomationCapabilities,
@@ -54,6 +59,8 @@ import type {
   Lead,
   MetaConnection,
   OperationsSummary,
+  OutreachBatch,
+  OutreachLeadOption,
   Product,
   ProductFamily,
   ScoreRun,
@@ -75,6 +82,23 @@ async function openExternalUrl(url: string): Promise<void> {
   if (!browser) throw new Error("The browser blocked the external window.");
 }
 
+async function copyTextToClipboard(value: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  if (!copied) throw new Error("Clipboard access is unavailable.");
+}
+
 const SECTION_LABELS: Record<WorkspaceSection, string> = {
   overview: "Overview",
   campaigns: "Campaigns",
@@ -83,6 +107,7 @@ const SECTION_LABELS: Record<WorkspaceSection, string> = {
   templates: "Templates",
   shortlist: "Weekly shortlist",
   pipeline: "Pipeline",
+  drafts: "Email drafts",
   settings: "Settings",
 };
 
@@ -100,7 +125,7 @@ function notificationDurationMs(message: string): number {
 
 /**
  * The single resources a mutation should re-fetch afterward, instead of the
- * full 13-endpoint `refresh()`. Keeps a quick note-add from re-fetching the
+ * full workspace `refresh()`. Keeps a quick note-add from re-fetching the
  * whole catalogue; the full refresh still runs on mount, manual Refresh, and
  * campaign-run/Meta-auth completion, which resync anything left out here.
  */
@@ -118,7 +143,9 @@ type RefreshDomain =
   | "diagnostics"
   | "summary"
   | "templates"
-  | "productFamilies";
+  | "productFamilies"
+  | "outreachLeadOptions"
+  | "outreachBatches";
 
 function validationDetails(error: ApiError): string[] {
   const errors = error.details.details.errors;
@@ -157,6 +184,7 @@ function errorMessage(error: unknown): string {
 
 export default function App() {
   const workspaceContentRef = useRef<HTMLElement>(null);
+  const weeklyEnsureStartedRef = useRef(false);
   const [health, setHealth] = useState<HealthState>("checking");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignRuns, setCampaignRuns] = useState<CampaignRun[]>([]);
@@ -174,6 +202,8 @@ export default function App() {
   const [scoringProfile, setScoringProfile] = useState<ScoringProfile | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [productFamilies, setProductFamilies] = useState<ProductFamily[]>([]);
+  const [outreachLeadOptions, setOutreachLeadOptions] = useState<OutreachLeadOption[]>([]);
+  const [outreachBatches, setOutreachBatches] = useState<OutreachBatch[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -204,6 +234,8 @@ export default function App() {
         metaConnectionResult,
         templateResult,
         productFamilyResult,
+        outreachLeadOptionResult,
+        outreachBatchResult,
       ] =
         await Promise.all([
           api.health(),
@@ -221,6 +253,8 @@ export default function App() {
           api.metaConnection(),
           api.templates(),
           api.productFamilies(),
+          api.outreachLeadOptions(),
+          api.outreachBatches(),
         ]);
       setHealth(healthResult.status === "ok" ? "connected" : "unavailable");
       setCampaigns(campaignResult);
@@ -237,6 +271,8 @@ export default function App() {
       setMetaConnection(metaConnectionResult);
       setTemplates(templateResult);
       setProductFamilies(productFamilyResult);
+      setOutreachLeadOptions(outreachLeadOptionResult);
+      setOutreachBatches(outreachBatchResult);
       setSelectedLeadId((current) =>
         current && leadResult.some((lead) => lead.id === current) ? current : (leadResult[0]?.id ?? null),
       );
@@ -270,6 +306,8 @@ export default function App() {
     summary: async () => setSummary(await api.summary()),
     templates: async () => setTemplates(await api.templates()),
     productFamilies: async () => setProductFamilies(await api.productFamilies()),
+    outreachLeadOptions: async () => setOutreachLeadOptions(await api.outreachLeadOptions()),
+    outreachBatches: async () => setOutreachBatches(await api.outreachBatches()),
   };
 
   async function refreshDomains(domains: RefreshDomain[]): Promise<void> {
@@ -279,6 +317,17 @@ export default function App() {
   useEffect(() => {
     void refresh(true);
   }, []);
+
+  useEffect(() => {
+    if (loading || health !== "connected" || weeklyEnsureStartedRef.current) return;
+    weeklyEnsureStartedRef.current = true;
+    void api
+      .ensureWeeklyOutreach()
+      .then((runs) => {
+        if (runs.length > 0) setCampaignRuns(runs);
+      })
+      .catch((caught: unknown) => setError(errorMessage(caught)));
+  }, [health, loading]);
 
   useEffect(() => {
     if (!success) return;
@@ -444,6 +493,26 @@ export default function App() {
     );
   }
 
+  async function runWeeklyOutreach(): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.ensureWeeklyOutreach(),
+        "Weekly outreach checked. Due campaigns are queued once for this week.",
+        ["campaignRuns", "campaigns", "shortlists", "outreachBatches", "summary"],
+      )) !== null
+    );
+  }
+
+  async function retryWeeklyOutreach(runId: string): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.retryWeeklyOutreach(runId),
+        "The failed weekly campaign was queued again.",
+        ["campaignRuns"],
+      )) !== null
+    );
+  }
+
   async function captureSocialCandidate(data: SocialCandidateInput): Promise<boolean> {
     return (
       (await perform(
@@ -570,7 +639,7 @@ export default function App() {
     const result = await perform(
       () => api.createLead(data),
       "Lead added with source evidence and audit history.",
-      ["leads", "summary"],
+      ["leads", "summary", "outreachLeadOptions"],
     );
     if (result) setSelectedLeadId(result.id);
     return result !== null;
@@ -581,6 +650,8 @@ export default function App() {
       (await perform(() => api.updateLead(leadId, data), "Lead details saved.", [
         "leads",
         "summary",
+        "outreachLeadOptions",
+        "outreachBatches",
       ])) !== null
     );
   }
@@ -594,7 +665,7 @@ export default function App() {
       (await perform(
         () => api.changeLeadStage(leadId, stage, reason),
         "Pipeline stage changed and recorded.",
-        ["leads", "summary"],
+        ["leads", "summary", "outreachLeadOptions", "outreachBatches"],
       )) !== null
     );
   }
@@ -604,7 +675,7 @@ export default function App() {
       (await perform(
         () => api.addLeadNote(leadId, content),
         "Note added to the activity timeline.",
-        ["leads"],
+        ["leads", "outreachLeadOptions", "outreachBatches"],
       )) !== null
     );
   }
@@ -637,7 +708,7 @@ export default function App() {
       (await perform(
         () => api.addCommunication(leadId, data),
         "Manual communication added to the timeline.",
-        ["leads"],
+        ["leads", "outreachLeadOptions"],
       )) !== null
     );
   }
@@ -647,7 +718,7 @@ export default function App() {
       (await perform(
         () => api.suppressLead(leadId, data),
         "Suppression applied; outreach actions are blocked.",
-        ["leads", "summary"],
+        ["leads", "summary", "outreachLeadOptions", "outreachBatches"],
       )) !== null
     );
   }
@@ -666,7 +737,7 @@ export default function App() {
     const result = await perform(
       () => api.deleteLead(leadId),
       "Lead data deleted; active suppression evidence was retained where required.",
-      ["leads", "summary"],
+      ["leads", "summary", "outreachLeadOptions", "outreachBatches"],
     );
     if (result) setSelectedLeadId(null);
     return result !== null;
@@ -839,6 +910,133 @@ export default function App() {
     );
   }
 
+  async function createOutreachBatch(data: OutreachBatchInput): Promise<string | null> {
+    const result = await perform(
+      () => api.createOutreachBatch(data),
+      "Drafts created locally and ready for your review.",
+      ["outreachBatches", "outreachLeadOptions", "leads"],
+    );
+    return result?.id ?? null;
+  }
+
+  async function editOutreachDraft(
+    draftId: string,
+    data: OutreachDraftEditInput,
+  ): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.editOutreachDraft(draftId, data),
+        "Draft changes saved. The current version now requires approval.",
+        ["outreachBatches", "leads"],
+      )) !== null
+    );
+  }
+
+  async function approveOutreachDraft(draftId: string): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.approveOutreachDraft(draftId),
+        "Draft approved. You can now open it in Zoho to send.",
+        ["outreachBatches", "outreachLeadOptions", "leads"],
+      )) !== null
+    );
+  }
+
+  async function approveOutreachDrafts(draftIds: string[]): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.approveOutreachDrafts(draftIds),
+        `${draftIds.length} draft${draftIds.length === 1 ? "" : "s"} approved locally.`,
+        ["outreachBatches", "outreachLeadOptions", "leads"],
+      )) !== null
+    );
+  }
+
+  async function rejectOutreachDraft(draftId: string, reason?: string): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.rejectOutreachDraft(draftId, reason),
+        "Draft rejected. The lead is unchanged and the draft will not leave this app.",
+        ["outreachBatches", "outreachLeadOptions", "leads"],
+      )) !== null
+    );
+  }
+
+  async function reopenOutreachDraft(draftId: string): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.reopenOutreachDraft(draftId),
+        "Draft reopened for editing and review.",
+        ["outreachBatches", "outreachLeadOptions", "leads"],
+      )) !== null
+    );
+  }
+
+  async function openOutreachDraftInZoho(draftId: string): Promise<boolean> {
+    setBusy(true);
+    setSuccess(null);
+    setError(null);
+    try {
+      const handoff = await api.prepareOutreachZohoHandoff(draftId);
+      let copied = true;
+      try {
+        await copyTextToClipboard(handoff.body);
+      } catch {
+        copied = false;
+      }
+
+      try {
+        const url = mailtoUrl(handoff.recipient_email, handoff.subject, handoff.body);
+        if (!url) throw new Error("The approved draft no longer has a recipient email address.");
+        await openExternalUrl(url);
+      } catch (caught) {
+        const reason = errorMessage(caught).slice(0, 2_000);
+        try {
+          await api.recordOutreachZohoOpenFailure(draftId, reason);
+        } catch {
+          // The original composer error is the useful message for the user.
+        }
+        try {
+          await refreshDomains(["outreachBatches", "outreachLeadOptions", "leads"]);
+        } catch {
+          // The backend already persisted the handoff and failure events.
+        }
+        setError(`Zoho could not be opened: ${reason}`);
+        return false;
+      }
+
+      try {
+        await refreshDomains(["outreachBatches", "outreachLeadOptions", "leads"]);
+      } catch {
+        setError(
+          "Zoho was opened, but the app could not refresh. The click was still recorded; use Refresh to update the screen.",
+        );
+        return true;
+      }
+      setSuccess(
+        copied
+          ? "Zoho opened with the approved email. The body was also copied; sending is not yet confirmed."
+          : "Zoho opened with the approved email. Clipboard access was unavailable; sending is not yet confirmed.",
+      );
+      return true;
+    } catch (caught) {
+      setError(errorMessage(caught));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmOutreachDraftSent(draftId: string): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.confirmOutreachDraftSent(draftId),
+        "Email marked as sent. A user-confirmed communication was added to the lead timeline.",
+        ["outreachBatches", "outreachLeadOptions", "leads"],
+      )) !== null
+    );
+  }
+
   async function createProductFamily(data: ProductFamilyInput): Promise<boolean> {
     return (
       (await perform(
@@ -951,11 +1149,14 @@ export default function App() {
       setActiveSection("leads");
     },
     goToCatalogue: () => setActiveSection("catalogue"),
+    goToEmailDrafts: () => setActiveSection("drafts"),
     createCampaign,
     updateCampaign,
     duplicateCampaign,
     runCampaign,
     runAllCampaigns,
+    runWeeklyOutreach,
+    retryWeeklyOutreach,
     openSocialSearch,
     captureSocialCandidate,
     previewInstagramProfile,
@@ -992,6 +1193,14 @@ export default function App() {
     createTemplate,
     updateTemplate,
     deleteTemplate,
+    createOutreachBatch,
+    editOutreachDraft,
+    approveOutreachDraft,
+    approveOutreachDrafts,
+    rejectOutreachDraft,
+    reopenOutreachDraft,
+    openOutreachDraftInZoho,
+    confirmOutreachDraftSent,
     createProductFamily,
     updateProductFamily,
     deleteProductFamily,
@@ -1002,9 +1211,12 @@ export default function App() {
     overview: (
       <DashboardWorkspace
         campaigns={campaigns}
+        campaignRuns={campaignRuns}
         leads={leads}
         summary={summary}
+        settings={settings}
         shortlists={shortlists}
+        outreachBatches={outreachBatches}
       />
     ),
     campaigns: (
@@ -1015,6 +1227,7 @@ export default function App() {
         capabilities={automationCapabilities}
         settings={settings}
         productFamilies={productFamilies}
+        templates={templates}
       />
     ),
     leads: (
@@ -1044,6 +1257,15 @@ export default function App() {
         productFamilies={productFamilies}
         selectedLeadId={selectedLeadId}
         onSelectLead={setSelectedLeadId}
+      />
+    ),
+    drafts: (
+      <EmailDraftsWorkspace
+        campaigns={campaigns}
+        leads={leads}
+        templates={templates}
+        leadOptions={outreachLeadOptions}
+        batches={outreachBatches}
       />
     ),
     settings: (
@@ -1107,6 +1329,7 @@ export default function App() {
             <p className="navigation-label">Lead operations</p>
             <NavigationItem href="#shortlist" icon={ListChecks} label="Weekly shortlist" count={summary?.shortlisted_this_week} active={activeSection === "shortlist"} onSelect={() => setActiveSection("shortlist")} />
             <NavigationItem href="#pipeline" icon={GitBranch} label="Pipeline" count={summary?.open_follow_ups} active={activeSection === "pipeline"} onSelect={() => setActiveSection("pipeline")} />
+            <NavigationItem href="#drafts" icon={MailCheck} label="Email drafts" count={outreachBatches.reduce((total, batch) => total + batch.pending_count, 0)} active={activeSection === "drafts"} onSelect={() => setActiveSection("drafts")} />
 
             <p className="navigation-label">Configuration</p>
             <NavigationItem href="#catalogue" icon={PackageSearch} label="Catalogue" count={products.length} active={activeSection === "catalogue"} onSelect={() => setActiveSection("catalogue")} />

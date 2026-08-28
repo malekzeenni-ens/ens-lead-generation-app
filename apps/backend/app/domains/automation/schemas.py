@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
@@ -76,6 +76,8 @@ class CampaignRunRead(BaseModel):
     campaign_id: str
     campaign_name: str
     trigger: str
+    week_start: date | None
+    outreach_batch_id: str | None
     status: str
     phase: str
     provider_status: str

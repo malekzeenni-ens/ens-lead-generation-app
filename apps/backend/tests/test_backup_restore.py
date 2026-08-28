@@ -39,7 +39,7 @@ def test_consistent_backup_verification_and_isolated_restore(
         "valid": True,
         "checksum_matches": True,
         "integrity_result": "ok",
-        "schema_version": "0008_template_product_families",
+        "schema_version": "0011_weekly_outreach_automation",
     }
 
     restored = tmp_path / "restore-test" / "restored.sqlite3"

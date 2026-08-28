@@ -1,8 +1,8 @@
 # Persistent job design
 
-**Status:** Operator-triggered durable campaign-run subset implemented; scheduling, leases, retry queues and budgets remain planned
+**Status:** Operator-triggered and first-open weekly campaign runs implemented; operating-system scheduling, leases, general retry queues and budgets remain planned
 
-`campaign_run`, `discovery_candidate`, and `provider_attempt` now persist the requested work, phase, progress counters, candidate evidence, safe failures, cancellation request, and terminal outcome. A single-process worker executes one run at a time and resumes queued/running records after application restart. This supports explicit button-triggered work; it is not an unattended scheduler or the full leased job design below.
+`campaign_run`, `discovery_candidate`, and `provider_attempt` now persist the requested work, phase, progress counters, candidate evidence, safe failures, cancellation request, and terminal outcome. A single-process worker executes one run at a time and resumes queued/running records after application restart. It supports explicit buttons plus an idempotent current-week check on the first app opening. Weekly runs execute campaigns sequentially and expose campaign-level retry, but the app cannot run while closed and this is not the full leased job design below.
 
 Each current run follows `queued → discovery → qualification → shortlist → completed`, with `completed_with_warnings`, `failed`, and `cancelled` terminal variants. Active duplicate runs for one campaign are rejected, all-active execution uses a shared batch ID, and cancellation is checked between bounded units of work. Score input fingerprints make unchanged lead/campaign/profile/catalogue combinations reusable.
 
@@ -34,4 +34,4 @@ The UI must show pending/running/retrying/blocked/failed states, last safe error
 
 ## Verification gate
 
-The current integration suite proves run persistence, all-active filtering, unchanged-score reuse, shortlist idempotency, provider normalisation/radius filtering, exact and fuzzy duplicate handling, candidate decisions, suppression-safe promotion, and SSRF blocking. Before unattended scheduling is enabled, contract tests must additionally prove multi-worker lease exclusivity, retry classification, budget reservation/release, kill-switch behavior, and suppression re-check immediately before each external side effect.
+The current integration suite proves run persistence, all-active filtering, unchanged-score reuse, shortlist idempotency, first-open week idempotency and catch-up, campaign failure isolation/retry, cross-campaign lead deduplication, weekly draft caps, provider normalisation/radius filtering, exact and fuzzy duplicate handling, candidate decisions, suppression-safe promotion, and SSRF blocking. Before operating-system scheduling is enabled, contract tests must additionally prove multi-worker lease exclusivity, retry classification, budget reservation/release and kill-switch behavior. Suppression and approval are already rechecked immediately before the existing assisted email handoff.

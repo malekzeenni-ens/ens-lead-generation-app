@@ -62,6 +62,13 @@ class Campaign(Base):
     preferred_channels: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     offer_settings: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     discovery_mode: Mapped[str] = mapped_column(String(30), nullable=False, default="manual")
+    weekly_outreach_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    weekly_outreach_template_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("message_template.id", ondelete="SET NULL")
+    )
+    weekly_outreach_provider: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="scoring"
+    )
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
@@ -94,6 +101,16 @@ class Lead(Base):
     social_profile: Mapped[str | None] = mapped_column(String(2048))
     phone_number: Mapped[str | None] = mapped_column(String(100))
     public_email: Mapped[str | None] = mapped_column(String(320))
+    contact_first_name: Mapped[str | None] = mapped_column(String(100))
+    contact_last_name: Mapped[str | None] = mapped_column(String(100))
+    contact_role: Mapped[str | None] = mapped_column(String(100))
+    contact_email: Mapped[str | None] = mapped_column(String(320))
+    contact_source_reference: Mapped[str | None] = mapped_column(Text)
+    personalisation_observation: Mapped[str | None] = mapped_column(Text)
+    relevance_opportunity: Mapped[str | None] = mapped_column(Text)
+    offer_angle: Mapped[str | None] = mapped_column(Text)
+    desired_next_step: Mapped[str | None] = mapped_column(Text)
+    avoid_mentioning: Mapped[str | None] = mapped_column(Text)
     contact_classification: Mapped[str] = mapped_column(
         String(50), nullable=False, default="unknown"
     )
@@ -108,6 +125,8 @@ class Lead(Base):
     sample_status: Mapped[str] = mapped_column(String(40), nullable=False, default="not_applicable")
     quote_status: Mapped[str] = mapped_column(String(40), nullable=False, default="not_requested")
     retention_review_date: Mapped[date | None] = mapped_column(Date)
+    outreach_hold_until: Mapped[date | None] = mapped_column(Date)
+    outreach_hold_reason: Mapped[str | None] = mapped_column(Text)
     current_score: Mapped[int | None] = mapped_column(Integer)
     score_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
@@ -143,6 +162,9 @@ class Lead(Base):
         back_populates="lead", cascade="all, delete-orphan", passive_deletes=True
     )
     shortlist_items: Mapped[list[ShortlistItem]] = relationship(
+        back_populates="lead", cascade="all, delete-orphan", passive_deletes=True
+    )
+    outreach_drafts: Mapped[list[OutreachDraft]] = relationship(
         back_populates="lead", cascade="all, delete-orphan", passive_deletes=True
     )
 
@@ -457,6 +479,10 @@ class CampaignRun(Base):
         String(36), ForeignKey("campaign.id", ondelete="CASCADE"), nullable=False
     )
     trigger: Mapped[str] = mapped_column(String(30), nullable=False, default="manual")
+    week_start: Mapped[date | None] = mapped_column(Date)
+    outreach_batch_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("outreach_batch.id", ondelete="SET NULL")
+    )
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="queued")
     phase: Mapped[str] = mapped_column(String(50), nullable=False, default="queued")
     provider_status: Mapped[str] = mapped_column(
@@ -644,3 +670,88 @@ class ShortlistItem(Base):
 
     shortlist: Mapped[Shortlist] = relationship(back_populates="items")
     lead: Mapped[Lead] = relationship(back_populates="shortlist_items")
+
+
+class OutreachBatch(Base):
+    __tablename__ = "outreach_batch"
+    __table_args__ = (
+        Index("ix_outreach_batch_status_created", "status", "created_at"),
+        Index("ix_outreach_batch_campaign_created", "campaign_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    campaign_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("campaign.id", ondelete="SET NULL")
+    )
+    template_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("message_template.id", ondelete="SET NULL")
+    )
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="review")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    drafts: Mapped[list[OutreachDraft]] = relationship(
+        back_populates="batch", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class OutreachDraft(Base):
+    __tablename__ = "outreach_draft"
+    __table_args__ = (
+        Index("ix_outreach_draft_batch_review", "batch_id", "review_status"),
+        Index("ix_outreach_draft_lead_created", "lead_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    batch_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("outreach_batch.id", ondelete="CASCADE"), nullable=False
+    )
+    lead_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("lead.id", ondelete="CASCADE"), nullable=False
+    )
+    template_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("message_template.id", ondelete="SET NULL")
+    )
+    recipient_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    review_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending_review")
+    sync_status: Mapped[str] = mapped_column(String(30), nullable=False, default="local_only")
+    current_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    approved_version: Mapped[int | None] = mapped_column(Integer)
+    approved_content_hash: Mapped[str | None] = mapped_column(String(64))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejection_reason: Mapped[str | None] = mapped_column(Text)
+    blocked_reason: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    batch: Mapped[OutreachBatch] = relationship(back_populates="drafts")
+    lead: Mapped[Lead] = relationship(back_populates="outreach_drafts")
+    revisions: Mapped[list[OutreachDraftRevision]] = relationship(
+        back_populates="draft", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class OutreachDraftRevision(Base):
+    __tablename__ = "outreach_draft_revision"
+    __table_args__ = (
+        UniqueConstraint("draft_id", "version", name="uq_outreach_draft_revision_version"),
+        Index("ix_outreach_revision_draft_created", "draft_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    draft_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("outreach_draft.id", ondelete="CASCADE"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject: Mapped[str] = mapped_column(String(300), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    editor: Mapped[str] = mapped_column(String(100), nullable=False, default="local_user")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    draft: Mapped[OutreachDraft] = relationship(back_populates="revisions")

@@ -103,7 +103,7 @@ def test_deterministic_scoring_explanation_versions_and_override(
     score = response.json()
     assert 0 <= score["final_score"] <= 100
     assert score["calculated_score"] == score["final_score"]
-    assert score["rule_version"] == "deterministic-local-v4"
+    assert score["rule_version"] == "deterministic-local-v5"
     assert score["profile_version"] == 1
     assert len(score["breakdown"]) == 7
     assert sum(item["points_available"] for item in score["breakdown"]) == 100
@@ -186,6 +186,33 @@ def test_scoring_v3_categories_do_not_penalise_fresh_unworked_leads(
         + by_category["Contactability"]["missing_evidence"]
     )
     assert "Resolved contact classification" not in contact_terms
+
+
+def test_direct_contact_email_counts_as_one_email_route_and_improves_contactability(
+    client: TestClient,
+    campaign_payload: dict[str, object],
+) -> None:
+    campaign, lead = _campaign_and_lead(client, campaign_payload)
+    before = client.post(
+        f"/api/v1/leads/{lead['id']}/score",
+        json={"campaign_id": campaign["id"]},
+    ).json()
+    saved = client.patch(
+        f"/api/v1/leads/{lead['id']}",
+        json={"contact_email": "owner@example.test"},
+    )
+    assert saved.status_code == 200
+
+    after = client.post(
+        f"/api/v1/leads/{lead['id']}/score",
+        json={"campaign_id": campaign["id"]},
+    ).json()
+    contactability = next(
+        item for item in after["breakdown"] if item["category"] == "Contactability"
+    )
+    assert "Email address on file" in contactability["evidence_used"]
+    assert after["calculated_score"] > before["calculated_score"]
+    assert after["rule_version"] == "deterministic-local-v5"
 
 
 def test_product_match_gives_partial_credit_when_segment_tags_are_missing(

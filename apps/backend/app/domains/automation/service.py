@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import suppress
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from difflib import SequenceMatcher
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -70,6 +70,12 @@ DEFAULT_METRICS = {
     "skipped": 0,
     "shortlist_selected": 0,
     "shortlist_created": 0,
+    "drafts_created": 0,
+    "attention_required": 0,
+    "missing_context": 0,
+    "cross_campaign_duplicates": 0,
+    "weekly_limit_skipped": 0,
+    "outreach_skipped": 0,
     "failures": 0,
 }
 
@@ -81,6 +87,8 @@ def _run_to_read(run: CampaignRun) -> CampaignRunRead:
         campaign_id=run.campaign_id,
         campaign_name=run.campaign.name,
         trigger=run.trigger,
+        week_start=run.week_start,
+        outreach_batch_id=run.outreach_batch_id,
         status=run.status,
         phase=run.phase,
         provider_status=run.provider_status,
@@ -182,6 +190,7 @@ class CampaignAutomationService:
         *,
         batch_id: str | None = None,
         trigger: str | None = None,
+        week_start: date | None = None,
         requested_provider: CampaignRunProvider = CampaignRunProvider.SCORING,
         correlation_id: str,
     ) -> str:
@@ -221,6 +230,7 @@ class CampaignAutomationService:
             batch_id=batch_id or str(uuid4()),
             campaign_id=campaign_id,
             trigger=trigger or f"manual_{requested_provider.value}",
+            week_start=week_start,
             status=CampaignRunStatus.QUEUED.value,
             phase="queued",
             metrics=dict(DEFAULT_METRICS),

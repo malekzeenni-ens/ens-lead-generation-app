@@ -261,3 +261,70 @@ No user database, real Google/Meta request, AI inference, outbound message or in
 ### Compatibility
 
 - Existing Meta connections remain usable. The narrower authorization scopes apply the next time Meta is connected or reconnected.
+
+## 26 August 2026 - Phase 2 assisted Zoho handoff
+
+### Delivered
+
+- Added **Open in Zoho to send** only for the current approved, unsent draft version. The backend repeats eligibility and approval-hash checks before returning recipient, subject and body.
+- Recorded every open click on the lead activity timeline before the desktop composer is requested, including repeated clicks and explicit wording that sending is not confirmed.
+- Opened the approved message through the OS default `mailto:` composer and copied the full body to the clipboard as a fallback. Composer failures are logged and do not mark the draft sent.
+- Added explicit **Mark as sent** after a successful handoff. Confirmation creates one user-confirmed email communication, closes the draft for future drafting and leaves the pipeline stage unchanged.
+- Kept Zoho OAuth/API sync, scheduling, background work and automatic sending out of scope.
+
+### Verification
+
+- Ruff, strict mypy, ESLint and strict TypeScript: pass.
+- Pytest: 65 passed, including repeated handoff logging, failure recovery, sent-confirmation idempotency and communication evidence.
+- Vitest/Testing Library: 86 passed, including route mapping, clipboard/composer payload, click-before-open ordering, sent confirmation and timeline visibility.
+- Production frontend build and Rust Cargo check: pass.
+
+## 26 August 2026 - Phase 1 local email drafts
+
+### Delivered
+
+- Added schema revision `0009_outreach_drafts` with structured lead holds, local draft batches, versioned draft content and version-bound approval evidence.
+- Added the **Email drafts** navigation workspace and dashboard review count with a two-step **Prepare drafts** → **Review drafts** journey.
+- Added server-side eligibility checks for suppression, pipeline stage, public email, contact classification, outreach hold and duplicate active drafts at generation and approval.
+- Added recent-note and communication-warning context without interpreting free-form notes as automated instructions.
+- Added subject/body personalisation, Save, Save and approve, individual/bulk approval, rejection reason and Reopen. Editing approved content clears approval; rejection never changes the lead.
+- Kept the complete phase local: no AI, scheduling, Zoho transfer or email sending path was added.
+
+### Verification
+
+- Ruff, strict mypy, ESLint and strict TypeScript: pass.
+- Pytest: 63 passed, including the 0008→0009 upgrade, draft lifecycle, hold and approval-invalidation invariants.
+- Vitest/Testing Library: 85 passed, including API route mapping and the full prepare/edit/approve/reject/reopen journey.
+- Production frontend build and desktop checks remain part of the final workspace quality run.
+
+## 27 August 2026 - Reusable lead email context
+
+### Delivered
+
+- Added schema revision `0010_lead_email_context` and a focused **Context** tab for one primary contact plus reusable personalisation, relevance, offer and next-step inputs.
+- Added named-contact and context template fields with a safe `greeting_name` fallback to the business name. Internal source/reference and avoid-mentioning fields are deliberately not inserted into templates.
+- Made a valid direct contact email the preferred recipient, with the public business email retained as fallback across manual contact, draft creation, approval and Zoho handoff.
+- Included the new fields in lead search, JSON/CSV export and deterministic contactability scoring. Any context/contact change invalidates approval for an unsent draft.
+
+### Verification
+
+- Pytest: 68 passed, including storage, validation, search, export, migration, scoring, context rendering, recipient priority, approval invalidation and Zoho handoff.
+- Vitest/Testing Library: 91 passed, including Context-tab submission, template rendering, greeting fallback and email selection.
+- Ruff, strict mypy, ESLint, strict TypeScript and the production frontend build pass.
+
+## 28 August 2026 - First-open weekly automation and control-centre dashboard
+
+### Delivered
+
+- Added schema revision `0011_weekly_outreach_automation` with campaign opt-in/template/provider controls and durable campaign-week/outreach-batch links.
+- Added first-open current-week catch-up, one-run-per-campaign/week idempotency, sequential multi-campaign execution, campaign-level failure isolation and same-run retry.
+- Added strongest-campaign deduplication for shared leads, per-campaign shortlist capacity and a settings-controlled global maximum of automatic drafts per week.
+- Reused the existing eligibility and template renderer so suppression, holds, contact classification, recent/replied communications, active drafts and referenced Context fields are checked before draft creation.
+- Reworked Overview into a weekly control centre with due/caught-up status, campaign progress, retries, draft/action counts, attention groups and a discovery-to-send funnel.
+- Kept the final workflow controlled: drafts require operator editing and approval; Zoho handoff and sent confirmation remain manual, and no email is sent automatically.
+
+### Verification
+
+- Focused weekly backend suite: 7 passed, covering first-open idempotency, Tuesday catch-up, missing Context, cross-campaign deduplication, global cap, retry and failure isolation.
+- Focused dashboard interaction tests: pass, including automatic first-open check, weekly status and navigation to draft review.
+- Full regression: 75 backend tests and 92 frontend tests passed. Ruff, strict mypy, ESLint, strict TypeScript, the production frontend build, Cargo desktop check and `git diff --check` all pass.

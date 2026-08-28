@@ -5,6 +5,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 
 import App from "./App";
 import { api, ApiError } from "./api";
+import { mondayIso } from "./domain";
 import type {
   ApiErrorShape,
   AutomationCapabilities,
@@ -15,6 +16,9 @@ import type {
   Lead,
   MetaConnection,
   OperationsSummary,
+  OutreachBatch,
+  OutreachDraft,
+  OutreachLeadOption,
   Product,
   ProductFamily,
   ScoreRun,
@@ -53,6 +57,8 @@ vi.mock("./api", () => {
       campaignRuns: vi.fn(),
       startCampaignRun: vi.fn(),
       startAllCampaignRuns: vi.fn(),
+      ensureWeeklyOutreach: vi.fn(),
+      retryWeeklyOutreach: vi.fn(),
       captureSocialCandidate: vi.fn(),
       previewInstagramProfile: vi.fn(),
       importInstagramProfile: vi.fn(),
@@ -95,6 +101,17 @@ vi.mock("./api", () => {
       createProductFamily: vi.fn(),
       updateProductFamily: vi.fn(),
       deleteProductFamily: vi.fn(),
+      outreachLeadOptions: vi.fn(),
+      outreachBatches: vi.fn(),
+      createOutreachBatch: vi.fn(),
+      editOutreachDraft: vi.fn(),
+      approveOutreachDraft: vi.fn(),
+      approveOutreachDrafts: vi.fn(),
+      rejectOutreachDraft: vi.fn(),
+      reopenOutreachDraft: vi.fn(),
+      prepareOutreachZohoHandoff: vi.fn(),
+      recordOutreachZohoOpenFailure: vi.fn(),
+      confirmOutreachDraftSent: vi.fn(),
     },
   };
 });
@@ -118,6 +135,9 @@ const campaign: Campaign = {
   preferred_channels: ["email", "instagram"],
   offer_settings: { digital_mock_up: true },
   discovery_mode: "manual",
+  weekly_outreach_enabled: false,
+  weekly_outreach_template_id: null,
+  weekly_outreach_provider: "scoring",
   status: "active",
   created_at: "2026-07-18T10:00:00Z",
   updated_at: "2026-07-18T10:00:00Z",
@@ -132,6 +152,16 @@ const lead: Lead = {
   social_profile: null,
   phone_number: null,
   public_email: null,
+  contact_first_name: null,
+  contact_last_name: null,
+  contact_role: null,
+  contact_email: null,
+  contact_source_reference: null,
+  personalisation_observation: null,
+  relevance_opportunity: null,
+  offer_angle: null,
+  desired_next_step: null,
+  avoid_mentioning: null,
   social_identities: [],
   contact_classification: "unknown",
   pipeline_stage: "new",
@@ -145,6 +175,8 @@ const lead: Lead = {
   sample_status: "not_applicable",
   quote_status: "not_requested",
   retention_review_date: null,
+  outreach_hold_until: null,
+  outreach_hold_reason: null,
   current_score: null,
   score_updated_at: null,
   campaign_ids: [campaign.id],
@@ -174,6 +206,7 @@ const lead: Lead = {
   notes: [],
   follow_ups: [],
   communications: [],
+  outreach_activities: [],
   suppression_records: [],
   created_at: "2026-07-18T10:00:00Z",
   updated_at: "2026-07-18T10:00:00Z",
@@ -200,12 +233,13 @@ const settings: WorkspaceSettings = {
   follow_up_window_days: 7,
   default_campaign_radius_miles: 25,
   default_weekly_shortlist_size: 5,
+  weekly_outreach_global_limit: 20,
 };
 
 const diagnostics: Diagnostics = {
   api_status: "ok",
   database_status: "connected",
-  schema_version: "0005_contact_social",
+  schema_version: "0010_lead_email_context",
   database_size_bytes: 131_072,
   journal_mode: "wal",
   foreign_keys_enabled: true,
@@ -250,6 +284,88 @@ const template: Template = {
   product_family_ids: [],
   created_at: "2026-07-19T10:00:00Z",
   updated_at: "2026-07-19T10:00:00Z",
+};
+
+const outreachReadyLead: Lead = {
+  ...lead,
+  public_email: "owner@example.test",
+  contact_classification: "corporate_subscriber",
+  pipeline_stage: "qualified",
+  notes: [
+    {
+      id: "note-1",
+      content: "Mention the seasonal cake range.",
+      actor: "local_user",
+      created_at: "2026-07-21T09:00:00Z",
+    },
+  ],
+};
+
+const outreachLeadOption: OutreachLeadOption = {
+  id: outreachReadyLead.id,
+  business_name: outreachReadyLead.business_name,
+  location: outreachReadyLead.location,
+  pipeline_stage: outreachReadyLead.pipeline_stage,
+  public_email: outreachReadyLead.public_email,
+  contact_classification: outreachReadyLead.contact_classification,
+  current_score: 72,
+  outreach_hold_until: null,
+  outreach_hold_reason: null,
+  ready: true,
+  blockers: [],
+  warnings: [],
+  latest_notes: ["Mention the seasonal cake range."],
+};
+
+const outreachDraft: OutreachDraft = {
+  id: "draft-1111-1111-1111-111111111111",
+  batch_id: "batch-1111-1111-1111-111111111111",
+  lead_id: outreachReadyLead.id,
+  business_name: outreachReadyLead.business_name,
+  location: outreachReadyLead.location,
+  pipeline_stage: outreachReadyLead.pipeline_stage,
+  recipient_email: "owner@example.test",
+  contact_classification: outreachReadyLead.contact_classification,
+  current_score: 72,
+  outreach_hold_until: null,
+  outreach_hold_reason: null,
+  latest_notes: ["Mention the seasonal cake range."],
+  template_id: template.id,
+  review_status: "pending_review",
+  sync_status: "local_only",
+  current_version: 1,
+  approved_version: null,
+  approved_at: null,
+  rejected_at: null,
+  rejection_reason: null,
+  blocked_reason: null,
+  current_revision: {
+    id: "revision-1111-1111-1111-1111111111",
+    version: 1,
+    subject: "Following up, Example Celebration Cakes",
+    body: "Hi Example Celebration Cakes, checking in about your order.",
+    content_hash: "a".repeat(64),
+    editor: "template",
+    created_at: "2026-07-21T09:00:00Z",
+  },
+  revision_count: 1,
+  created_at: "2026-07-21T09:00:00Z",
+  updated_at: "2026-07-21T09:00:00Z",
+};
+
+const outreachBatch: OutreachBatch = {
+  id: outreachDraft.batch_id,
+  campaign_id: campaign.id,
+  template_id: template.id,
+  template_topic: template.topic,
+  status: "review",
+  pending_count: 1,
+  approved_count: 0,
+  rejected_count: 0,
+  sent_count: 0,
+  drafts: [outreachDraft],
+  created_at: "2026-07-21T09:00:00Z",
+  updated_at: "2026-07-21T09:00:00Z",
 };
 
 const productFamily: ProductFamily = {
@@ -361,6 +477,8 @@ const campaignRun: CampaignRun = {
   batch_id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
   campaign_id: campaign.id,
   campaign_name: campaign.name,
+  week_start: null,
+  outreach_batch_id: null,
   trigger: "manual",
   status: "completed_with_warnings",
   phase: "completed",
@@ -444,6 +562,8 @@ describe("local operating workbench", () => {
     vi.mocked(api.campaignRuns).mockResolvedValue([]);
     vi.mocked(api.startCampaignRun).mockResolvedValue(campaignRun);
     vi.mocked(api.startAllCampaignRuns).mockResolvedValue([campaignRun]);
+    vi.mocked(api.ensureWeeklyOutreach).mockResolvedValue([]);
+    vi.mocked(api.retryWeeklyOutreach).mockResolvedValue(campaignRun);
     vi.mocked(api.captureSocialCandidate).mockResolvedValue(campaignRun);
     vi.mocked(api.previewInstagramProfile).mockResolvedValue(instagramProfilePreview);
     vi.mocked(api.importInstagramProfile).mockResolvedValue(campaignRun);
@@ -485,6 +605,9 @@ describe("local operating workbench", () => {
     vi.mocked(api.createProductFamily).mockResolvedValue(productFamily);
     vi.mocked(api.updateProductFamily).mockResolvedValue(productFamily);
     vi.mocked(api.deleteProductFamily).mockResolvedValue(undefined);
+    vi.mocked(api.outreachLeadOptions).mockResolvedValue([]);
+    vi.mocked(api.outreachBatches).mockResolvedValue([]);
+    vi.mocked(api.approveOutreachDrafts).mockResolvedValue([outreachDraft]);
   });
 
   it("shows the accessible desktop shell and operating summary", async () => {
@@ -506,7 +629,7 @@ describe("local operating workbench", () => {
     render(<App />);
     await screen.findByText("API connected");
 
-    await user.click(screen.getByRole("button", { name: /Needs review/ }));
+    await user.click(screen.getByRole("button", { name: /Needs attention/ }));
 
     expect(screen.getByRole("heading", { name: "All leads" })).toBeInTheDocument();
     expect(
@@ -516,6 +639,76 @@ describe("local operating workbench", () => {
       "review",
     );
     expect(screen.getByText(lead.business_name)).toBeInTheDocument();
+  });
+
+  it("checks weekly outreach on first open and exposes completed campaign drafts", async () => {
+    const user = userEvent.setup();
+    const automatedCampaign: Campaign = {
+      ...campaign,
+      weekly_outreach_enabled: true,
+      weekly_outreach_template_id: template.id,
+    };
+    const weeklyRun: CampaignRun = {
+      ...campaignRun,
+      week_start: mondayIso(),
+      outreach_batch_id: outreachBatch.id,
+      status: "completed_with_warnings",
+      metrics: {
+        ...campaignRun.metrics,
+        drafts_created: 1,
+        attention_required: 1,
+        missing_context: 1,
+      },
+    };
+    vi.mocked(api.campaigns).mockResolvedValue([automatedCampaign]);
+    vi.mocked(api.campaignRuns).mockResolvedValue([weeklyRun]);
+    vi.mocked(api.ensureWeeklyOutreach).mockResolvedValue([weeklyRun]);
+    vi.mocked(api.outreachBatches).mockResolvedValue([outreachBatch]);
+
+    render(<App />);
+    await screen.findByText("API connected");
+
+    await waitFor(() => expect(api.ensureWeeklyOutreach).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("You are caught up for this week")).toBeInTheDocument();
+    expect(screen.getByText(automatedCampaign.name)).toBeInTheDocument();
+    expect(screen.getByText("1 need attention")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Review" }));
+    expect(screen.getByRole("heading", { name: "Email drafts" })).toBeInTheDocument();
+  });
+
+  it("explains weekly automation and confirms a manual run before doing any work", async () => {
+    const user = userEvent.setup();
+    const automatedCampaign: Campaign = {
+      ...campaign,
+      weekly_outreach_enabled: true,
+      weekly_outreach_template_id: template.id,
+    };
+    vi.mocked(api.campaigns).mockResolvedValue([automatedCampaign]);
+    const confirm = vi.spyOn(window, "confirm");
+
+    try {
+      render(<App />);
+      await screen.findByText("API connected");
+      await waitFor(() => expect(api.ensureWeeklyOutreach).toHaveBeenCalledTimes(1));
+
+      expect(screen.getByText("How the weekly check works")).toBeInTheDocument();
+      const capacityHelp = screen.getByRole("button", {
+        name: "About weekly draft capacity",
+      });
+      expect(capacityHelp).toHaveAttribute("aria-describedby");
+      expect(screen.getByRole("tooltip")).toHaveTextContent("workspace-wide safety limit");
+
+      confirm.mockReturnValueOnce(false);
+      await user.click(screen.getByRole("button", { name: "Run due campaigns" }));
+      expect(api.ensureWeeklyOutreach).toHaveBeenCalledTimes(1);
+
+      confirm.mockReturnValueOnce(true);
+      await user.click(screen.getByRole("button", { name: "Run due campaigns" }));
+      await waitFor(() => expect(api.ensureWeeklyOutreach).toHaveBeenCalledTimes(2));
+      expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining("No email will be sent"));
+    } finally {
+      confirm.mockRestore();
+    }
   });
 
   it("navigates from the Active products card straight to the Catalogue workspace", async () => {
@@ -914,6 +1107,53 @@ describe("local operating workbench", () => {
     expect(await screen.findByText("Campaign changes saved with audit history.")).toBeInTheDocument();
   });
 
+  it("requires confirmation before weekly campaign automation is enabled", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm");
+
+    try {
+      render(<App />);
+      await screen.findByText("API connected");
+      await user.click(screen.getByRole("link", { name: /Campaigns/ }));
+      const campaignRecord = screen.getByRole("heading", { name: campaign.name }).closest("article");
+      if (!campaignRecord) throw new Error("Campaign record is missing.");
+      await user.click(within(campaignRecord).getByRole("button", { name: "Edit" }));
+
+      expect(within(campaignRecord).getByText("Before you enable weekly outreach")).toBeInTheDocument();
+      await user.selectOptions(
+        within(campaignRecord).getByRole("combobox", { name: "Weekly email template" }),
+        template.id,
+      );
+      await user.click(
+        within(campaignRecord).getByRole("checkbox", {
+          name: /Prepare outreach automatically each week/,
+        }),
+      );
+
+      confirm.mockReturnValueOnce(false);
+      await user.click(within(campaignRecord).getByRole("button", { name: "Save campaign" }));
+      expect(api.updateCampaign).not.toHaveBeenCalled();
+
+      confirm.mockReturnValueOnce(true);
+      await user.click(within(campaignRecord).getByRole("button", { name: "Save campaign" }));
+      await waitFor(() =>
+        expect(api.updateCampaign).toHaveBeenCalledWith(
+          campaign.id,
+          expect.objectContaining({
+            weekly_outreach_enabled: true,
+            weekly_outreach_template_id: template.id,
+            weekly_outreach_provider: "scoring",
+          }),
+        ),
+      );
+      expect(confirm).toHaveBeenLastCalledWith(
+        expect.stringContaining("No email will be sent automatically"),
+      );
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
   it("submits an evidence-backed lead", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -1065,6 +1305,53 @@ describe("local operating workbench", () => {
     expect(websiteLink).toHaveAttribute("rel", "noreferrer");
   });
 
+  it("saves a primary contact and reusable email context from the lead Context tab", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Pipeline/ }));
+    await user.click(screen.getByRole("tab", { name: "Context" }));
+
+    await user.type(screen.getByRole("textbox", { name: "First name" }), "Amira");
+    await user.type(screen.getByRole("textbox", { name: "Last name" }), "Khan");
+    await user.type(screen.getByRole("textbox", { name: "Role or title" }), "Owner");
+    await user.type(screen.getByRole("textbox", { name: /Direct email/ }), "Amira@Example.test");
+    fireEvent.change(screen.getByRole("textbox", { name: "Contact source or reference" }), {
+      target: { value: "https://example.test/about" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /^Personalisation observation/ }), {
+      target: { value: "Hand-painted wedding cakes" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /^Why it is relevant/ }), {
+      target: { value: "Matching acrylic details can complete the design" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /^Offer angle/ }), {
+      target: { value: "A personalised sample set" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /^Desired next step/ }), {
+      target: { value: "Ask permission to send three examples" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /Avoid mentioning/ }), {
+      target: { value: "An outdated range" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save context" }));
+
+    await waitFor(() =>
+      expect(api.updateLead).toHaveBeenCalledWith(lead.id, {
+        contact_first_name: "Amira",
+        contact_last_name: "Khan",
+        contact_role: "Owner",
+        contact_email: "Amira@Example.test",
+        contact_source_reference: "https://example.test/about",
+        personalisation_observation: "Hand-painted wedding cakes",
+        relevance_opportunity: "Matching acrylic details can complete the design",
+        offer_angle: "A personalised sample set",
+        desired_next_step: "Ask permission to send three examples",
+        avoid_mentioning: "An outdated range",
+      }),
+    );
+  });
+
   it("omits the website link when the lead has no website on file", async () => {
     const user = userEvent.setup();
     vi.mocked(api.leads).mockResolvedValue([{ ...lead, website: null }]);
@@ -1108,31 +1395,37 @@ describe("local operating workbench", () => {
 
   it("applies suppression from the lead control panel", async () => {
     const user = userEvent.setup();
-    render(<App />);
-    await screen.findByText("API connected");
-    await user.click(screen.getByRole("link", { name: /Pipeline/ }));
-    await user.click(screen.getByRole("tab", { name: "Privacy" }));
-    const suppressionCard = screen
-      .getByRole("heading", { name: "Suppression and privacy" })
-      .closest("section");
-    expect(suppressionCard).not.toBeNull();
-    await user.type(
-      within(suppressionCard as HTMLElement).getByRole("textbox", { name: "Reason" }),
-      "Business objected",
-    );
-    await user.click(
-      within(suppressionCard as HTMLElement).getByRole("button", { name: "Apply suppression" }),
-    );
-    await waitFor(() =>
-      expect(api.suppressLead).toHaveBeenCalledWith(
-        lead.id,
-        expect.objectContaining({
-          suppression_type: "do_not_contact",
-          reason: "Business objected",
-          source: "Local user",
-        }),
-      ),
-    );
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    try {
+      render(<App />);
+      await screen.findByText("API connected");
+      await user.click(screen.getByRole("link", { name: /Pipeline/ }));
+      await user.click(screen.getByRole("tab", { name: "Privacy" }));
+      const suppressionCard = screen
+        .getByRole("heading", { name: "Suppression and privacy" })
+        .closest("section");
+      expect(suppressionCard).not.toBeNull();
+      await user.type(
+        within(suppressionCard as HTMLElement).getByRole("textbox", { name: "Reason" }),
+        "Business objected",
+      );
+      await user.click(
+        within(suppressionCard as HTMLElement).getByRole("button", { name: "Apply suppression" }),
+      );
+      expect(confirm).toHaveBeenCalledWith(expect.stringContaining("immediately blocks all outreach"));
+      await waitFor(() =>
+        expect(api.suppressLead).toHaveBeenCalledWith(
+          lead.id,
+          expect.objectContaining({
+            suppression_type: "do_not_contact",
+            reason: "Business objected",
+            source: "Local user",
+          }),
+        ),
+      );
+    } finally {
+      confirm.mockRestore();
+    }
   });
 
   it("saves authenticated local workspace settings", async () => {
@@ -1379,6 +1672,7 @@ describe("local operating workbench", () => {
         ...lead,
         phone_number: "+44 7438 186906",
         public_email: "hello@example.test",
+        contact_email: "amira@example.test",
         social_identities: [
           {
             id: "identity-1",
@@ -1423,7 +1717,7 @@ describe("local operating workbench", () => {
       await user.click(screen.getByRole("button", { name: "Email" }));
       await waitFor(() =>
         expect(openUrl).toHaveBeenLastCalledWith(
-          expect.stringContaining("mailto:hello@example.test?subject="),
+          expect.stringContaining("mailto:amira@example.test?subject="),
         ),
       );
       await waitFor(() =>
@@ -1475,5 +1769,334 @@ describe("local operating workbench", () => {
     expect(previewBody.textContent).toBe(
       `Hi Example Celebration Cakes, take a look:\n${product.name} — ${product.pricing_guidance}`,
     );
+  });
+
+  it("explains bulk draft approval and requires confirmation", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.outreachBatches).mockResolvedValue([outreachBatch]);
+    const confirm = vi.spyOn(window, "confirm");
+
+    try {
+      render(<App />);
+      await screen.findByText("API connected");
+      await user.click(screen.getByRole("link", { name: /Email drafts/ }));
+      await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
+
+      expect(screen.getByText("Approval is not sending")).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("checkbox", {
+          name: `Select ${outreachDraft.business_name} for approval`,
+        }),
+      );
+
+      confirm.mockReturnValueOnce(false);
+      await user.click(screen.getByRole("button", { name: "Approve selected (1)" }));
+      expect(api.approveOutreachDrafts).not.toHaveBeenCalled();
+
+      confirm.mockReturnValueOnce(true);
+      await user.click(screen.getByRole("button", { name: "Approve selected (1)" }));
+      await waitFor(() =>
+        expect(api.approveOutreachDrafts).toHaveBeenCalledWith([outreachDraft.id]),
+      );
+      expect(confirm).toHaveBeenLastCalledWith(
+        expect.stringContaining("Nothing will be sent automatically"),
+      );
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
+  it("prepares, personalises, approves, rejects and reopens a local email draft", async () => {
+    const user = userEvent.setup();
+    let currentBatches: OutreachBatch[] = [];
+    let currentLead: Lead = outreachReadyLead;
+    const addOutreachActivity = (
+      action: Lead["outreach_activities"][number]["action"],
+      createdAt: string,
+      version: number | null,
+      reason: string | null = null,
+    ): void => {
+      currentLead = {
+        ...currentLead,
+        outreach_activities: [
+          ...currentLead.outreach_activities,
+          {
+            id: `activity-${currentLead.outreach_activities.length + 1}`,
+            draft_id: outreachDraft.id,
+            action,
+            version,
+            reason,
+            recipient_email: null,
+            created_at: createdAt,
+          },
+        ],
+      };
+    };
+    const editedDraft: OutreachDraft = {
+      ...outreachDraft,
+      current_version: 2,
+      revision_count: 2,
+      current_revision: {
+        ...outreachDraft.current_revision,
+        id: "revision-2222-2222-2222-2222222222",
+        version: 2,
+        subject: "A personal note for Example Celebration Cakes",
+        editor: "local_user",
+      },
+    };
+    const editedBatch: OutreachBatch = { ...outreachBatch, drafts: [editedDraft] };
+    const approvedDraft: OutreachDraft = {
+      ...editedDraft,
+      review_status: "approved",
+      approved_version: 2,
+      approved_at: "2026-07-21T09:10:00Z",
+    };
+    const approvedBatch: OutreachBatch = {
+      ...editedBatch,
+      status: "ready",
+      pending_count: 0,
+      approved_count: 1,
+      drafts: [approvedDraft],
+    };
+    const rejectedDraft: OutreachDraft = {
+      ...approvedDraft,
+      review_status: "rejected",
+      approved_version: null,
+      approved_at: null,
+      rejected_at: "2026-07-21T09:12:00Z",
+      rejection_reason: "Not this week",
+    };
+    const rejectedBatch: OutreachBatch = {
+      ...approvedBatch,
+      status: "closed",
+      approved_count: 0,
+      rejected_count: 1,
+      drafts: [rejectedDraft],
+    };
+
+    vi.mocked(api.leads).mockImplementation(() => Promise.resolve([currentLead]));
+    vi.mocked(api.outreachLeadOptions).mockResolvedValue([outreachLeadOption]);
+    vi.mocked(api.outreachBatches).mockImplementation(() => Promise.resolve(currentBatches));
+    vi.mocked(api.createOutreachBatch).mockImplementation(() => {
+      currentBatches = [outreachBatch];
+      addOutreachActivity("outreach.draft_generated", "2026-07-21T09:00:00Z", 1);
+      return Promise.resolve(outreachBatch);
+    });
+    vi.mocked(api.editOutreachDraft).mockImplementation(() => {
+      currentBatches = [editedBatch];
+      addOutreachActivity("outreach.draft_edited", "2026-07-21T09:05:00Z", 2);
+      return Promise.resolve(editedDraft);
+    });
+    vi.mocked(api.approveOutreachDraft).mockImplementation(() => {
+      currentBatches = [approvedBatch];
+      addOutreachActivity("outreach.draft_approved", "2026-07-21T09:10:00Z", 2);
+      return Promise.resolve(approvedDraft);
+    });
+    vi.mocked(api.rejectOutreachDraft).mockImplementation(() => {
+      currentBatches = [rejectedBatch];
+      addOutreachActivity(
+        "outreach.draft_rejected",
+        "2026-07-21T09:12:00Z",
+        null,
+        "Not this week",
+      );
+      return Promise.resolve(rejectedDraft);
+    });
+    vi.mocked(api.reopenOutreachDraft).mockImplementation(() => {
+      currentBatches = [editedBatch];
+      addOutreachActivity("outreach.draft_reopened", "2026-07-21T09:15:00Z", null);
+      return Promise.resolve(editedDraft);
+    });
+
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Email drafts/ }));
+    expect(screen.getByRole("heading", { name: "Email drafts" })).toBeInTheDocument();
+    expect(screen.getByText("Assisted Zoho handoff")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("checkbox", { name: /Example Celebration Cakes/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Create 1 draft" }));
+
+    await screen.findByRole("heading", { name: "Review and decide" });
+    const subject = screen.getByRole("textbox", { name: "Subject" });
+    await user.clear(subject);
+    await user.type(subject, "A personal note for Example Celebration Cakes");
+    await user.click(screen.getByRole("button", { name: "Save and approve" }));
+
+    await waitFor(() =>
+      expect(api.editOutreachDraft).toHaveBeenCalledWith(outreachDraft.id, {
+        subject: "A personal note for Example Celebration Cakes",
+        body: outreachDraft.current_revision.body,
+      }),
+    );
+    await waitFor(() => expect(api.approveOutreachDraft).toHaveBeenCalledWith(outreachDraft.id));
+    expect((await screen.findAllByText("Approved")).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await user.type(screen.getByRole("textbox", { name: /Rejection reason/ }), "Not this week");
+    await user.click(screen.getByRole("button", { name: "Confirm rejection" }));
+    await waitFor(() =>
+      expect(api.rejectOutreachDraft).toHaveBeenCalledWith(outreachDraft.id, "Not this week"),
+    );
+    expect(await screen.findByText(/This draft stays local/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reopen draft" }));
+    await waitFor(() => expect(api.reopenOutreachDraft).toHaveBeenCalledWith(outreachDraft.id));
+    expect((await screen.findAllByText("Needs review")).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("link", { name: /Pipeline/ }));
+    await user.click(screen.getByRole("tab", { name: /Activity & follow-up/ }));
+    expect(screen.getByText("Draft generated")).toBeInTheDocument();
+    expect(screen.getByText("Draft edited")).toBeInTheDocument();
+    expect(screen.getByText("Draft approved")).toBeInTheDocument();
+    expect(screen.getByText("Draft rejected")).toBeInTheDocument();
+    expect(screen.getByText("Reason: Not this week")).toBeInTheDocument();
+    expect(screen.getByText("Draft reopened")).toBeInTheDocument();
+  });
+
+  it("opens an approved draft in Zoho, logs the click, and records manual sent confirmation", async () => {
+    const user = userEvent.setup();
+    const approvedDraft: OutreachDraft = {
+      ...outreachDraft,
+      review_status: "approved",
+      approved_version: 1,
+      approved_at: "2026-07-21T09:10:00Z",
+    };
+    const approvedBatch: OutreachBatch = {
+      ...outreachBatch,
+      status: "ready",
+      pending_count: 0,
+      approved_count: 1,
+      drafts: [approvedDraft],
+    };
+    const openedDraft: OutreachDraft = {
+      ...approvedDraft,
+      sync_status: "opened_in_zoho",
+    };
+    const openedBatch: OutreachBatch = { ...approvedBatch, drafts: [openedDraft] };
+    const sentDraft: OutreachDraft = {
+      ...approvedDraft,
+      sync_status: "user_confirmed_sent",
+    };
+    const sentBatch: OutreachBatch = {
+      ...approvedBatch,
+      status: "closed",
+      approved_count: 0,
+      sent_count: 1,
+      drafts: [sentDraft],
+    };
+    let currentBatches = [approvedBatch];
+    let currentLead = outreachReadyLead;
+    const operationOrder: string[] = [];
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    window.__TAURI_INTERNALS__ = {};
+    vi.mocked(openUrl).mockImplementation(() => {
+      operationOrder.push("composer-opened");
+      return Promise.resolve();
+    });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    vi.mocked(api.outreachBatches).mockImplementation(() => Promise.resolve(currentBatches));
+    vi.mocked(api.outreachLeadOptions).mockResolvedValue([outreachLeadOption]);
+    vi.mocked(api.leads).mockImplementation(() => Promise.resolve([currentLead]));
+    vi.mocked(api.prepareOutreachZohoHandoff).mockImplementation(() => {
+      operationOrder.push("click-logged");
+      currentBatches = [openedBatch];
+      currentLead = {
+        ...currentLead,
+        outreach_activities: [
+          ...currentLead.outreach_activities,
+          {
+            id: "zoho-click-1",
+            draft_id: outreachDraft.id,
+            action: "outreach.zoho_open_clicked",
+            version: 1,
+            reason: null,
+            recipient_email: "owner@example.test",
+            created_at: "2026-07-21T09:20:00Z",
+          },
+        ],
+      };
+      return Promise.resolve({
+        draft_id: outreachDraft.id,
+        lead_id: outreachReadyLead.id,
+        recipient_email: "owner@example.test",
+        subject: outreachDraft.current_revision.subject,
+        body: outreachDraft.current_revision.body,
+        version: 1,
+        opened_at: "2026-07-21T09:20:00Z",
+      });
+    });
+    vi.mocked(api.confirmOutreachDraftSent).mockImplementation(() => {
+      currentBatches = [sentBatch];
+      currentLead = {
+        ...currentLead,
+        communications: [
+          ...currentLead.communications,
+          {
+            id: "communication-zoho-1",
+            channel: "email",
+            subject: outreachDraft.current_revision.subject,
+            content: outreachDraft.current_revision.body,
+            draft_status: "sent_from_approved_draft",
+            approval_status: "manual_confirmed",
+            sent_status: "sent",
+            sent_at: "2026-07-21T09:25:00Z",
+            user_confirmed: true,
+            external_message_id: null,
+            response_status: "none",
+            created_at: "2026-07-21T09:25:00Z",
+          },
+        ],
+      };
+      return Promise.resolve(sentDraft);
+    });
+
+    try {
+      render(<App />);
+      await screen.findByText("API connected");
+      await user.click(screen.getByRole("link", { name: /Email drafts/ }));
+      await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
+      await user.click(screen.getByRole("button", { name: "Open in Zoho to send" }));
+
+      await waitFor(() =>
+        expect(api.prepareOutreachZohoHandoff).toHaveBeenCalledWith(outreachDraft.id),
+      );
+      expect(operationOrder).toEqual(["click-logged", "composer-opened"]);
+      expect(writeText).toHaveBeenCalledWith(outreachDraft.current_revision.body);
+      expect(openUrl).toHaveBeenCalledWith(
+        `mailto:owner@example.test?subject=${encodeURIComponent(
+          outreachDraft.current_revision.subject,
+        )}&body=${encodeURIComponent(outreachDraft.current_revision.body)}`,
+      );
+      expect(await screen.findByText(/sending is not confirmed/i)).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Mark as sent" }));
+      expect(confirm).toHaveBeenCalled();
+      await waitFor(() =>
+        expect(api.confirmOutreachDraftSent).toHaveBeenCalledWith(outreachDraft.id),
+      );
+      expect(await screen.findByText(/You confirmed this email was sent/)).toBeInTheDocument();
+
+      await user.click(screen.getByRole("link", { name: /Pipeline/ }));
+      await user.click(screen.getByRole("tab", { name: /Activity & follow-up/ }));
+      expect(screen.getByText("Open in Zoho clicked")).toBeInTheDocument();
+      expect(screen.getByText(/sending is not confirmed/)).toBeInTheDocument();
+      expect(screen.getByText(/Email.*Sent/)).toBeInTheDocument();
+    } finally {
+      confirm.mockRestore();
+      delete window.__TAURI_INTERNALS__;
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: originalClipboard,
+      });
+    }
   });
 });

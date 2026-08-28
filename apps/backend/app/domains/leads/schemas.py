@@ -155,6 +155,16 @@ class LeadCreate(BaseModel):
     facebook_url: HttpUrl | None = None
     phone_number: str | None = Field(default=None, max_length=100)
     public_email: str | None = Field(default=None, max_length=320)
+    contact_first_name: str | None = Field(default=None, max_length=100)
+    contact_last_name: str | None = Field(default=None, max_length=100)
+    contact_role: str | None = Field(default=None, max_length=100)
+    contact_email: str | None = Field(default=None, max_length=320)
+    contact_source_reference: str | None = Field(default=None, max_length=2_000)
+    personalisation_observation: str | None = Field(default=None, max_length=4_000)
+    relevance_opportunity: str | None = Field(default=None, max_length=4_000)
+    offer_angle: str | None = Field(default=None, max_length=4_000)
+    desired_next_step: str | None = Field(default=None, max_length=2_000)
+    avoid_mentioning: str | None = Field(default=None, max_length=2_000)
     contact_classification: ContactClassification = ContactClassification.UNKNOWN
     source: ManualSourceInput
 
@@ -166,6 +176,8 @@ class LeadCreate(BaseModel):
 
         if self.public_email and not valid_public_email(self.public_email):
             raise ValueError("Provide a valid public email address")
+        if self.contact_email and not valid_public_email(self.contact_email):
+            raise ValueError("Provide a valid direct contact email address")
         if self.instagram_url:
             social_identity(str(self.instagram_url), "instagram")
         if self.facebook_url:
@@ -249,6 +261,16 @@ class CommunicationRead(BaseModel):
     created_at: datetime
 
 
+class OutreachActivityRead(BaseModel):
+    id: str
+    draft_id: str
+    action: str
+    version: int | None
+    reason: str | None
+    recipient_email: str | None
+    created_at: datetime
+
+
 class SuppressionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -273,6 +295,16 @@ class LeadRead(BaseModel):
     social_profile: str | None
     phone_number: str | None
     public_email: str | None
+    contact_first_name: str | None
+    contact_last_name: str | None
+    contact_role: str | None
+    contact_email: str | None
+    contact_source_reference: str | None
+    personalisation_observation: str | None
+    relevance_opportunity: str | None
+    offer_angle: str | None
+    desired_next_step: str | None
+    avoid_mentioning: str | None
     social_identities: list[SocialIdentityRead]
     contact_classification: str
     pipeline_stage: str
@@ -286,6 +318,8 @@ class LeadRead(BaseModel):
     sample_status: str
     quote_status: str
     retention_review_date: date | None
+    outreach_hold_until: date | None
+    outreach_hold_reason: str | None
     current_score: int | None
     score_updated_at: datetime | None
     campaign_ids: list[str]
@@ -294,6 +328,7 @@ class LeadRead(BaseModel):
     notes: list[LeadNoteRead]
     follow_ups: list[FollowUpRead]
     communications: list[CommunicationRead]
+    outreach_activities: list[OutreachActivityRead]
     suppression_records: list[SuppressionRead]
     created_at: datetime
     updated_at: datetime
@@ -311,6 +346,16 @@ class LeadUpdate(BaseModel):
     facebook_url: HttpUrl | None = None
     phone_number: str | None = Field(default=None, max_length=100)
     public_email: str | None = Field(default=None, max_length=320)
+    contact_first_name: str | None = Field(default=None, max_length=100)
+    contact_last_name: str | None = Field(default=None, max_length=100)
+    contact_role: str | None = Field(default=None, max_length=100)
+    contact_email: str | None = Field(default=None, max_length=320)
+    contact_source_reference: str | None = Field(default=None, max_length=2_000)
+    personalisation_observation: str | None = Field(default=None, max_length=4_000)
+    relevance_opportunity: str | None = Field(default=None, max_length=4_000)
+    offer_angle: str | None = Field(default=None, max_length=4_000)
+    desired_next_step: str | None = Field(default=None, max_length=2_000)
+    avoid_mentioning: str | None = Field(default=None, max_length=2_000)
     contact_classification: ContactClassification | None = None
     estimated_order_value: float | None = Field(default=None, ge=0)
     quote_value: float | None = Field(default=None, ge=0)
@@ -321,6 +366,8 @@ class LeadUpdate(BaseModel):
     sample_status: SampleStatus | None = None
     quote_status: QuoteStatus | None = None
     retention_review_date: date | None = None
+    outreach_hold_until: date | None = None
+    outreach_hold_reason: str | None = Field(default=None, max_length=2_000)
 
     @model_validator(mode="after")
     def require_change(self) -> LeadUpdate:
@@ -330,6 +377,8 @@ class LeadUpdate(BaseModel):
 
         if self.public_email and not valid_public_email(self.public_email):
             raise ValueError("Provide a valid public email address")
+        if self.contact_email and not valid_public_email(self.contact_email):
+            raise ValueError("Provide a valid direct contact email address")
         if self.instagram_url:
             social_identity(str(self.instagram_url), "instagram")
         if self.facebook_url:

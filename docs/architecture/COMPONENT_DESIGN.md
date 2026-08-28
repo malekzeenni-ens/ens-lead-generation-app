@@ -1,6 +1,6 @@
 # Component design
 
-**Updated:** 18 July 2026
+**Updated:** 28 August 2026
 
 ## Runtime components
 
@@ -41,10 +41,14 @@ The backend is a modular monolith. Domain modules live under `app/domains`; API 
 - Create immutable bakery scoring-profile versions; calculate and preserve explained deterministic score runs and reasoned manual overrides.
 - Match active products to leads through visible segment/campaign rules and snapshot the match evidence with each score/shortlist decision.
 - Generate one campaign shortlist per week within capacity while enforcing suppression, stage, score, freshness and recent-recommendation controls; approve, defer, dismiss or replace individual items.
+- Prepare local email-draft batches from editable templates; show eligibility checks and recent notes; append edited revisions; approve, bulk-approve, reject or reopen without any external transfer.
+- Capture one primary contact and structured reusable email context inside each lead; render only explicit safe template fields and prefer the direct contact email at draft/handoff boundaries.
+- On the first app opening of each local calendar week, queue each opted-in active campaign once, run campaigns sequentially, refresh its configured source, score and shortlist, then prepare local drafts from complete contact-ready Context.
+- Deduplicate shared leads across campaign shortlists by strongest campaign score, apply a workspace-wide weekly cap, isolate campaign failures and reuse the same weekly run for dashboard retry.
 
 ## UI composition
 
-The interface uses the universal management-application shell: a 56px application header, 240px navigation sidebar, scroll-contained main workspace, and 28px status bar. The overview exposes local operating metrics, follow-up queues, a simplified pipeline, product/scoring counts, and the current weekly shortlist. Campaign, lead, pipeline, catalogue, weekly-shortlist, and settings workspaces pair compact forms with operational records. Lead records use a table at desktop sizes and labelled card rows on compact screens.
+The interface uses the universal management-application shell: a 56px application header, 240px navigation sidebar, scroll-contained main workspace, and 28px status bar. The overview is the weekly control centre: current-week state, campaign progress/retry, draft capacity, review and Zoho actions, attention groups, funnel results, follow-ups, pipeline and shortlist. Campaign editing owns the opt-in, template and refresh-provider controls; Settings owns the cross-campaign weekly draft cap. Campaign, lead, pipeline, email-draft, catalogue, weekly-shortlist, and settings workspaces pair compact forms with operational records. Lead records use a table at desktop sizes and labelled card rows on compact screens. The selected lead's **Context** tab separates the primary contact from reusable email context without introducing a multi-contact subsystem.
 
 Reusable React primitives in `components/DesignSystem.tsx` own connection status, navigation items, section headings, metrics, empty states, and loading states. Lucide is the sole production icon family. Semantic colour, type, spacing, radius, control-height, transition, and surface tokens are centralised in `styles.css`; component markup contains no raw presentation colours.
 

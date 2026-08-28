@@ -5,6 +5,7 @@ import type {
   Campaign,
   CampaignRun,
   ProductFamily,
+  Template,
   WorkspaceSettings,
 } from "../types";
 import { CampaignAutomationTab } from "./CampaignAutomationTab";
@@ -20,6 +21,7 @@ interface CampaignWorkspaceProps {
   capabilities: AutomationCapabilities | null;
   settings: WorkspaceSettings | null;
   productFamilies: ProductFamily[];
+  templates: Template[];
 }
 
 type CampaignTask = "campaigns" | "create" | "automation" | "social";
@@ -31,6 +33,7 @@ export function CampaignWorkspace({
   capabilities,
   settings,
   productFamilies,
+  templates,
 }: CampaignWorkspaceProps) {
   const [activeTask, setActiveTask] = useState<CampaignTask>(initialTask);
 
@@ -73,6 +76,7 @@ export function CampaignWorkspace({
             campaignRuns={campaignRuns}
             capabilities={capabilities}
             productFamilies={productFamilies}
+            templates={templates}
           />
         </TaskPanel>
       ) : null}

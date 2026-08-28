@@ -2,10 +2,22 @@ import { Copy, Edit3, Megaphone, Pause, Play, RefreshCw, Search } from "lucide-r
 import { type FormEvent, useMemo, useState } from "react";
 
 import { usePagination } from "../pagination";
-import type { AutomationCapabilities, Campaign, CampaignRun, ProductFamily } from "../types";
+import type {
+  AutomationCapabilities,
+  Campaign,
+  CampaignRun,
+  ProductFamily,
+  Template,
+} from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import { formList, formValue } from "./campaignShared";
-import { EmptyState, LoadingState, Pagination, SectionHeading } from "./DesignSystem";
+import {
+  EmptyState,
+  GuidanceNote,
+  LoadingState,
+  Pagination,
+  SectionHeading,
+} from "./DesignSystem";
 import type { CampaignUpdate } from "../api";
 
 interface CampaignRegisterTabProps {
@@ -13,6 +25,7 @@ interface CampaignRegisterTabProps {
   campaignRuns: CampaignRun[];
   capabilities: AutomationCapabilities | null;
   productFamilies: ProductFamily[];
+  templates: Template[];
 }
 
 export function CampaignRegisterTab({
@@ -20,6 +33,7 @@ export function CampaignRegisterTab({
   campaignRuns,
   capabilities,
   productFamilies,
+  templates,
 }: CampaignRegisterTabProps) {
   const {
     loading,
@@ -51,7 +65,8 @@ export function CampaignRegisterTab({
     campaignId: string,
   ): Promise<void> {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const campaign = campaigns.find((item) => item.id === campaignId);
     const keepConfiguredSource =
       capabilities?.google_places_configured === false &&
@@ -71,6 +86,48 @@ export function CampaignRegisterTab({
     if (useInstagram) discoverySources.push("instagram");
     if (usePublicRegistries) discoverySources.push("public_registries");
     const productFamilyId = formValue(form, "edit-product-family");
+    const weeklyEnabled = form.has("edit-weekly-outreach");
+    const weeklyTemplateId = formValue(form, "edit-weekly-template") || null;
+    const weeklyProvider = formValue(
+      form,
+      "edit-weekly-provider",
+    ) as CampaignUpdate["weekly_outreach_provider"];
+    const weeklyTemplateSelect = formElement.elements.namedItem("edit-weekly-template");
+    if (weeklyTemplateSelect instanceof HTMLSelectElement) {
+      weeklyTemplateSelect.setCustomValidity("");
+      if (weeklyEnabled && !weeklyTemplateId) {
+        weeklyTemplateSelect.setCustomValidity(
+          "Choose an email template before enabling weekly outreach.",
+        );
+        weeklyTemplateSelect.reportValidity();
+        return;
+      }
+    }
+    const weeklyProviderSelect = formElement.elements.namedItem("edit-weekly-provider");
+    if (weeklyProviderSelect instanceof HTMLSelectElement) {
+      weeklyProviderSelect.setCustomValidity("");
+      if (
+        weeklyProvider &&
+        weeklyProvider !== "scoring" &&
+        !discoverySources.includes(weeklyProvider)
+      ) {
+        weeklyProviderSelect.setCustomValidity(
+          "Enable this provider in the discovery options above before using it for the weekly refresh.",
+        );
+        weeklyProviderSelect.reportValidity();
+        return;
+      }
+    }
+    if (campaign && !campaign.weekly_outreach_enabled && weeklyEnabled) {
+      const templateName =
+        templates.find((template) => template.id === weeklyTemplateId)?.topic ??
+        "the selected template";
+      const providerName = (weeklyProvider ?? "scoring").replaceAll("_", " ");
+      const confirmed = window.confirm(
+        `Enable weekly automation for "${campaign.name}"?\n\nOn the first app opening each week, it will run ${providerName}, refresh the shortlist and prepare up to ${formValue(form, "edit-shortlist")} local drafts using ${templateName}.\n\nNo email will be sent automatically.`,
+      );
+      if (!confirmed) return;
+    }
     const saved = await onUpdate(campaignId, {
       name: formValue(form, "edit-name"),
       description: formValue(form, "edit-description"),
@@ -86,6 +143,9 @@ export function CampaignRegisterTab({
       minimum_score_threshold: Number(formValue(form, "edit-minimum-score")),
       discovery_mode: discoverySources.length > 1 ? "combined" : "manual",
       status: formValue(form, "edit-status") as CampaignUpdate["status"],
+      weekly_outreach_enabled: weeklyEnabled,
+      weekly_outreach_template_id: weeklyTemplateId,
+      weekly_outreach_provider: weeklyProvider,
     });
     if (saved) setEditingId(null);
   }
@@ -182,6 +242,12 @@ export function CampaignRegisterTab({
                             : "Any segment-matched active product"}
                         </>
                       )}
+                    </p>
+                    <p className="campaign-categories">
+                      <strong>Weekly outreach:</strong>{" "}
+                      {campaign.weekly_outreach_enabled
+                        ? `${templates.find((template) => template.id === campaign.weekly_outreach_template_id)?.topic ?? "Template missing"} · ${campaign.weekly_outreach_provider.replaceAll("_", " ")}`
+                        : "Manual only"}
                     </p>
                     <div className="record-actions">
                       <div className="record-actions__group" aria-label="Execution actions">
@@ -386,6 +452,60 @@ export function CampaignRegisterTab({
                               <option key={family.id} value={family.id}>{family.name}</option>
                             ))}
                           </select>
+                        </label>
+                        <div className="subsection-heading subsection-heading--compact">
+                          <div>
+                            <h3>Weekly outreach</h3>
+                            <p>
+                              On the first app opening of each week, prepare drafts from this
+                              campaign&apos;s strongest contact-ready leads.
+                            </p>
+                          </div>
+                        </div>
+                        <GuidanceNote title="Before you enable weekly outreach">
+                          Enabling this campaign authorises a current-week refresh when the app
+                          first opens, or when you manually run due campaigns. It prepares local
+                          drafts only; review, approval and sending remain your decisions.
+                        </GuidanceNote>
+                        <label className="choice-row">
+                          <input
+                            name="edit-weekly-outreach"
+                            type="checkbox"
+                            defaultChecked={campaign.weekly_outreach_enabled}
+                            disabled={templates.length === 0}
+                          />
+                          <span>
+                            <strong>Prepare outreach automatically each week</strong>
+                            <small>Drafts still require your review and approval before Zoho opens.</small>
+                          </span>
+                        </label>
+                        <label>
+                          Weekly email template
+                          <select
+                            name="edit-weekly-template"
+                            defaultValue={campaign.weekly_outreach_template_id ?? ""}
+                          >
+                            <option value="">Choose a template</option>
+                            {templates.map((template) => (
+                              <option key={template.id} value={template.id}>{template.topic}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Weekly refresh
+                          <select
+                            name="edit-weekly-provider"
+                            defaultValue={campaign.weekly_outreach_provider}
+                          >
+                            <option value="scoring">Existing leads · refresh scores only</option>
+                            <option value="google_places">Google Places, then score</option>
+                            <option value="instagram">Instagram profiles, then score</option>
+                            <option value="public_registries">Public registries, then score</option>
+                          </select>
+                          <small className="field-hint">
+                            External providers must also be enabled above. Campaign capacity stays
+                            at {campaign.weekly_shortlist_size} leads.
+                          </small>
                         </label>
                         <label>Status
                           <select name="edit-status" defaultValue={campaign.status}>

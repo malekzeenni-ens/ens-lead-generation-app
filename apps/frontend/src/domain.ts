@@ -8,6 +8,7 @@ export type WorkspaceSection =
   | "templates"
   | "shortlist"
   | "pipeline"
+  | "drafts"
   | "settings";
 
 export const BAKERY_SEGMENT = "Bakeries and home bakers";

@@ -36,6 +36,12 @@ class CampaignCreate(BaseModel):
     preferred_channels: list[str] = Field(default_factory=list, max_length=10)
     offer_settings: dict[str, bool] = Field(default_factory=dict)
     discovery_mode: DiscoveryMode = DiscoveryMode.MANUAL
+    weekly_outreach_enabled: bool = False
+    weekly_outreach_template_id: str | None = Field(default=None, min_length=36, max_length=36)
+    weekly_outreach_provider: str = Field(
+        default="scoring",
+        pattern=r"^(scoring|google_places|instagram|public_registries)$",
+    )
     status: CampaignStatus = CampaignStatus.ACTIVE
 
     @field_validator(
@@ -55,9 +61,7 @@ class CampaignCreate(BaseModel):
     @field_validator("discovery_sources")
     @classmethod
     def supported_sources(cls, values: list[str]) -> list[str]:
-        if not set(values).issubset(
-            {"manual", "google_places", "instagram", "public_registries"}
-        ):
+        if not set(values).issubset({"manual", "google_places", "instagram", "public_registries"}):
             raise ValueError("Discovery sources contain an unsupported provider")
         return values
 
@@ -81,6 +85,9 @@ class CampaignRead(BaseModel):
     preferred_channels: list[str]
     offer_settings: dict[str, bool]
     discovery_mode: str
+    weekly_outreach_enabled: bool
+    weekly_outreach_template_id: str | None
+    weekly_outreach_provider: str
     status: str
     created_at: datetime
     updated_at: datetime
@@ -104,6 +111,12 @@ class CampaignUpdate(BaseModel):
     preferred_channels: list[str] | None = Field(default=None, max_length=10)
     offer_settings: dict[str, bool] | None = None
     discovery_mode: DiscoveryMode | None = None
+    weekly_outreach_enabled: bool | None = None
+    weekly_outreach_template_id: str | None = Field(default=None, min_length=36, max_length=36)
+    weekly_outreach_provider: str | None = Field(
+        default=None,
+        pattern=r"^(scoring|google_places|instagram|public_registries)$",
+    )
     status: CampaignStatus | None = None
 
     @field_validator(

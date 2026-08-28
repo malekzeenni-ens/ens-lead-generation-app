@@ -26,6 +26,25 @@ interface FamilyPickerFieldsProps {
   selectedIds: Set<string>;
 }
 
+const TEMPLATE_TOKENS = [
+  "greeting_name",
+  "contact_first_name",
+  "contact_last_name",
+  "contact_full_name",
+  "contact_role",
+  "personalisation_observation",
+  "relevance_opportunity",
+  "offer_angle",
+  "desired_next_step",
+  "business_name",
+  "location",
+  "segment",
+  "phone_number",
+  "public_email",
+  "website",
+  "products",
+];
+
 /**
  * Searchable checkbox list of product families for a template. Every
  * family's checkbox stays mounted at all times — the search only toggles
@@ -160,6 +179,17 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
         ]}
       />
 
+      <details className="template-token-guide">
+        <summary>Available template fields</summary>
+        <p>
+          Add these to a subject or body. They are filled from the selected lead when a draft is
+          created. Greeting name uses the contact's first name, or the business name when it is blank.
+        </p>
+        <div className="template-token-list">
+          {TEMPLATE_TOKENS.map((token) => <code key={token}>{`{{${token}}}`}</code>)}
+        </div>
+      </details>
+
       {activeTask === "create" ? (
         <TaskPanel id="template-tasks" tabId="create">
           <section className="workspace-section" aria-labelledby="add-template-heading">
@@ -167,7 +197,7 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
               id="add-template-heading"
               eyebrow="New template"
               title="Add template"
-              description="Use {{business_name}}, {{location}}, {{segment}}, {{phone_number}}, {{public_email}}, {{website}} or {{products}} as placeholders — they are filled in from the selected lead and its assigned product families."
+              description="Build one reusable message and insert the lead-specific details you need from the available template fields above."
               icon={FileText}
             />
             <form
@@ -186,7 +216,7 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
                   required
                   maxLength={20_000}
                   rows={6}
-                  placeholder="Hi {{business_name}}, checking in about your order."
+                  placeholder="Hi {{greeting_name}}, I noticed {{personalisation_observation}}"
                 />
               </label>
               <FamilyPickerFields productFamilies={productFamilies} selectedIds={new Set()} />

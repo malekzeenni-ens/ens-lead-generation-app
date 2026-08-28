@@ -93,6 +93,23 @@ Status values: `planned`, `in progress`, `implemented`, `verified`, `deferred`, 
 | FR-040/051 automated refresh | Verified | Each run scores every eligible campaign lead, fingerprints inputs, reuses unchanged results and snapshots rule-based product matches | Three-run idempotency test proves score reuse and one current-week shortlist |
 | FR-060 automated shortlist preparation | Verified | Run creates the current-week capacity/threshold-controlled shortlist and preserves an existing shortlist | Campaign-run integration test |
 
+## Phase 1 local email drafts
+
+| Requirement | Status | Implementation evidence | Verification evidence |
+|---|---|---|---|
+| FR-070 Email draft generation | Implemented for local templates | Server-rendered subject/body with recorded lead fields and optional template product-family values | Outreach API lifecycle test and frontend Prepare flow |
+| FR-072–073 Evidence/invention controls | Implemented for non-AI phase | Only explicit template tokens backed by stored lead/catalogue fields are substituted; unknown tokens remain visible | Rendering assertion and no-AI/no-provider architecture review |
+| FR-074 Draft editing | Verified | Immutable revisions, editable subject/body and Save/Save and approve controls | Backend version assertion and frontend interaction test |
+| FR-075–076 Status and explicit approval | Verified for generated/edited/approved/rejected local states | Server-side eligibility at creation/approval, approved version/hash, reapproval after edit | Approval invalidation, bulk/single decision and lifecycle tests |
+| FR-079 Outreach templates | Verified for email | Existing editable template topic/subject/body and product-family links feed local drafts | Template and outreach integration tests |
+| Lead contact and email context | Verified | One primary contact plus evidence/relevance/offer/next-step/avoid fields live in the lead Context tab; named-contact and safe context tokens render into drafts, with business-name greeting fallback and direct-email recipient priority | API round-trip/search/export, draft rendering/handoff, approval invalidation and frontend Context-tab tests |
+| Structured outreach hold | Verified | Reason/date fields on lead; active hold blocks generation and approval | Backend hold/block/clear test and inline hold interface |
+| Rejection safety | Verified | Rejection remains local, changes no lead state and supports reopen | Backend lead-state assertion and frontend reject/reopen test |
+| Assisted Zoho handoff | Verified | Approved recipient/subject/body open through the default `mailto:` composer after fresh eligibility and approval checks; every click is audited and body copied | Backend repeated-click/failure tests and frontend open/clipboard/timeline test |
+| Sent confirmation | Verified | Opening is explicitly unconfirmed; Mark as sent creates a user-confirmed email communication without changing pipeline stage | Backend idempotency/communication assertions and frontend journey test |
+| First-open weekly preparation | Verified | Opted-in campaigns run once per local week on first app opening, catch up later in the week, deduplicate shared leads, apply the global cap and prepare local drafts only | Weekly idempotency/catch-up/deduplication/cap/failure-isolation tests and dashboard interaction test |
+| Zoho API sync, operating-system scheduling and automatic sending | Deferred | No OAuth, CRM mapping, closed-app scheduler or send endpoint exists | Source/API review and assisted-handoff interface wording |
+
 ## Delivery backlog mapping
 
 | Requirements | Stage | Status |
@@ -104,10 +121,10 @@ Status values: `planned`, `in progress`, `implemented`, `verified`, `deferred`, 
 | FR-161–168 compliance operations | 1–4 | Local controls verified; professional legal review remains a release dependency |
 | FR-020–035 remainder | 2 | Planned |
 | FR-040–065 | 2 | Qualification slice verified; FR-052/054/055 remain deferred/planned as listed above |
-| FR-012–019 controlled discovery | 3 | Google, official Instagram and assisted social paths implemented and tested; scheduling, budgets and real credential pilots remain |
-| FR-070–080, FR-150–157 | 4 | Planned |
+| FR-012–019 controlled discovery | 3 | Google, official Instagram and assisted social paths implemented and tested; first-open weekly execution is verified, while closed-app scheduling, budgets and real credential pilots remain |
+| FR-070–080, FR-150–157 | 4 | Local non-AI drafting, version-bound approval, assisted email composer handoff and explicit sent confirmation implemented; AI, tone and Instagram messaging remain planned/deferred |
 | FR-130–143 | 5 | In progress; local operational subset implemented |
-| INT-001–007 Zoho | Phase 2 | Deferred |
+| INT-001–007 Zoho | Phase 2/later | Assisted manual handoff verified; Zoho API integration remains deferred |
 | Meta messaging/broader Facebook discovery, Shopify API sync, multi-user, local AI and other explicit exclusions | Later/none | Deferred; bounded official Instagram discovery and local Shopify product-export CSV import are verified in source |
 
 No requirement is implied complete by the earlier installer proof. The Stage 1, Stage 2 qualification, and operator-triggered automation increments were developed and verified without rebuilding an installer.

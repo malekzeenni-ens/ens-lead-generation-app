@@ -8,6 +8,7 @@ class WorkspaceSettings(BaseModel):
     follow_up_window_days: int = Field(default=7, ge=1, le=30)
     default_campaign_radius_miles: int = Field(default=25, ge=1, le=500)
     default_weekly_shortlist_size: int = Field(default=5, ge=1, le=50)
+    weekly_outreach_global_limit: int = Field(default=20, ge=1, le=100)
 
 
 class WorkspaceSettingsUpdate(BaseModel):
@@ -17,6 +18,7 @@ class WorkspaceSettingsUpdate(BaseModel):
     follow_up_window_days: int | None = Field(default=None, ge=1, le=30)
     default_campaign_radius_miles: int | None = Field(default=None, ge=1, le=500)
     default_weekly_shortlist_size: int | None = Field(default=None, ge=1, le=50)
+    weekly_outreach_global_limit: int | None = Field(default=None, ge=1, le=100)
 
     @model_validator(mode="after")
     def require_change(self) -> WorkspaceSettingsUpdate:

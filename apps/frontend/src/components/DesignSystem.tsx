@@ -1,15 +1,17 @@
 import {
   ChevronLeft,
   ChevronRight,
+  CircleHelp,
   CircleCheck,
   CircleDashed,
   CircleX,
   Inbox,
+  Info,
   LoaderCircle,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import { type KeyboardEvent, type ReactNode, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useId, useState } from "react";
 
 export type HealthState = "checking" | "connected" | "unavailable";
 
@@ -274,6 +276,47 @@ export function LoadingState({ label }: LoadingStateProps) {
     <div className="loading-state" role="status">
       <LoaderCircle className="spin" size={20} aria-hidden="true" />
       <span>{label}</span>
+    </div>
+  );
+}
+
+interface HelpTipProps {
+  label: string;
+  children: ReactNode;
+}
+
+export function HelpTip({ label, children }: HelpTipProps) {
+  const tooltipId = useId();
+  return (
+    <span className="help-tip">
+      <button
+        className="help-tip__trigger"
+        type="button"
+        aria-label={label}
+        aria-describedby={tooltipId}
+      >
+        <CircleHelp size={15} aria-hidden="true" />
+      </button>
+      <span className="help-tip__content" id={tooltipId} role="tooltip">
+        {children}
+      </span>
+    </span>
+  );
+}
+
+interface GuidanceNoteProps {
+  title: string;
+  children: ReactNode;
+}
+
+export function GuidanceNote({ title, children }: GuidanceNoteProps) {
+  return (
+    <div className="guidance-note">
+      <Info size={18} aria-hidden="true" />
+      <div>
+        <strong>{title}</strong>
+        <p>{children}</p>
+      </div>
     </div>
   );
 }

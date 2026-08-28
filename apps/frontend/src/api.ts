@@ -13,6 +13,10 @@ import type {
   MetaAuthorizationStart,
   MetaConnection,
   OperationsSummary,
+  OutreachBatch,
+  OutreachDraft,
+  OutreachZohoHandoff,
+  OutreachLeadOption,
   Product,
   ProductFamily,
   ScoreRun,
@@ -95,6 +99,9 @@ export interface CampaignInput {
   preferred_channels: string[];
   offer_settings: Record<string, boolean>;
   discovery_mode: "manual" | "scheduled" | "combined";
+  weekly_outreach_enabled?: boolean;
+  weekly_outreach_template_id?: string | null;
+  weekly_outreach_provider?: CampaignRunProvider;
 }
 
 export interface CampaignUpdate {
@@ -111,6 +118,9 @@ export interface CampaignUpdate {
   weekly_shortlist_size?: number;
   minimum_score_threshold?: number;
   discovery_mode?: "manual" | "scheduled" | "combined";
+  weekly_outreach_enabled?: boolean;
+  weekly_outreach_template_id?: string | null;
+  weekly_outreach_provider?: CampaignRunProvider;
   status?: "active" | "paused" | "inactive";
 }
 
@@ -125,6 +135,16 @@ export interface LeadInput {
   facebook_url?: string;
   phone_number?: string;
   public_email?: string;
+  contact_first_name?: string;
+  contact_last_name?: string;
+  contact_role?: string;
+  contact_email?: string;
+  contact_source_reference?: string;
+  personalisation_observation?: string;
+  relevance_opportunity?: string;
+  offer_angle?: string;
+  desired_next_step?: string;
+  avoid_mentioning?: string;
   contact_classification: string;
   source: {
     name: string;
@@ -144,6 +164,16 @@ export interface LeadUpdate {
   facebook_url?: string | null;
   phone_number?: string | null;
   public_email?: string | null;
+  contact_first_name?: string | null;
+  contact_last_name?: string | null;
+  contact_role?: string | null;
+  contact_email?: string | null;
+  contact_source_reference?: string | null;
+  personalisation_observation?: string | null;
+  relevance_opportunity?: string | null;
+  offer_angle?: string | null;
+  desired_next_step?: string | null;
+  avoid_mentioning?: string | null;
   contact_classification?: string;
   estimated_order_value?: number | null;
   quote_value?: number | null;
@@ -154,6 +184,19 @@ export interface LeadUpdate {
   sample_status?: string;
   quote_status?: string;
   retention_review_date?: string | null;
+  outreach_hold_until?: string | null;
+  outreach_hold_reason?: string | null;
+}
+
+export interface OutreachBatchInput {
+  lead_ids: string[];
+  template_id: string;
+  campaign_id?: string | null;
+}
+
+export interface OutreachDraftEditInput {
+  subject: string;
+  body: string;
 }
 
 export interface SocialCandidateInput {
@@ -228,6 +271,10 @@ export const api = {
     ),
   startAllCampaignRuns: (provider: CampaignRunProvider) =>
     request<CampaignRun[]>("/campaign-runs/all", jsonBody("POST", { provider })),
+  ensureWeeklyOutreach: () =>
+    request<CampaignRun[]>("/campaign-runs/weekly/ensure", jsonBody("POST", {})),
+  retryWeeklyOutreach: (runId: string) =>
+    request<CampaignRun>(`/campaign-runs/${runId}/weekly-retry`, jsonBody("POST", {})),
   captureSocialCandidate: (data: SocialCandidateInput) =>
     request<CampaignRun>("/social-candidates", jsonBody("POST", data)),
   previewInstagramProfile: (profileUrl: string) =>
@@ -375,4 +422,42 @@ export const api = {
     request<Template>(`/templates/${templateId}`, jsonBody("PATCH", data)),
   deleteTemplate: (templateId: string) =>
     rawRequest(`/templates/${templateId}`, { method: "DELETE" }).then(() => undefined),
+  outreachLeadOptions: (campaignId?: string) =>
+    request<OutreachLeadOption[]>(
+      `/outreach/lead-options${campaignId ? `?campaign_id=${encodeURIComponent(campaignId)}` : ""}`,
+    ),
+  outreachBatches: () => request<OutreachBatch[]>("/outreach/batches"),
+  createOutreachBatch: (data: OutreachBatchInput) =>
+    request<OutreachBatch>("/outreach/batches", jsonBody("POST", data)),
+  editOutreachDraft: (draftId: string, data: OutreachDraftEditInput) =>
+    request<OutreachDraft>(`/outreach/drafts/${draftId}`, jsonBody("PATCH", data)),
+  approveOutreachDraft: (draftId: string) =>
+    request<OutreachDraft>(`/outreach/drafts/${draftId}/approve`, jsonBody("POST", {})),
+  approveOutreachDrafts: (draftIds: string[]) =>
+    request<OutreachDraft[]>(
+      "/outreach/drafts/approve-many",
+      jsonBody("POST", { draft_ids: draftIds }),
+    ),
+  rejectOutreachDraft: (draftId: string, reason?: string) =>
+    request<OutreachDraft>(
+      `/outreach/drafts/${draftId}/reject`,
+      jsonBody("POST", { reason: reason?.trim() || null }),
+    ),
+  reopenOutreachDraft: (draftId: string) =>
+    request<OutreachDraft>(`/outreach/drafts/${draftId}/reopen`, jsonBody("POST", {})),
+  prepareOutreachZohoHandoff: (draftId: string) =>
+    request<OutreachZohoHandoff>(
+      `/outreach/drafts/${draftId}/zoho-open`,
+      jsonBody("POST", {}),
+    ),
+  recordOutreachZohoOpenFailure: (draftId: string, reason: string) =>
+    request<OutreachDraft>(
+      `/outreach/drafts/${draftId}/zoho-open-failed`,
+      jsonBody("POST", { reason }),
+    ),
+  confirmOutreachDraftSent: (draftId: string) =>
+    request<OutreachDraft>(
+      `/outreach/drafts/${draftId}/sent-confirmed`,
+      jsonBody("POST", {}),
+    ),
 };

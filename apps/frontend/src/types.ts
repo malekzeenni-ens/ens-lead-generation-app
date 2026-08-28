@@ -15,6 +15,9 @@ export interface Campaign {
   preferred_channels: string[];
   offer_settings: Record<string, boolean>;
   discovery_mode: string;
+  weekly_outreach_enabled: boolean;
+  weekly_outreach_template_id: string | null;
+  weekly_outreach_provider: "scoring" | "google_places" | "instagram" | "public_registries";
   status: string;
   created_at: string;
   updated_at: string;
@@ -74,6 +77,23 @@ export interface Communication {
   created_at: string;
 }
 
+export interface OutreachActivity {
+  id: string;
+  draft_id: string;
+  action:
+    | "outreach.draft_generated"
+    | "outreach.draft_edited"
+    | "outreach.draft_approved"
+    | "outreach.draft_rejected"
+    | "outreach.draft_reopened"
+    | "outreach.zoho_open_clicked"
+    | "outreach.zoho_open_failed";
+  version: number | null;
+  reason: string | null;
+  recipient_email: string | null;
+  created_at: string;
+}
+
 export interface SuppressionRecord {
   id: string;
   suppression_type: string;
@@ -94,6 +114,16 @@ export interface Lead {
   social_profile: string | null;
   phone_number: string | null;
   public_email: string | null;
+  contact_first_name: string | null;
+  contact_last_name: string | null;
+  contact_role: string | null;
+  contact_email: string | null;
+  contact_source_reference: string | null;
+  personalisation_observation: string | null;
+  relevance_opportunity: string | null;
+  offer_angle: string | null;
+  desired_next_step: string | null;
+  avoid_mentioning: string | null;
   social_identities: SocialIdentity[];
   contact_classification: string;
   pipeline_stage: string;
@@ -107,6 +137,8 @@ export interface Lead {
   sample_status: string;
   quote_status: string;
   retention_review_date: string | null;
+  outreach_hold_until: string | null;
+  outreach_hold_reason: string | null;
   current_score: number | null;
   score_updated_at: string | null;
   campaign_ids: string[];
@@ -115,6 +147,7 @@ export interface Lead {
   notes: LeadNote[];
   follow_ups: FollowUp[];
   communications: Communication[];
+  outreach_activities: OutreachActivity[];
   suppression_records: SuppressionRecord[];
   created_at: string;
   updated_at: string;
@@ -151,6 +184,7 @@ export interface WorkspaceSettings {
   follow_up_window_days: number;
   default_campaign_radius_miles: number;
   default_weekly_shortlist_size: number;
+  weekly_outreach_global_limit: number;
 }
 
 export interface Diagnostics {
@@ -232,6 +266,85 @@ export interface Template {
   subject: string;
   body: string;
   product_family_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutreachLeadOption {
+  id: string;
+  business_name: string;
+  location: string;
+  pipeline_stage: string;
+  public_email: string | null;
+  contact_classification: string;
+  current_score: number | null;
+  outreach_hold_until: string | null;
+  outreach_hold_reason: string | null;
+  ready: boolean;
+  blockers: string[];
+  warnings: string[];
+  latest_notes: string[];
+}
+
+export interface OutreachDraftRevision {
+  id: string;
+  version: number;
+  subject: string;
+  body: string;
+  content_hash: string;
+  editor: string;
+  created_at: string;
+}
+
+export interface OutreachDraft {
+  id: string;
+  batch_id: string;
+  lead_id: string;
+  business_name: string;
+  location: string;
+  pipeline_stage: string;
+  recipient_email: string;
+  contact_classification: string;
+  current_score: number | null;
+  outreach_hold_until: string | null;
+  outreach_hold_reason: string | null;
+  latest_notes: string[];
+  template_id: string | null;
+  review_status: "pending_review" | "approved" | "rejected";
+  sync_status: string;
+  current_version: number;
+  approved_version: number | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+  rejection_reason: string | null;
+  blocked_reason: string | null;
+  current_revision: OutreachDraftRevision;
+  revision_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutreachZohoHandoff {
+  draft_id: string;
+  lead_id: string;
+  recipient_email: string;
+  subject: string;
+  body: string;
+  version: number;
+  opened_at: string;
+}
+
+export interface OutreachBatch {
+  id: string;
+  campaign_id: string | null;
+  template_id: string | null;
+  template_topic: string | null;
+  status: string;
+  pending_count: number;
+  approved_count: number;
+  rejected_count: number;
+  sent_count: number;
+  drafts: OutreachDraft[];
   created_at: string;
   updated_at: string;
 }
@@ -344,6 +457,8 @@ export interface CampaignRun {
   campaign_id: string;
   campaign_name: string;
   trigger: string;
+  week_start: string | null;
+  outreach_batch_id: string | null;
   status: string;
   phase: string;
   provider_status: string;

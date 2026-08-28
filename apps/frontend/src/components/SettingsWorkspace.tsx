@@ -22,7 +22,15 @@ import type {
 } from "../types";
 import { humanize } from "../domain";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
-import { LoadingState, PageHeader, SectionHeading, StatGrid, TaskPanel, TaskTabs } from "./DesignSystem";
+import {
+  HelpTip,
+  LoadingState,
+  PageHeader,
+  SectionHeading,
+  StatGrid,
+  TaskPanel,
+  TaskTabs,
+} from "./DesignSystem";
 
 interface SettingsWorkspaceProps {
   settings: WorkspaceSettings | null;
@@ -72,6 +80,7 @@ export function SettingsWorkspace({
       follow_up_window_days: Number(formValue(form, "follow-up-window")),
       default_campaign_radius_miles: Number(formValue(form, "default-radius")),
       default_weekly_shortlist_size: Number(formValue(form, "default-shortlist")),
+      weekly_outreach_global_limit: Number(formValue(form, "weekly-outreach-limit")),
     });
   }
 
@@ -355,6 +364,18 @@ export function SettingsWorkspace({
                     <input name="default-shortlist" type="number" min="1" max="50" defaultValue={settings.default_weekly_shortlist_size} required />
                   </label>
                 </div>
+                <label>
+                  <span className="field-label-with-help">
+                    Maximum automatic drafts per week
+                    <HelpTip label="About the automatic weekly draft limit">
+                      This is one shared limit across all enabled campaigns. Duplicate leads are
+                      removed before the limit is applied, and skipped leads remain available for
+                      a later week.
+                    </HelpTip>
+                  </span>
+                  <input name="weekly-outreach-limit" type="number" min="1" max="100" defaultValue={settings.weekly_outreach_global_limit} required />
+                  <small className="field-hint">Start with 2–3 drafts while testing, then increase it when the review workload feels comfortable.</small>
+                </label>
                 <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save settings</button>
               </form>
             </section>

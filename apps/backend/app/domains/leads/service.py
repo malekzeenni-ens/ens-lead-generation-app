@@ -5,6 +5,7 @@ import csv
 import hashlib
 import io
 import re
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from enum import Enum
 from typing import Any
@@ -14,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import DomainError
 from app.db.models import (
+    AuditEvent,
     Communication,
     FollowUp,
     Lead,
@@ -25,6 +27,7 @@ from app.db.models import (
     SourceSystem,
     SuppressionRecord,
 )
+from app.domains.audit.repository import AuditRepository
 from app.domains.audit.service import record_audit_event
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.leads.identity import social_identity
@@ -43,6 +46,7 @@ from app.domains.leads.schemas import (
     LeadRead,
     LeadUpdate,
     NoteCreate,
+    OutreachActivityRead,
     PipelineStage,
     SocialIdentityRead,
     SourceObservationRead,
@@ -51,6 +55,7 @@ from app.domains.leads.schemas import (
     SuppressionCreate,
     SuppressionRead,
 )
+from app.domains.outreach.state import invalidate_approved_drafts
 
 
 def normalize_business_name(value: str) -> str:
@@ -73,7 +78,24 @@ def _audit_value(value: Any) -> Any:
     return str(value)
 
 
-def lead_to_read(lead: Lead) -> LeadRead:
+def _outreach_activity_to_read(event: AuditEvent) -> OutreachActivityRead:
+    version = event.summary.get("version")
+    reason = event.summary.get("reason")
+    recipient_email = event.summary.get("recipient_email")
+    return OutreachActivityRead(
+        id=event.id,
+        draft_id=event.entity_id,
+        action=event.action,
+        version=version if isinstance(version, int) else None,
+        reason=reason if isinstance(reason, str) and reason else None,
+        recipient_email=(
+            recipient_email if isinstance(recipient_email, str) and recipient_email else None
+        ),
+        created_at=event.created_at,
+    )
+
+
+def lead_to_read(lead: Lead, outreach_events: Sequence[AuditEvent] = ()) -> LeadRead:
     sources = [
         SourceObservationRead(
             id=observation.id,
@@ -117,6 +139,16 @@ def lead_to_read(lead: Lead) -> LeadRead:
         social_profile=lead.social_profile,
         phone_number=lead.phone_number,
         public_email=lead.public_email,
+        contact_first_name=lead.contact_first_name,
+        contact_last_name=lead.contact_last_name,
+        contact_role=lead.contact_role,
+        contact_email=lead.contact_email,
+        contact_source_reference=lead.contact_source_reference,
+        personalisation_observation=lead.personalisation_observation,
+        relevance_opportunity=lead.relevance_opportunity,
+        offer_angle=lead.offer_angle,
+        desired_next_step=lead.desired_next_step,
+        avoid_mentioning=lead.avoid_mentioning,
         social_identities=[
             SocialIdentityRead.model_validate(identity)
             for identity in sorted(lead.social_identities, key=lambda item: item.platform)
@@ -133,6 +165,8 @@ def lead_to_read(lead: Lead) -> LeadRead:
         sample_status=lead.sample_status,
         quote_status=lead.quote_status,
         retention_review_date=lead.retention_review_date,
+        outreach_hold_until=lead.outreach_hold_until,
+        outreach_hold_reason=lead.outreach_hold_reason,
         current_score=lead.current_score,
         score_updated_at=lead.score_updated_at,
         campaign_ids=[link.campaign_id for link in lead.campaigns],
@@ -141,6 +175,7 @@ def lead_to_read(lead: Lead) -> LeadRead:
         notes=notes,
         follow_ups=follow_ups,
         communications=communications,
+        outreach_activities=[_outreach_activity_to_read(event) for event in outreach_events],
         suppression_records=suppressions,
         created_at=lead.created_at,
         updated_at=lead.updated_at,
@@ -152,9 +187,21 @@ class LeadService:
         self,
         repository: LeadRepository | None = None,
         campaign_repository: CampaignRepository | None = None,
+        audit_repository: AuditRepository | None = None,
     ) -> None:
         self.repository = repository or LeadRepository()
         self.campaign_repository = campaign_repository or CampaignRepository()
+        self.audit_repository = audit_repository or AuditRepository()
+
+    def _outreach_events(
+        self, session: Session, lead_ids: Sequence[str]
+    ) -> dict[str, list[AuditEvent]]:
+        by_lead: dict[str, list[AuditEvent]] = {lead_id: [] for lead_id in lead_ids}
+        for event in self.audit_repository.outreach_activity_events(session, lead_ids):
+            lead_id = event.summary.get("lead_id")
+            if isinstance(lead_id, str) and lead_id in by_lead:
+                by_lead[lead_id].append(event)
+        return by_lead
 
     def _get_model(self, session: Session, lead_id: str) -> Lead:
         lead = self.repository.get(session, lead_id)
@@ -167,7 +214,8 @@ class LeadService:
         stored = self.repository.get(session, lead_id)
         if stored is None:
             raise RuntimeError("Stored lead could not be reloaded")
-        return lead_to_read(stored)
+        events = self._outreach_events(session, [lead_id])
+        return lead_to_read(stored, events[lead_id])
 
     def _upsert_social_identity(
         self,
@@ -259,6 +307,16 @@ class LeadService:
             else None,
             phone_number=data.phone_number,
             public_email=data.public_email.casefold() if data.public_email else None,
+            contact_first_name=data.contact_first_name,
+            contact_last_name=data.contact_last_name,
+            contact_role=data.contact_role,
+            contact_email=data.contact_email.casefold() if data.contact_email else None,
+            contact_source_reference=data.contact_source_reference,
+            personalisation_observation=data.personalisation_observation,
+            relevance_opportunity=data.relevance_opportunity,
+            offer_angle=data.offer_angle,
+            desired_next_step=data.desired_next_step,
+            avoid_mentioning=data.avoid_mentioning,
             contact_classification=data.contact_classification.value,
             pipeline_stage=PipelineStage.NEW.value,
         )
@@ -359,10 +417,13 @@ class LeadService:
             suppressed=suppressed,
             campaign_id=campaign_id,
         )
-        return [lead_to_read(lead) for lead in leads]
+        events = self._outreach_events(session, [lead.id for lead in leads])
+        return [lead_to_read(lead, events[lead.id]) for lead in leads]
 
     def get(self, session: Session, lead_id: str) -> LeadRead:
-        return lead_to_read(self._get_model(session, lead_id))
+        lead = self._get_model(session, lead_id)
+        events = self._outreach_events(session, [lead_id])
+        return lead_to_read(lead, events[lead_id])
 
     def update(
         self,
@@ -405,7 +466,7 @@ class LeadService:
             stored_value = value.value if isinstance(value, Enum) else value
             if field in {"website", "social_profile"} and stored_value is not None:
                 stored_value = str(stored_value)
-            if field == "public_email" and stored_value:
+            if field in {"public_email", "contact_email"} and stored_value:
                 stored_value = str(stored_value).casefold()
             setattr(lead, field, stored_value)
             after[field] = _audit_value(stored_value)
@@ -434,13 +495,41 @@ class LeadService:
         if "business_name" in changes:
             lead.normalized_name = normalize_business_name(lead.business_name)
 
+        approval_sensitive_fields = {
+            "public_email",
+            "contact_first_name",
+            "contact_last_name",
+            "contact_role",
+            "contact_email",
+            "contact_source_reference",
+            "personalisation_observation",
+            "relevance_opportunity",
+            "offer_angle",
+            "desired_next_step",
+            "avoid_mentioning",
+            "contact_classification",
+            "outreach_hold_until",
+            "outreach_hold_reason",
+        }
+        invalidated_drafts = 0
+        if approval_sensitive_fields.intersection(changes):
+            invalidated_drafts = invalidate_approved_drafts(
+                session,
+                lead.id,
+                "Lead contact or outreach-hold details changed after approval.",
+            )
+
         record_audit_event(
             session,
             action="lead.updated",
             entity_type="lead",
             entity_id=lead.id,
             correlation_id=correlation_id,
-            summary={"before": before, "after": after},
+            summary={
+                "before": before,
+                "after": after,
+                "invalidated_outreach_drafts": invalidated_drafts,
+            },
         )
         session.commit()
         return self._reload(session, lead.id)
@@ -467,6 +556,11 @@ class LeadService:
             )
         previous_stage = lead.pipeline_stage
         lead.pipeline_stage = data.stage.value
+        invalidated_drafts = invalidate_approved_drafts(
+            session,
+            lead.id,
+            "Lead pipeline stage changed after approval.",
+        )
         session.add(
             LeadStageEvent(
                 lead_id=lead.id,
@@ -486,6 +580,7 @@ class LeadService:
                 "previous_stage": previous_stage,
                 "new_stage": data.stage.value,
                 "reason": data.reason,
+                "invalidated_outreach_drafts": invalidated_drafts,
             },
         )
         session.commit()
@@ -676,6 +771,11 @@ class LeadService:
         )
         session.add(record)
         lead.suppressed = True
+        invalidated_drafts = invalidate_approved_drafts(
+            session,
+            lead.id,
+            "Lead was suppressed after draft approval.",
+        )
         cancelled_follow_ups = 0
         for follow_up in lead.follow_ups:
             if follow_up.status == FollowUpStatus.OPEN.value:
@@ -717,6 +817,7 @@ class LeadService:
                 "type": record.suppression_type,
                 "cancelled_follow_ups": cancelled_follow_ups,
                 "removed_shortlist_items": removed_shortlist_items,
+                "invalidated_outreach_drafts": invalidated_drafts,
             },
         )
         session.commit()
@@ -781,6 +882,16 @@ class LeadService:
                 "social_profile": lead.social_profile,
                 "phone_number": lead.phone_number,
                 "public_email": lead.public_email,
+                "contact_first_name": lead.contact_first_name,
+                "contact_last_name": lead.contact_last_name,
+                "contact_role": lead.contact_role,
+                "contact_email": lead.contact_email,
+                "contact_source_reference": lead.contact_source_reference,
+                "personalisation_observation": lead.personalisation_observation,
+                "relevance_opportunity": lead.relevance_opportunity,
+                "offer_angle": lead.offer_angle,
+                "desired_next_step": lead.desired_next_step,
+                "avoid_mentioning": lead.avoid_mentioning,
                 "instagram_url": next(
                     (
                         item.profile_url
@@ -830,6 +941,19 @@ class LeadService:
             )
             activities.extend(
                 (
+                    activity.created_at,
+                    "outreach_draft",
+                    activity.action.removeprefix("outreach."),
+                    (
+                        f"version {activity.version}"
+                        if activity.version is not None
+                        else (activity.reason or "")
+                    ),
+                )
+                for activity in lead.outreach_activities
+            )
+            activities.extend(
+                (
                     suppression.effective_at,
                     "suppression",
                     suppression.suppression_type,
@@ -859,6 +983,16 @@ class LeadService:
             "social_profile",
             "phone_number",
             "public_email",
+            "contact_first_name",
+            "contact_last_name",
+            "contact_role",
+            "contact_email",
+            "contact_source_reference",
+            "personalisation_observation",
+            "relevance_opportunity",
+            "offer_angle",
+            "desired_next_step",
+            "avoid_mentioning",
             "instagram_url",
             "facebook_url",
             "contact_classification",

@@ -47,6 +47,9 @@ class LeadRepository:
                     Lead.location.ilike(pattern),
                     Lead.phone_number.ilike(pattern),
                     Lead.public_email.ilike(pattern),
+                    Lead.contact_first_name.ilike(pattern),
+                    Lead.contact_last_name.ilike(pattern),
+                    Lead.contact_email.ilike(pattern),
                 )
             )
         if stage:

@@ -7,7 +7,22 @@ const TEMPLATE_TOKENS: Record<string, (lead: Lead) => string> = {
   phone_number: (lead) => lead.phone_number ?? "",
   public_email: (lead) => lead.public_email ?? "",
   website: (lead) => lead.website ?? "",
+  greeting_name: (lead) => lead.contact_first_name || lead.business_name,
+  contact_first_name: (lead) => lead.contact_first_name ?? "",
+  contact_last_name: (lead) => lead.contact_last_name ?? "",
+  contact_full_name: (lead) =>
+    [lead.contact_first_name, lead.contact_last_name].filter(Boolean).join(" "),
+  contact_role: (lead) => lead.contact_role ?? "",
+  personalisation_observation: (lead) => lead.personalisation_observation ?? "",
+  relevance_opportunity: (lead) => lead.relevance_opportunity ?? "",
+  offer_angle: (lead) => lead.offer_angle ?? "",
+  desired_next_step: (lead) => lead.desired_next_step ?? "",
 };
+
+/** Prefer a named contact's direct address, falling back to the public business address. */
+export function emailAddressFor(lead: Lead): string | null {
+  return lead.contact_email || lead.public_email;
+}
 
 /** One line per product, e.g. "Personalised Cake Topper — £12.50", for the {{products}} token. */
 export function productListText(products: Product[]): string {
