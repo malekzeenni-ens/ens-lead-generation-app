@@ -20,7 +20,7 @@ target/
 *.sqlite3
 backups/
 !apps/backend/app/domains/backups/
-!apps/backend/app/domains/backups/**
+!apps/backend/app/domains/backups/*.py
 logs/
 playwright-report/
 test-results/
