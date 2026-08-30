@@ -108,7 +108,10 @@ def upgrade() -> None:
             "fk_score_run_campaign_run", "campaign_run", ["campaign_run_id"], ["id"],
             ondelete="SET NULL"
         )
-        batch.create_index("ix_score_run_fingerprint", ["lead_id", "campaign_id", "input_fingerprint"])
+        batch.create_index(
+            "ix_score_run_fingerprint",
+            ["lead_id", "campaign_id", "input_fingerprint"],
+        )
 
 
 def downgrade() -> None:

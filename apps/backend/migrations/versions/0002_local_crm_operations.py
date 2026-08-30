@@ -24,15 +24,30 @@ def upgrade() -> None:
     op.add_column("lead", sa.Column("lost_reason", sa.String(length=100), nullable=True))
     op.add_column(
         "lead",
-        sa.Column("mock_up_status", sa.String(length=40), nullable=False, server_default="not_offered"),
+        sa.Column(
+            "mock_up_status",
+            sa.String(length=40),
+            nullable=False,
+            server_default="not_offered",
+        ),
     )
     op.add_column(
         "lead",
-        sa.Column("sample_status", sa.String(length=40), nullable=False, server_default="not_applicable"),
+        sa.Column(
+            "sample_status",
+            sa.String(length=40),
+            nullable=False,
+            server_default="not_applicable",
+        ),
     )
     op.add_column(
         "lead",
-        sa.Column("quote_status", sa.String(length=40), nullable=False, server_default="not_requested"),
+        sa.Column(
+            "quote_status",
+            sa.String(length=40),
+            nullable=False,
+            server_default="not_requested",
+        ),
     )
     op.add_column("lead", sa.Column("retention_review_date", sa.Date(), nullable=True))
 

@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings
 from app.core.errors import DomainError
 from app.db.models import (
     Communication,
@@ -18,10 +19,13 @@ from app.db.models import (
 )
 from app.domains.audit.repository import AuditRepository
 from app.domains.audit.service import record_audit_event
+from app.domains.campaign_assistant.gate import require_local_ai_enabled
+from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.catalogue.repository import CatalogueRepository
 from app.domains.leads.identity import valid_public_email
 from app.domains.leads.repository import LeadRepository
+from app.domains.outreach.prompt import _OLLAMA_REFINE_SCHEMA, build_refine_messages
 from app.domains.outreach.repository import OutreachRepository
 from app.domains.outreach.schemas import (
     OutreachBatchCreate,
@@ -29,6 +33,8 @@ from app.domains.outreach.schemas import (
     OutreachDraftApproveMany,
     OutreachDraftEdit,
     OutreachDraftRead,
+    OutreachDraftRefineRequest,
+    OutreachDraftRefineResult,
     OutreachDraftReject,
     OutreachDraftRevisionRead,
     OutreachLeadOptionRead,
@@ -36,6 +42,7 @@ from app.domains.outreach.schemas import (
     OutreachZohoOpenFailure,
 )
 from app.domains.outreach.state import refresh_batch_status
+from app.domains.system.schemas import WorkspaceSettings
 from app.domains.templates.repository import TemplateRepository
 
 _ELIGIBLE_STAGES = {
@@ -473,6 +480,46 @@ class OutreachService:
         )
         session.commit()
         return self.get_draft(session, draft.id)
+
+    def refine_draft(
+        self,
+        session: Session,
+        draft_id: str,
+        data: OutreachDraftRefineRequest,
+        *,
+        manager: CampaignAssistantManager,
+        runtime_settings: Settings,
+        workspace_settings: WorkspaceSettings,
+    ) -> OutreachDraftRefineResult:
+        require_local_ai_enabled(runtime_settings, workspace_settings)
+        draft = self.repository.get_draft(session, draft_id)
+        if draft is None:
+            raise DomainError("OUTREACH_DRAFT_NOT_FOUND", "Draft not found.", status_code=404)
+        template = (
+            self.template_repository.get(session, draft.template_id)
+            if draft.template_id
+            else None
+        )
+        products = self._template_products(session, template) if template else []
+        context = {
+            key: value
+            for key, value in self._template_values(draft.lead, products).items()
+            if value
+        }
+        messages = build_refine_messages(
+            current_subject=data.subject,
+            current_body=data.body,
+            lead_context=context,
+            instruction=data.instruction,
+        )
+        result, _profile = manager.generate_structured(
+            messages,
+            schema=_OLLAMA_REFINE_SCHEMA,
+            model_cls=OutreachDraftRefineResult,
+            error_prefix="OUTREACH_REFINE",
+            protect_resources=workspace_settings.protect_design_software_resources,
+        )
+        return result.value
 
     def _approve_model(self, session: Session, draft: OutreachDraft, correlation_id: str) -> None:
         if draft.sync_status == "user_confirmed_sent":

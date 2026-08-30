@@ -7,11 +7,47 @@ from typing import Any, cast
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 from sqlalchemy import inspect
 
 from app.db.migrations import backend_directory, run_migrations
 from app.db.session import create_sqlite_engine, sqlite_url
+from app.domains.campaign_assistant.ollama import OllamaStructuredResult
+from app.domains.campaign_assistant.schemas import OllamaGenerationMetrics, ResourceProfile
 from tests.conftest import lead_payload
+
+
+class FakeRefineManager:
+    def __init__(self, values: list[dict[str, str]], *, busy: bool = False) -> None:
+        self.values = values
+        self.busy = busy
+
+    def generate_structured(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        schema: dict[str, object],
+        model_cls: type[BaseModel],
+        error_prefix: str,
+        protect_resources: bool,
+    ) -> tuple[OllamaStructuredResult[BaseModel], ResourceProfile]:
+        del messages, schema, error_prefix, protect_resources
+        if self.busy:
+            from app.core.errors import DomainError
+
+            raise DomainError(
+                "CAMPAIGN_ASSISTANT_BUSY",
+                "The local assistant is already processing another request.",
+                status_code=409,
+            )
+        value = model_cls.model_validate(self.values.pop(0))
+        return (
+            OllamaStructuredResult(
+                value=value,
+                metrics=OllamaGenerationMetrics(model="llama3.2:3b"),
+            ),
+            ResourceProfile.STANDARD,
+        )
 
 
 def _ready_lead(
@@ -347,6 +383,76 @@ def test_failed_zoho_open_is_logged_and_does_not_enable_sent_confirmation(
     confirmation = client.post(f"/api/v1/outreach/drafts/{draft['id']}/sent-confirmed", json={})
     assert confirmation.status_code == 409
     assert client.get(f"/api/v1/leads/{lead['id']}").json()["communications"] == []
+
+
+def test_ai_refine_never_persists_and_remains_available_after_external_handoff(
+    client: TestClient,
+    app: Any,
+    campaign_payload: dict[str, object],
+) -> None:
+    campaign, lead = _ready_lead(client, campaign_payload)
+    batch = _batch(client, campaign, lead, _template(client))
+    draft = batch["drafts"][0]
+    app.state.campaign_assistant_manager = FakeRefineManager(
+        [
+            {"subject": "A sharper subject", "body": "A more personal first suggestion."},
+            {"subject": "A final suggestion", "body": "Still review-only after sending."},
+        ]
+    )
+
+    approved = client.post(f"/api/v1/outreach/drafts/{draft['id']}/approve", json={})
+    assert approved.status_code == 200
+    opened = client.post(f"/api/v1/outreach/drafts/{draft['id']}/zoho-open", json={})
+    assert opened.status_code == 200
+
+    refined = client.post(
+        f"/api/v1/outreach/drafts/{draft['id']}/refine",
+        json={
+            "subject": draft["current_revision"]["subject"],
+            "body": draft["current_revision"]["body"],
+        },
+    )
+    assert refined.status_code == 200
+    assert refined.json()["subject"] == "A sharper subject"
+    unchanged = client.get(f"/api/v1/outreach/batches/{batch['id']}").json()["drafts"][0]
+    assert unchanged["revision_count"] == 1
+    assert unchanged["current_version"] == 1
+    assert unchanged["sync_status"] == "opened_in_zoho"
+
+    sent = client.post(f"/api/v1/outreach/drafts/{draft['id']}/sent-confirmed", json={})
+    assert sent.status_code == 200
+    refined_after_sent = client.post(
+        f"/api/v1/outreach/drafts/{draft['id']}/refine",
+        json={"subject": "Original", "body": "Original body"},
+    )
+    assert refined_after_sent.status_code == 200
+    assert refined_after_sent.json()["subject"] == "A final suggestion"
+    assert client.get(f"/api/v1/outreach/batches/{batch['id']}").json()["drafts"][0][
+        "revision_count"
+    ] == 1
+
+
+def test_ai_refine_validates_instruction_and_propagates_busy(
+    client: TestClient,
+    app: Any,
+    campaign_payload: dict[str, object],
+) -> None:
+    campaign, lead = _ready_lead(client, campaign_payload)
+    draft = _batch(client, campaign, lead, _template(client))["drafts"][0]
+
+    oversized = client.post(
+        f"/api/v1/outreach/drafts/{draft['id']}/refine",
+        json={"subject": "Subject", "body": "Body", "instruction": "x" * 501},
+    )
+    assert oversized.status_code == 422
+
+    app.state.campaign_assistant_manager = FakeRefineManager([], busy=True)
+    busy = client.post(
+        f"/api/v1/outreach/drafts/{draft['id']}/refine",
+        json={"subject": "Subject", "body": "Body"},
+    )
+    assert busy.status_code == 409
+    assert busy.json()["code"] == "CAMPAIGN_ASSISTANT_BUSY"
 
 
 def test_eligibility_blocks_holds_and_duplicate_active_drafts(

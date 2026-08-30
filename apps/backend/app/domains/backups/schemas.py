@@ -26,6 +26,9 @@ class BackupResult(BaseModel):
     schema_version: str
     application_version: str
     created_at: datetime
+    assistant_files_archive: Path | None = None
+    assistant_files_checksum_sha256: str | None = Field(default=None, min_length=64, max_length=64)
+    assistant_files_count: int = 0
 
 
 class VerificationResult(BaseModel):
@@ -33,3 +36,6 @@ class VerificationResult(BaseModel):
     checksum_matches: bool
     integrity_result: str
     schema_version: str
+    assistant_files_present: bool = False
+    assistant_files_checksum_matches: bool | None = None
+    assistant_files_count: int | None = None

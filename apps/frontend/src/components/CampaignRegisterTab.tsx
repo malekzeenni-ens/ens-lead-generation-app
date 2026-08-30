@@ -8,6 +8,7 @@ import {
   Play,
   RefreshCw,
   Search,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
@@ -56,6 +57,7 @@ export function CampaignRegisterTab({
     duplicateCampaign: onDuplicate,
     deleteCampaign: onDelete,
     runCampaign: onRunCampaign,
+    askAssistant,
   } = useWorkspaceActions();
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -381,6 +383,15 @@ export function CampaignRegisterTab({
                         </div>
                       ) : null}
                       <div className="record-actions__group" aria-label="Management actions">
+                        <button
+                          className="tertiary-action"
+                          type="button"
+                          onClick={() =>
+                            askAssistant({ kind: "campaign", id: campaign.id })
+                          }
+                        >
+                          <Sparkles size={16} aria-hidden="true" /> Ask AI
+                        </button>
                         <button
                           className="tertiary-action"
                           type="button"

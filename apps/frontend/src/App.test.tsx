@@ -8,8 +8,10 @@ import { api, ApiError } from "./api";
 import { mondayIso } from "./domain";
 import type {
   ApiErrorShape,
+  AssistantConversation,
   AutomationCapabilities,
   Campaign,
+  CampaignDraft,
   CampaignRun,
   Diagnostics,
   InstagramProfilePreview,
@@ -54,6 +56,19 @@ vi.mock("./api", () => {
       updateCampaign: vi.fn(),
       duplicateCampaign: vi.fn(),
       deleteCampaign: vi.fn(),
+      campaignAssistantStatus: vi.fn(),
+      assistantConversations: vi.fn(),
+      createAssistantConversation: vi.fn(),
+      sendAssistantMessage: vi.fn(),
+      createCampaignDraftFromConversation: vi.fn(),
+      downloadAssistantAttachment: vi.fn(),
+      campaignDrafts: vi.fn(),
+      createCampaignDraft: vi.fn(),
+      sendCampaignDraftMessage: vi.fn(),
+      updateCampaignDraft: vi.fn(),
+      decideCampaignDraftOverride: vi.fn(),
+      approveCampaignDraft: vi.fn(),
+      discardCampaignDraft: vi.fn(),
       automationCapabilities: vi.fn(),
       campaignRuns: vi.fn(),
       startCampaignRun: vi.fn(),
@@ -235,6 +250,68 @@ const settings: WorkspaceSettings = {
   default_campaign_radius_miles: 25,
   default_weekly_shortlist_size: 5,
   weekly_outreach_global_limit: 20,
+  local_campaign_assistant_enabled: true,
+  protect_design_software_resources: true,
+};
+
+const assistantDraft: CampaignDraft = {
+  id: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+  status: "ready",
+  original_request: "Create a baking campaign for Luton",
+  campaign: {
+    name: "Luton Bakery AI Draft",
+    description: "Local bakery partnership campaign",
+    segment: "Independent bakeries and cake makers",
+    primary_location: "Luton, United Kingdom",
+    radius_miles: 25,
+    keywords: ["bakery", "cake maker"],
+    exclusion_keywords: ["supermarket"],
+    product_categories: ["Cake toppers"],
+    product_family_id: null,
+    discovery_sources: ["manual"],
+    weekly_shortlist_size: 5,
+    minimum_score_threshold: 50,
+    preferred_channels: ["email"],
+    offer_settings: { digital_mock_up: true, introductory_pricing: false },
+    discovery_mode: "manual",
+    weekly_outreach_enabled: false,
+    weekly_outreach_template_id: null,
+    weekly_outreach_provider: "scoring",
+    status: "paused",
+  },
+  assistant_message: "I prepared a focused campaign for review.",
+  assumptions: ["The audience is independent bakeries."],
+  warnings: [],
+  questions: [],
+  version: 1,
+  model_name: "llama3.2:3b",
+  prompt_version: "campaign-planner-v1",
+  resource_profile: "standard",
+  generation_duration_ms: 500,
+  prompt_token_count: 400,
+  output_token_count: 180,
+  approved_campaign_id: null,
+  created_at: "2026-08-29T10:00:00Z",
+  updated_at: "2026-08-29T10:00:00Z",
+  approved_at: null,
+  overrides: [],
+  revisions: [
+    {
+      id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+      version: 1,
+      revision_source: "generated",
+      user_instruction: "Create a baking campaign for Luton",
+      payload: null,
+      assistant_message: "I prepared a focused campaign for review.",
+      assumptions: ["The audience is independent bakeries."],
+      warnings: [],
+      questions: [],
+      resource_profile: "standard",
+      model_name: "llama3.2:3b",
+      prompt_version: "campaign-planner-v1",
+      created_at: "2026-08-29T10:00:00Z",
+    },
+  ],
 };
 
 const diagnostics: Diagnostics = {
@@ -566,6 +643,19 @@ describe("local operating workbench", () => {
       shared_leads_retained: 0,
       outreach_batches_deleted: 0,
     });
+    vi.mocked(api.campaignAssistantStatus).mockResolvedValue({
+      enabled: true,
+      ollama_reachable: true,
+      model_installed: true,
+      model_loaded: false,
+      model: "llama3.2:3b",
+      resource_profile: "standard",
+      protected_applications: [],
+      ready: true,
+      message: "The local AI assistant is ready.",
+    });
+    vi.mocked(api.campaignDrafts).mockResolvedValue([]);
+    vi.mocked(api.assistantConversations).mockResolvedValue([]);
     vi.mocked(api.automationCapabilities).mockResolvedValue(automationCapabilities);
     vi.mocked(api.metaConnection).mockResolvedValue(metaConnection);
     vi.mocked(api.campaignRuns).mockResolvedValue([]);
@@ -631,6 +721,58 @@ describe("local operating workbench", () => {
     expect(screen.getByRole("heading", { name: "Lead intelligence dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Controlled mode")).toBeInTheDocument();
     expect(screen.getByText("Active campaigns")).toBeInTheDocument();
+  });
+
+  it("places the AI assistant in the sidebar instead of Campaigns", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("API connected");
+
+    expect(screen.getByRole("link", { name: "AI assistant" })).toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: /Campaigns/ }));
+    expect(screen.queryByRole("tab", { name: "Local AI assistant" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "AI assistant" }));
+    expect(await screen.findByRole("heading", { name: "AI assistant" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "App copilot" })).toBeInTheDocument();
+  });
+
+  it("opens the dedicated assistant with an exact campaign context", async () => {
+    const user = userEvent.setup();
+    const conversation: AssistantConversation = {
+      id: "12121212-1212-1212-1212-121212121212",
+      title: "Campaign review",
+      messages: [],
+      created_at: "2026-08-30T09:00:00Z",
+      updated_at: "2026-08-30T09:00:00Z",
+    };
+    vi.mocked(api.assistantConversations).mockResolvedValue([conversation]);
+    vi.mocked(api.sendAssistantMessage).mockResolvedValue(conversation);
+    render(<App />);
+    await screen.findByText("API connected");
+
+    await user.click(screen.getByRole("link", { name: /Campaigns/ }));
+    await user.click(screen.getByRole("button", { name: "Ask AI" }));
+
+    expect(await screen.findByRole("heading", { name: "AI assistant" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Context for the next answer" }),
+    ).toHaveValue(`campaign:${campaign.id}`);
+    expect(screen.getByText(`Campaign · ${campaign.name}`)).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Ask the local assistant" }),
+      "What should I do next?",
+    );
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() =>
+      expect(api.sendAssistantMessage).toHaveBeenCalledWith(
+        conversation.id,
+        "What should I do next?",
+        [],
+        { kind: "campaign", id: campaign.id },
+      ),
+    );
   });
 
   it("navigates from a dashboard metric card to the pre-filtered leads register", async () => {
@@ -887,6 +1029,186 @@ describe("local operating workbench", () => {
       }),
     );
     expect(await screen.findByText("Campaign created and stored locally.")).toBeInTheDocument();
+  });
+
+  it("creates and explicitly approves a local AI campaign draft", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.createCampaignDraft).mockResolvedValue(assistantDraft);
+    vi.mocked(api.approveCampaignDraft).mockResolvedValue({
+      draft: {
+        ...assistantDraft,
+        status: "approved",
+        approved_campaign_id: campaign.id,
+        approved_at: "2026-08-29T10:05:00Z",
+      },
+      campaign: { ...campaign, status: "paused" },
+    });
+
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: "AI assistant" }));
+    await user.click(screen.getByRole("tab", { name: /^Campaign draft/ }));
+    expect(await screen.findByText("The local AI assistant is ready.")).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Campaign instruction" }),
+      "Create a baking campaign for Luton",
+    );
+    await user.click(screen.getByRole("button", { name: "Create draft" }));
+
+    await waitFor(() =>
+      expect(api.createCampaignDraft).toHaveBeenCalledWith(
+        "Create a baking campaign for Luton",
+      ),
+    );
+    expect(await screen.findByDisplayValue("Luton Bakery AI Draft")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Approve paused campaign" }));
+
+    await waitFor(() =>
+      expect(api.approveCampaignDraft).toHaveBeenCalledWith(assistantDraft.id, 1),
+    );
+    expect(await screen.findByText("Campaign approved and saved as a paused campaign.")).toBeInTheDocument();
+  });
+
+  it("uses the same local AI interface for general answers and downloadable playbooks", async () => {
+    const user = userEvent.setup();
+    const conversation: AssistantConversation = {
+      id: "12121212-1212-1212-1212-121212121212",
+      title: "New conversation",
+      messages: [],
+      created_at: "2026-08-29T10:00:00Z",
+      updated_at: "2026-08-29T10:00:00Z",
+    };
+    vi.mocked(api.createAssistantConversation).mockResolvedValue(conversation);
+    vi.mocked(api.sendAssistantMessage).mockResolvedValue({
+      ...conversation,
+      title: "Create a Luton bakery playbook",
+      messages: [
+        {
+          id: "13131313-1313-1313-1313-131313131313",
+          role: "user",
+          content: "Create a Luton bakery campaign playbook as a Word document",
+          model_name: null,
+          resource_profile: null,
+          generation_duration_ms: null,
+          campaign_draft_suggested: false,
+          attachments: [],
+          created_at: "2026-08-29T10:00:01Z",
+        },
+        {
+          id: "14141414-1414-1414-1414-141414141414",
+          role: "assistant",
+          content: "I created the campaign playbook for review.",
+          model_name: "llama3.2:3b",
+          resource_profile: "standard",
+          generation_duration_ms: 500,
+          campaign_draft_suggested: false,
+          attachments: [
+            {
+              id: "15151515-1515-1515-1515-151515151515",
+              direction: "generated",
+              filename: "luton-bakery-playbook.docx",
+              media_type:
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              size_bytes: 2048,
+              processing_status: "generated",
+              download_url:
+                "/assistant/conversations/12121212-1212-1212-1212-121212121212/attachments/15151515-1515-1515-1515-151515151515",
+              created_at: "2026-08-29T10:00:02Z",
+            },
+          ],
+          created_at: "2026-08-29T10:00:02Z",
+        },
+      ],
+    });
+
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: "AI assistant" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Ask the local assistant" }),
+      "Create a Luton bakery campaign playbook as a Word document",
+    );
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(api.sendAssistantMessage).toHaveBeenCalledWith(
+        conversation.id,
+        "Create a Luton bakery campaign playbook as a Word document",
+        [],
+        { kind: "workspace", id: null },
+      ),
+    );
+    expect(await screen.findByText("I created the campaign playbook for review.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /luton-bakery-playbook.docx/ })).toBeInTheDocument();
+  });
+
+  it("waits for confirmation before applying a playbook override", async () => {
+    const user = userEvent.setup();
+    const pendingOverride = {
+      ...assistantDraft,
+      status: "awaiting_override_confirmation" as const,
+      campaign: null,
+      assistant_message: "A 100-mile radius is a material playbook override.",
+      overrides: [
+        {
+          id: "ffffffff-ffff-ffff-ffff-ffffffffffff",
+          draft_id: assistantDraft.id,
+          draft_version: 1,
+          status: "pending" as const,
+          summary: "Use 100 miles instead of the 25-mile local default.",
+          items: [
+            {
+              item_id: "99999999-9999-9999-9999-999999999999",
+              rule_id: "local-radius",
+              field: "radius_miles",
+              playbook_recommendation: 25,
+              requested_value: 100,
+              impact: "This may reduce local relevance.",
+              decision: "pending" as const,
+            },
+          ],
+          playbook_version: "campaign-planner-v1",
+          created_at: "2026-08-29T10:00:00Z",
+          confirmed_at: null,
+          rejected_at: null,
+        },
+      ],
+    };
+    vi.mocked(api.campaignDrafts).mockResolvedValue([pendingOverride]);
+    vi.mocked(api.decideCampaignDraftOverride).mockResolvedValue({
+      ...assistantDraft,
+      version: 2,
+      campaign: { ...assistantDraft.campaign!, radius_miles: 100 },
+      overrides: [
+        {
+          ...pendingOverride.overrides[0]!,
+          status: "confirmed",
+          confirmed_at: "2026-08-29T10:01:00Z",
+          items: [{ ...pendingOverride.overrides[0]!.items[0]!, decision: "confirmed" }],
+        },
+      ],
+    });
+
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: "AI assistant" }));
+    await user.click(screen.getByRole("tab", { name: /^Campaign draft/ }));
+
+    expect(await screen.findByText("Playbook override requested")).toBeInTheDocument();
+    expect(screen.getByText("This may reduce local relevance.")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Campaign instruction" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Confirm override" }));
+
+    await waitFor(() =>
+      expect(api.decideCampaignDraftOverride).toHaveBeenCalledWith(
+        assistantDraft.id,
+        pendingOverride.overrides[0]!.id,
+        "confirm",
+        1,
+      ),
+    );
+    expect(await screen.findByDisplayValue("100")).toBeInTheDocument();
   });
 
   it("runs scoring and product matching for a campaign on demand", async () => {

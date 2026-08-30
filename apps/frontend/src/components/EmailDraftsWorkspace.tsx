@@ -10,15 +10,19 @@ import {
   RotateCcw,
   Save,
   ShieldCheck,
+  Sparkles,
   XCircle,
 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 
 import { emailAddressFor } from "../contact";
+import { ApiError, api } from "../api";
 import { classificationLabel, formatDateTime, humanize, todayIso } from "../domain";
 import type {
   Campaign,
   Lead,
+  LeadAutofillResultItem,
+  LeadAutofillSuggestion,
   OutreachBatch,
   OutreachDraft,
   OutreachLeadOption,
@@ -47,6 +51,15 @@ interface EmailDraftsWorkspaceProps {
 interface DraftEditorProps {
   draft: OutreachDraft;
 }
+
+const AUTOFILL_FIELDS = [
+  "personalisation_observation",
+  "relevance_opportunity",
+  "offer_angle",
+  "desired_next_step",
+] as const satisfies ReadonlyArray<keyof LeadAutofillSuggestion>;
+
+type AutofillField = (typeof AUTOFILL_FIELDS)[number];
 
 function reviewLabel(draft: OutreachDraft): string {
   if (draft.sync_status === "user_confirmed_sent") return "Sent (confirmed)";
@@ -91,6 +104,8 @@ function DraftEditor({ draft }: DraftEditorProps) {
   const [body, setBody] = useState(draft.current_revision.body);
   const [showReject, setShowReject] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
   const dirty =
     subject !== draft.current_revision.subject || body !== draft.current_revision.body;
   const rejected = draft.review_status === "rejected";
@@ -111,6 +126,25 @@ function DraftEditor({ draft }: DraftEditorProps) {
     event.preventDefault();
     const completed = await rejectOutreachDraft(draft.id, rejectionReason);
     if (completed) setShowReject(false);
+  }
+
+  async function refineWithAI(): Promise<void> {
+    setRefining(true);
+    setRefineError(null);
+    try {
+      const result = await api.refineOutreachDraft(draft.id, {
+        subject: subject.trim(),
+        body: body.trim(),
+      });
+      setSubject(result.subject);
+      setBody(result.body);
+    } catch (error) {
+      setRefineError(
+        error instanceof ApiError ? error.details.message : "The draft could not be refined.",
+      );
+    } finally {
+      setRefining(false);
+    }
   }
 
   return (
@@ -210,6 +244,15 @@ function DraftEditor({ draft }: DraftEditorProps) {
       </label>
 
       <div className="draft-editor__actions">
+        <button
+          className="secondary-action"
+          type="button"
+          disabled={busy || refining || !subject.trim() || !body.trim()}
+          onClick={() => void refineWithAI()}
+        >
+          <Sparkles size={17} aria-hidden="true" />
+          {refining ? "Refining…" : "Refine with AI"}
+        </button>
         {rejected ? (
           <button
             className="primary-action"
@@ -298,6 +341,8 @@ function DraftEditor({ draft }: DraftEditorProps) {
           View lead
         </button>
       </div>
+
+      {refineError ? <p className="form-error">{refineError}</p> : null}
 
       {draft.review_status === "approved" && !sentConfirmed ? (
         <p className="draft-handoff-help">
@@ -427,8 +472,14 @@ export function EmailDraftsWorkspace({
   leadOptions,
   batches,
 }: EmailDraftsWorkspaceProps) {
-  const { busy, loading, createOutreachBatch, approveOutreachDrafts } =
-    useWorkspaceActions();
+  const {
+    busy,
+    loading,
+    createOutreachBatch,
+    approveOutreachDrafts,
+    bulkUpdateLeads,
+    askAssistant,
+  } = useWorkspaceActions();
   const [activeTask, setActiveTask] = useState<"prepare" | "review">(
     batches.some((batch) => batch.pending_count > 0) ? "review" : "prepare",
   );
@@ -439,7 +490,11 @@ export function EmailDraftsWorkspace({
   const [selectedDraftId, setSelectedDraftId] = useState("");
   const [selectedApprovalIds, setSelectedApprovalIds] = useState<string[]>([]);
   const [holdLeadId, setHoldLeadId] = useState<string | null>(null);
+  const [autofillItems, setAutofillItems] = useState<LeadAutofillResultItem[]>([]);
+  const [autofilling, setAutofilling] = useState(false);
+  const [autofillError, setAutofillError] = useState<string | null>(null);
   const selectedTemplateId = templateId || templates[0]?.id || "";
+  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
   const recipientEmailByLeadId = useMemo(
     () => new Map(leads.map((lead) => [lead.id, emailAddressFor(lead)])),
     [leads],
@@ -474,6 +529,27 @@ export function EmailDraftsWorkspace({
     ),
   );
   const pendingTotal = batches.reduce((total, batch) => total + batch.pending_count, 0);
+  const templateAutofillFields = useMemo(() => {
+    const text = `${selectedTemplate?.subject ?? ""}\n${selectedTemplate?.body ?? ""}`;
+    const tokens = new Set([...text.matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map((match) => match[1]));
+    return AUTOFILL_FIELDS.filter((field) => tokens.has(field));
+  }, [selectedTemplate]);
+  const missingAutofillFieldsByLeadId = useMemo(
+    () =>
+      new Map(
+        selectedLeadIds.map((leadId) => {
+          const lead = leads.find((item) => item.id === leadId);
+          return [
+            leadId,
+            templateAutofillFields.filter((field) => !lead?.[field]?.trim()),
+          ] as const;
+        }),
+      ),
+    [leads, selectedLeadIds, templateAutofillFields],
+  );
+  const blockedLeadIds = selectedLeadIds.filter(
+    (leadId) => (missingAutofillFieldsByLeadId.get(leadId)?.length ?? 0) > 0,
+  );
 
   function toggleLead(leadId: string): void {
     setSelectedLeadIds((current) =>
@@ -514,6 +590,52 @@ export function EmailDraftsWorkspace({
     );
     if (!confirmed) return;
     if (await approveOutreachDrafts(approvalIds)) setSelectedApprovalIds([]);
+  }
+
+  async function autofillMissingContext(): Promise<void> {
+    if (!blockedLeadIds.length || blockedLeadIds.length > 20) return;
+    setAutofilling(true);
+    setAutofillError(null);
+    try {
+      const response = await api.autofillLeads(blockedLeadIds);
+      setAutofillItems(response.items);
+    } catch (error) {
+      setAutofillError(
+        error instanceof ApiError ? error.details.message : "Lead context could not be suggested.",
+      );
+    } finally {
+      setAutofilling(false);
+    }
+  }
+
+  function updateAutofill(
+    leadId: string,
+    field: AutofillField,
+    value: string,
+  ): void {
+    setAutofillItems((current) =>
+      current.map((item) =>
+        item.lead_id === leadId && item.suggestion
+          ? { ...item, suggestion: { ...item.suggestion, [field]: value } }
+          : item,
+      ),
+    );
+  }
+
+  async function saveAutofill(): Promise<void> {
+    const items = autofillItems.flatMap((item) => {
+      if (!item.suggestion) return [];
+      const missingFields = missingAutofillFieldsByLeadId.get(item.lead_id) ?? [];
+      const changes = Object.fromEntries(
+        missingFields.flatMap((field) => {
+          const value = item.suggestion?.[field]?.trim();
+          return value ? [[field, value]] : [];
+        }),
+      );
+      return Object.keys(changes).length ? [{ lead_id: item.lead_id, changes }] : [];
+    });
+    if (!items.length) return;
+    if (await bulkUpdateLeads({ items })) setAutofillItems([]);
   }
 
   return (
@@ -604,8 +726,78 @@ export function EmailDraftsWorkspace({
                   <MailCheck size={17} aria-hidden="true" />
                   Create {selectedLeadIds.length || ""} draft{selectedLeadIds.length === 1 ? "" : "s"}
                 </button>
+                {blockedLeadIds.length ? (
+                  <button
+                    className="secondary-action"
+                    type="button"
+                    disabled={autofilling || blockedLeadIds.length > 20}
+                    title={blockedLeadIds.length > 20 ? "Select no more than 20 blocked leads" : undefined}
+                    onClick={() => void autofillMissingContext()}
+                  >
+                    <Sparkles size={17} aria-hidden="true" />
+                    {autofilling ? "Preparing context…" : "Fill missing context with AI"}
+                  </button>
+                ) : null}
               </div>
             </div>
+
+            {blockedLeadIds.length ? (
+              <p className="form-hint">
+                {blockedLeadIds.length} selected lead{blockedLeadIds.length === 1 ? "" : "s"} need
+                template context. AI suggestions are not saved until you review and choose Save all.
+              </p>
+            ) : null}
+            {autofillError ? <p className="form-error">{autofillError}</p> : null}
+
+            {autofillItems.length ? (
+              <section className="operation-card" aria-labelledby="autofill-review-heading">
+                <div className="records-heading">
+                  <div>
+                    <h3 id="autofill-review-heading">Review suggested lead context</h3>
+                    <p>Edit every suggestion before saving it to the selected leads.</p>
+                  </div>
+                  <button
+                    className="primary-action"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void saveAutofill()}
+                  >
+                    <Save size={16} aria-hidden="true" /> Save all
+                  </button>
+                </div>
+                <div className="form-grid">
+                  {autofillItems.map((item) => (
+                    <fieldset key={item.lead_id}>
+                      <legend>{item.business_name || item.lead_id}</legend>
+                      {item.skipped_reason ? <p className="form-error">{item.skipped_reason}</p> : null}
+                      {item.suggestion
+                        ? AUTOFILL_FIELDS.map((field) => {
+                            const lead = leads.find((candidate) => candidate.id === item.lead_id);
+                            const existing = lead?.[field] ?? "";
+                            const missing = missingAutofillFieldsByLeadId
+                              .get(item.lead_id)
+                              ?.includes(field);
+                            return (
+                              <label key={field}>
+                                {humanize(field)}
+                                <textarea
+                                  rows={2}
+                                  value={existing || item.suggestion?.[field] || ""}
+                                  disabled={!missing}
+                                  maxLength={field === "desired_next_step" ? 2_000 : 4_000}
+                                  onChange={(event) =>
+                                    updateAutofill(item.lead_id, field, event.target.value)
+                                  }
+                                />
+                              </label>
+                            );
+                          })
+                        : null}
+                    </fieldset>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             {loading ? (
               <LoadingState label="Checking lead eligibility" />
@@ -749,6 +941,15 @@ export function EmailDraftsWorkspace({
                     <span>{selectedBatch.rejected_count} rejected</span>
                     <span>{selectedBatch.sent_count} sent</span>
                   </div>
+                  <button
+                    className="tertiary-action"
+                    type="button"
+                    onClick={() =>
+                      askAssistant({ kind: "outreach_batch", id: selectedBatch.id })
+                    }
+                  >
+                    <Sparkles size={17} aria-hidden="true" /> Ask AI about this batch
+                  </button>
                   <button
                     className="primary-action"
                     type="button"

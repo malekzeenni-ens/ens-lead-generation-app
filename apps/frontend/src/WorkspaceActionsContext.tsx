@@ -4,6 +4,7 @@ import type {
   CampaignInput,
   CampaignRunProvider,
   CampaignUpdate,
+  LeadBulkUpdateInput,
   LeadInput,
   LeadUpdate,
   OutreachBatchInput,
@@ -17,7 +18,9 @@ import type {
   TemplateUpdate,
 } from "./api";
 import type {
+  AssistantContextSelection,
   BackupResult,
+  CampaignDraftApprovalResult,
   InstagramProfilePreview,
   ScoringWeights,
   ShopifyImportResult,
@@ -43,7 +46,12 @@ export interface WorkspaceActions {
   goToLeadsNeedingReview: () => void;
   goToCatalogue: () => void;
   goToEmailDrafts: () => void;
+  askAssistant: (context: AssistantContextSelection) => void;
   createCampaign: (data: CampaignInput) => Promise<boolean>;
+  approveCampaignDraft: (
+    draftId: string,
+    expectedVersion: number,
+  ) => Promise<CampaignDraftApprovalResult | null>;
   updateCampaign: (campaignId: string, data: CampaignUpdate) => Promise<boolean>;
   duplicateCampaign: (campaignId: string, name: string) => Promise<boolean>;
   deleteCampaign: (campaignId: string) => Promise<boolean>;
@@ -64,6 +72,7 @@ export interface WorkspaceActions {
   ) => Promise<boolean>;
   createLead: (data: LeadInput) => Promise<boolean>;
   updateLead: (leadId: string, data: LeadUpdate) => Promise<boolean>;
+  bulkUpdateLeads: (data: LeadBulkUpdateInput) => Promise<boolean>;
   changeLeadStage: (leadId: string, stage: string, reason?: string) => Promise<boolean>;
   addNote: (leadId: string, content: string) => Promise<boolean>;
   addFollowUp: (leadId: string, data: Record<string, unknown>) => Promise<boolean>;

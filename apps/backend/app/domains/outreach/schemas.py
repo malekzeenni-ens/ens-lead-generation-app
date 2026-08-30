@@ -42,6 +42,21 @@ class OutreachDraftEdit(BaseModel):
     body: str = Field(min_length=1, max_length=50_000)
 
 
+class OutreachDraftRefineRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    subject: str = Field(min_length=1, max_length=300)
+    body: str = Field(min_length=1, max_length=50_000)
+    instruction: str | None = Field(default=None, max_length=500)
+
+
+class OutreachDraftRefineResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    subject: str = Field(min_length=1, max_length=300)
+    body: str = Field(min_length=1, max_length=50_000)
+
+
 class OutreachDraftReject(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

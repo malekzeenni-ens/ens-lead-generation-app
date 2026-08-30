@@ -328,3 +328,34 @@ No user database, real Google/Meta request, AI inference, outbound message or in
 - Focused weekly backend suite: 7 passed, covering first-open idempotency, Tuesday catch-up, missing Context, cross-campaign deduplication, global cap, retry and failure isolation.
 - Focused dashboard interaction tests: pass, including automatic first-open check, weekly status and navigation to draft review.
 - Full regression: 75 backend tests and 92 frontend tests passed. Ruff, strict mypy, ESLint, strict TypeScript, the production frontend build, Cargo desktop check and `git diff --check` all pass.
+
+## 29 August 2026 - Local campaign assistant and confirmed playbook overrides
+
+### Delivered
+
+- Added a local-only campaign planner backed by Ollama and `llama3.2:3b`, with a loopback-only runtime boundary, structured output and no model tools.
+- Added durable draft, revision and override-decision records. Material playbook departures wait for explicit confirmation; hard approval, provider and automation constraints cannot be overridden.
+- Added a campaign chat and complete editable review form. Generation never creates a campaign; explicit approval creates exactly one paused campaign with weekly outreach disabled.
+- Added exact LightBurn/xTool Creative Space process detection. Normal model limits remain active otherwise; only detected design-software sessions use reduced limits and unload-after-use behavior.
+- Added workspace switches for the local assistant and design-software protection, plus Ollama setup and architecture documentation.
+
+### Verification
+
+- Full backend regression: 83 tests passed, plus the focused resource-policy test for standard, protected and protection-disabled modes.
+- Frontend Vitest/Testing Library: 101 tests passed, including conversational draft creation, override confirmation and explicit paused-campaign approval.
+- Ruff, backend application mypy, ESLint, strict TypeScript, frontend production build, lock verification and `git diff --check` pass.
+
+## 29 August 2026 - General local AI conversations and attachments
+
+### Delivered
+
+- Expanded the same Ollama interface from campaign-only drafting to persistent general questions, templates, playbooks and planning conversations.
+- Added authenticated local TXT/CSV/DOCX artifact generation and download, plus validated TXT/CSV/DOCX/JPEG/PNG uploads. The text-only 3B model clearly reports that it cannot inspect image content.
+- Added a deliberate conversation/playbook-to-campaign handoff that reuses the existing override, paused-draft and separate-approval boundaries.
+- Added schema revision `0013_general_assistant`, local attachment storage, a shared Ollama generation lock and the same exact LightBurn/xTool resource policy.
+
+### Verification
+
+- Real local Ollama run passed for a general answer, generated Word playbook, authenticated DOCX download and playbook-to-campaign handoff; no campaign existed before approval.
+- Focused backend assistant/campaign suites: 12 passed. Frontend local-assistant interaction suite: 50 passed.
+- Full regression: 91 backend tests and 102 frontend tests passed. Ruff, formatting, strict mypy, ESLint, strict TypeScript, production frontend build, Cargo tests/clippy, lock verification, dependency audit and `git diff --check` pass.

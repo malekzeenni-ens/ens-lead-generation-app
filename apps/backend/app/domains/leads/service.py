@@ -30,6 +30,7 @@ from app.db.models import (
 from app.domains.audit.repository import AuditRepository
 from app.domains.audit.service import record_audit_event
 from app.domains.campaigns.repository import CampaignRepository
+from app.domains.leads.activity import lead_activity_rows
 from app.domains.leads.identity import social_identity
 from app.domains.leads.repository import LeadRepository
 from app.domains.leads.schemas import (
@@ -40,6 +41,7 @@ from app.domains.leads.schemas import (
     FollowUpCreate,
     FollowUpRead,
     FollowUpStatus,
+    LeadBulkUpdateRequest,
     LeadCreate,
     LeadDeleteResult,
     LeadNoteRead,
@@ -409,7 +411,7 @@ class LeadService:
         stage: str | None = None,
         suppressed: bool | None = None,
         campaign_id: str | None = None,
-    ) -> list[LeadRead]:
+    ) -> builtins.list[LeadRead]:
         leads = self.repository.list(
             session,
             query=query,
@@ -431,6 +433,8 @@ class LeadService:
         lead_id: str,
         data: LeadUpdate,
         correlation_id: str,
+        *,
+        commit: bool = True,
     ) -> LeadRead:
         lead = self._get_model(session, lead_id)
         changes = data.model_dump(exclude_unset=True)
@@ -531,8 +535,35 @@ class LeadService:
                 "invalidated_outreach_drafts": invalidated_drafts,
             },
         )
-        session.commit()
+        if commit:
+            session.commit()
+        else:
+            session.flush()
         return self._reload(session, lead.id)
+
+    def bulk_update(
+        self,
+        session: Session,
+        data: LeadBulkUpdateRequest,
+        correlation_id: str,
+    ) -> builtins.list[LeadRead]:
+        for item in data.items:
+            if self.repository.get(session, item.lead_id) is None:
+                raise DomainError("LEAD_NOT_FOUND", "Lead not found.", status_code=404)
+        try:
+            for item in data.items:
+                self.update(
+                    session,
+                    item.lead_id,
+                    item.changes,
+                    correlation_id,
+                    commit=False,
+                )
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        return [self._reload(session, item.lead_id) for item in data.items]
 
     def change_stage(
         self,
@@ -915,30 +946,10 @@ class LeadService:
                 "quote_value": lead.quote_value,
                 "won_value": lead.won_value,
             }
-            activities: builtins.list[tuple[datetime | date, str, str, str]] = []
-            activities.extend(
-                (event.created_at, "stage", event.new_stage, event.reason or "")
-                for event in lead.stage_events
-            )
-            activities.extend((note.created_at, "note", note.content, "") for note in lead.notes)
-            activities.extend(
-                (
-                    follow_up.created_at,
-                    "follow_up",
-                    follow_up.follow_up_type,
-                    f"{follow_up.status}; due {follow_up.due_date.isoformat()}",
-                )
-                for follow_up in lead.follow_ups
-            )
-            activities.extend(
-                (
-                    communication.created_at,
-                    "communication",
-                    communication.channel,
-                    communication.sent_status,
-                )
-                for communication in lead.communications
-            )
+            activities: builtins.list[tuple[datetime | date, str, str, str]] = [
+                (row.occurred_at, row.activity_type, row.detail, row.status)
+                for row in lead_activity_rows(lead)
+            ]
             activities.extend(
                 (
                     activity.created_at,

@@ -1,6 +1,9 @@
 # Component design
 
-**Updated:** 28 August 2026
+**Updated:** 29 August 2026
+
+The complete local Ollama, general-assistant, file and guarded campaign-drafting design is
+maintained in [AI_INTEGRATION_ARCHITECTURE.md](AI_INTEGRATION_ARCHITECTURE.md).
 
 ## Runtime components
 

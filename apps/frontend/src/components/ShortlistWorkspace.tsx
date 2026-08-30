@@ -5,6 +5,7 @@ import {
   ListChecks,
   RefreshCw,
   ShieldOff,
+  Sparkles,
   X,
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
@@ -27,6 +28,7 @@ export function ShortlistWorkspace({ campaigns, shortlists }: ShortlistWorkspace
     generateShortlist: onGenerate,
     shortlistAction: onAction,
     manageLead: onManageLead,
+    askAssistant,
   } = useWorkspaceActions();
   const activeCampaigns = campaigns.filter((campaign) => campaign.status === "active");
   const [campaignId, setCampaignId] = useState(activeCampaigns[0]?.id ?? "");
@@ -118,6 +120,17 @@ export function ShortlistWorkspace({ campaigns, shortlists }: ShortlistWorkspace
           icon={ListChecks}
           count={latest?.capacity}
         />
+        {latest ? (
+          <div className="contextual-ai-action">
+            <button
+              className="tertiary-action"
+              type="button"
+              onClick={() => askAssistant({ kind: "shortlist", id: latest.id })}
+            >
+              <Sparkles size={16} aria-hidden="true" /> Ask AI about this shortlist
+            </button>
+          </div>
+        ) : null}
         {loading ? (
           <LoadingState label="Loading weekly recommendations" />
         ) : !latest ? (

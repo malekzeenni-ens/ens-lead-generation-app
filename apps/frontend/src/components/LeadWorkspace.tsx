@@ -1,10 +1,19 @@
-import { AlertTriangle, ArrowRight, Plus, Search, UserRoundSearch } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  ListTodo,
+  Plus,
+  Search,
+  Sparkles,
+  UserRoundSearch,
+} from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 
+import { ApiError, api } from "../api";
 import { emailAddressFor } from "../contact";
 import { PIPELINE_STAGES, humanize } from "../domain";
 import { usePagination } from "../pagination";
-import type { Campaign, Lead } from "../types";
+import type { Campaign, Lead, StalledLeadDigest } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import {
   EmptyState,
@@ -64,6 +73,7 @@ export function LeadWorkspace({
     busy,
     createLead: onCreate,
     manageLead: onManage,
+    askAssistant,
   } = useWorkspaceActions();
   const [activeTask, setActiveTask] = useState("browse");
   const [query, setQuery] = useState("");
@@ -72,6 +82,12 @@ export function LeadWorkspace({
   const [stage, setStage] = useState("");
   const [suppression, setSuppression] = useState("all");
   const [reviewFilter, setReviewFilter] = useState(initialClassificationFilter);
+  const [aiQuery, setAiQuery] = useState("");
+  const [translating, setTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState<string | null>(null);
+  const [digest, setDigest] = useState<StalledLeadDigest | null>(null);
+  const [loadingDigest, setLoadingDigest] = useState(false);
+  const [digestError, setDigestError] = useState<string | null>(null);
   const currentCampaigns = campaigns.filter((campaign) => campaign.status !== "inactive");
   const sourceOptions = useMemo(
     () => {
@@ -152,6 +168,47 @@ export function LeadWorkspace({
     if (saved) {
       formElement.reset();
       setActiveTask("browse");
+    }
+  }
+
+  async function translateFilters(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!aiQuery.trim()) return;
+    setTranslating(true);
+    setTranslateError(null);
+    try {
+      const result = await api.translateLeadFilter(aiQuery.trim());
+      setStage(result.stage ?? "");
+      setCampaignId(result.campaign_id ?? "");
+      setSourceType(result.source_type ?? "");
+      setSuppression(
+        result.suppressed === null
+          ? "all"
+          : result.suppressed
+            ? "suppressed"
+            : "available",
+      );
+      setQuery(result.keyword ?? "");
+    } catch (error) {
+      setTranslateError(
+        error instanceof ApiError ? error.details.message : "The filters could not be translated.",
+      );
+    } finally {
+      setTranslating(false);
+    }
+  }
+
+  async function loadStalledDigest(): Promise<void> {
+    setLoadingDigest(true);
+    setDigestError(null);
+    try {
+      setDigest(await api.stalledLeadDigest());
+    } catch (error) {
+      setDigestError(
+        error instanceof ApiError ? error.details.message : "The stalled-lead digest failed.",
+      );
+    } finally {
+      setLoadingDigest(false);
     }
   }
 
@@ -260,6 +317,78 @@ export function LeadWorkspace({
         ) : (
           <TaskPanel id="leads-tasks" tabId="browse">
           <div className="records-panel records-panel--table">
+            <form className="form-grid form-grid--compact" onSubmit={(event) => void translateFilters(event)}>
+              <div className="field-pair">
+                <label>
+                  Set filters with AI
+                  <input
+                    value={aiQuery}
+                    maxLength={300}
+                    placeholder="For example: unsuppressed bakery leads from Instagram"
+                    onChange={(event) => setAiQuery(event.target.value)}
+                  />
+                </label>
+                <div className="form-actions">
+                  <button
+                    className="secondary-action"
+                    type="submit"
+                    disabled={translating || !aiQuery.trim()}
+                  >
+                    <Sparkles size={16} aria-hidden="true" />
+                    {translating ? "Translating…" : "Ask AI"}
+                  </button>
+                  <button
+                    className="secondary-action"
+                    type="button"
+                    disabled={loadingDigest}
+                    onClick={() => void loadStalledDigest()}
+                  >
+                    <ListTodo size={16} aria-hidden="true" />
+                    {loadingDigest ? "Preparing…" : "Stalled leads"}
+                  </button>
+                </div>
+              </div>
+              <p className="form-hint">
+                Sets the filters below from your request — it does not search inside notes or emails.
+              </p>
+              {translateError ? <p className="form-error">{translateError}</p> : null}
+              {digestError ? <p className="form-error">{digestError}</p> : null}
+            </form>
+
+            {digest ? (
+              <section className="operation-card" aria-labelledby="stalled-leads-heading">
+                <div className="records-heading">
+                  <div>
+                    <h3 id="stalled-leads-heading">Stalled leads</h3>
+                    <p>AI suggestions for leads selected by deterministic activity rules.</p>
+                  </div>
+                  <button className="tertiary-action" type="button" onClick={() => setDigest(null)}>
+                    Close
+                  </button>
+                </div>
+                {digest.items.length ? (
+                  <div className="compact-list">
+                    {digest.items.map((item) => (
+                      <div key={item.lead_id}>
+                        <span>
+                          <strong>{item.business_name}</strong>
+                          <small>{item.days_stale} days stale · {item.suggested_action}</small>
+                        </span>
+                        <button
+                          className="tertiary-action"
+                          type="button"
+                          onClick={() => onManage(item.lead_id)}
+                        >
+                          Open lead <ArrowRight size={15} aria-hidden="true" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="supporting-copy">No stalled leads matched the current rules.</p>
+                )}
+              </section>
+            ) : null}
             <div className="filter-bar filter-bar--leads" aria-label="Lead filters">
               <label className="search-control">
                 <span className="visually-hidden">Search leads</span>
@@ -390,9 +519,18 @@ export function LeadWorkspace({
                           <td data-label="Location">{lead.location}</td>
                           <td data-label="Next action">{nextFollowUp?.due_date ?? "Not set"}</td>
                           <td data-label="Action">
-                            <button className="tertiary-action" type="button" onClick={() => onManage(lead.id)}>
-                              Manage <ArrowRight size={16} aria-hidden="true" />
-                            </button>
+                            <div className="record-actions">
+                              <button
+                                className="tertiary-action"
+                                type="button"
+                                onClick={() => askAssistant({ kind: "lead", id: lead.id })}
+                              >
+                                <Sparkles size={16} aria-hidden="true" /> Ask AI
+                              </button>
+                              <button className="tertiary-action" type="button" onClick={() => onManage(lead.id)}>
+                                Manage <ArrowRight size={16} aria-hidden="true" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

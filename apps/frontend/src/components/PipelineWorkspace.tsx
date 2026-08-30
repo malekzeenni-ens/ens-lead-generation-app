@@ -12,6 +12,7 @@ import {
   Save,
   ShieldAlert,
   ShieldOff,
+  Sparkles,
   UserRoundCog,
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
@@ -24,6 +25,7 @@ import {
   renderTemplate,
   whatsappUrl,
 } from "../contact";
+import { ApiError, api } from "../api";
 import {
   PIPELINE_STAGES,
   classificationLabel,
@@ -34,7 +36,15 @@ import {
   todayIso,
 } from "../domain";
 import { usePagination } from "../pagination";
-import type { Campaign, Lead, Product, ProductFamily, ScoreRun, Template } from "../types";
+import type {
+  Campaign,
+  Lead,
+  LeadBriefing,
+  Product,
+  ProductFamily,
+  ScoreRun,
+  Template,
+} from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import {
   DangerConfirm,
@@ -187,10 +197,15 @@ export function PipelineWorkspace({
     calculateScore: onCalculateScore,
     overrideScore: onOverrideScore,
     sendContactMessage,
+    askAssistant,
   } = useWorkspaceActions();
   const [activeTask, setActiveTask] = useState("overview");
   const [leadQuery, setLeadQuery] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [briefing, setBriefing] = useState<LeadBriefing | null>(null);
+  const [briefingLeadId, setBriefingLeadId] = useState<string | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
+  const [briefingError, setBriefingError] = useState<string | null>(null);
   const selectedLead = leads.find((lead) => lead.id === selectedLeadId) ?? leads[0] ?? null;
   const filteredLeads = useMemo(() => {
     const query = leadQuery.toLocaleLowerCase();
@@ -256,6 +271,34 @@ export function PipelineWorkspace({
     const selectedIndex = filteredLeads.findIndex((lead) => lead.id === selectedLeadId);
     if (selectedIndex >= 0) setLeadPage(Math.floor(selectedIndex / leadPageSize) + 1);
   }, [filteredLeads, leadPageSize, selectedLeadId, setLeadPage]);
+
+  async function generateBriefing(): Promise<void> {
+    if (!selectedLead) return;
+    setBriefingLoading(true);
+    setBriefingError(null);
+    try {
+      setBriefing(await api.briefLead(selectedLead.id));
+      setBriefingLeadId(selectedLead.id);
+    } catch (error) {
+      setBriefingError(
+        error instanceof ApiError ? error.details.message : "The lead briefing failed.",
+      );
+    } finally {
+      setBriefingLoading(false);
+    }
+  }
+
+  async function saveBriefingAsNote(): Promise<void> {
+    if (!selectedLead || !briefing || briefingLeadId !== selectedLead.id) return;
+    const content = [
+      `AI briefing: ${briefing.summary}`,
+      `Talking points:\n${briefing.talking_points.map((point) => `- ${point}`).join("\n")}`,
+      briefing.watch_out_for ? `Watch out for: ${briefing.watch_out_for}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    await onNote(selectedLead.id, content);
+  }
 
   async function submitDetails(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -484,6 +527,15 @@ export function PipelineWorkspace({
                     </div>
                   </div>
                   <div className="lead-detail-statuses">
+                    <button
+                      className="tertiary-action"
+                      type="button"
+                      onClick={() =>
+                        askAssistant({ kind: "lead", id: selectedLead.id })
+                      }
+                    >
+                      <Sparkles size={16} aria-hidden="true" /> Ask AI about this lead
+                    </button>
                     <span className="status-badge">{humanize(selectedLead.pipeline_stage)}</span>
                     <span className={`status-badge${selectedLead.suppressed ? " status-badge--warning" : " status-badge--success"}`}>
                       {selectedLead.suppressed ? "Do not contact" : classificationLabel(selectedLead.contact_classification)}
@@ -869,6 +921,41 @@ export function PipelineWorkspace({
 
                 {activeTask === "overview" ? (
                 <TaskPanel id="lead-pipeline-tasks" tabId="overview">
+                <section className="operation-card" aria-labelledby="lead-briefing-heading">
+                  <div className="operation-card__heading">
+                    <Sparkles size={18} aria-hidden="true" />
+                    <h3 id="lead-briefing-heading">Contact briefing</h3>
+                  </div>
+                  <button
+                    className="secondary-action"
+                    type="button"
+                    disabled={briefingLoading}
+                    onClick={() => void generateBriefing()}
+                  >
+                    <Sparkles size={16} aria-hidden="true" />
+                    {briefingLoading ? "Preparing…" : "Brief me"}
+                  </button>
+                  {briefingError ? <p className="form-error">{briefingError}</p> : null}
+                  {briefing && briefingLeadId === selectedLead.id ? (
+                    <div className="guidance-note">
+                      <p>{briefing.summary}</p>
+                      <ul>
+                        {briefing.talking_points.map((point) => <li key={point}>{point}</li>)}
+                      </ul>
+                      {briefing.watch_out_for ? (
+                        <p><strong>Watch out for:</strong> {briefing.watch_out_for}</p>
+                      ) : null}
+                      <button
+                        className="tertiary-action"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void saveBriefingAsNote()}
+                      >
+                        Save as note
+                      </button>
+                    </div>
+                  ) : null}
+                </section>
                 <details className="operation-disclosure" open>
                   <summary><FileText size={17} aria-hidden="true" /> Lead details and retention</summary>
                   <form className="form-grid" onSubmit={(event) => void submitDetails(event)}>

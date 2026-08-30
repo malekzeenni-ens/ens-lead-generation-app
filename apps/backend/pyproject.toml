@@ -7,6 +7,7 @@ dependencies = [
   "alembic>=1.14,<2",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
+  "psutil>=6.1,<8",
   "pydantic-settings>=2.7,<3",
   "sqlalchemy>=2.0,<3",
   "uvicorn[standard]>=0.34,<1"
@@ -18,7 +19,8 @@ dev = [
   "pyinstaller>=6.12,<7",
   "pytest>=8.3,<9",
   "pytest-cov>=6,<8",
-  "ruff>=0.9,<1"
+  "ruff>=0.9,<1",
+  "types-psutil>=6.1,<8"
 ]
 
 [build-system]

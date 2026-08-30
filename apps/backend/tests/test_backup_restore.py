@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import base64
 import shutil
 import sqlite3
 from contextlib import closing
 from pathlib import Path
 from typing import cast
+from zipfile import ZipFile
 
 import pytest
 from fastapi import FastAPI
@@ -39,7 +41,10 @@ def test_consistent_backup_verification_and_isolated_restore(
         "valid": True,
         "checksum_matches": True,
         "integrity_result": "ok",
-        "schema_version": "0011_weekly_outreach_automation",
+        "schema_version": "0014_backup_manifest_assistant_files",
+        "assistant_files_present": False,
+        "assistant_files_checksum_matches": None,
+        "assistant_files_count": 0,
     }
 
     restored = tmp_path / "restore-test" / "restored.sqlite3"
@@ -72,3 +77,62 @@ def test_consistent_backup_verification_and_isolated_restore(
     )
     assert not tampered_result.valid
     assert not tampered_result.checksum_matches
+
+
+def test_backup_bundles_and_restores_assistant_file_bytes(
+    client: TestClient, app: FastAPI, tmp_path: Path
+) -> None:
+    from tests.test_general_assistant import FakeGeneralAssistantManager
+
+    app.state.campaign_assistant_manager = FakeGeneralAssistantManager()
+    conversation = client.post("/api/v1/assistant/conversations", json={}).json()
+    upload = client.post(
+        f"/api/v1/assistant/conversations/{conversation['id']}/messages",
+        json={
+            "content": "Keep this reference",
+            "attachments": [
+                {
+                    "filename": "brief.txt",
+                    "media_type": "text/plain",
+                    "content_base64": base64.b64encode(b"Target Luton bakeries.").decode(),
+                }
+            ],
+        },
+    )
+    assert upload.status_code == 200
+
+    backup_directory = tmp_path / "backups"
+    backup = client.post(
+        "/api/v1/backups", json={"target_directory": str(backup_directory)}
+    ).json()
+    assert backup["assistant_files_count"] == 1
+    archive_path = Path(backup["assistant_files_archive"])
+    assert archive_path.is_file()
+
+    verification = client.post(
+        "/api/v1/backups/verify", json={"backup_path": backup["backup_path"]}
+    ).json()
+    assert verification["valid"] is True
+    assert verification["assistant_files_present"] is True
+    assert verification["assistant_files_checksum_matches"] is True
+    assert verification["assistant_files_count"] == 1
+
+    restored = tmp_path / "restore-test" / "restored.sqlite3"
+    application = cast(FastAPI, client.app)
+    result = BackupService(application.state.settings.database_path).restore_to_isolated_path(
+        Path(backup["backup_path"]), restored
+    )
+    assert result.valid
+    assert result.assistant_files_present is True
+    restored_files_directory = restored.parent / "assistant_files"
+    restored_files = list(restored_files_directory.glob("*.txt"))
+    assert len(restored_files) == 1
+    assert restored_files[0].read_bytes() == b"Target Luton bakeries."
+
+    with ZipFile(archive_path, "a") as archive:
+        archive.writestr("extra-injected-file.txt", "unexpected")
+    tampered_result = BackupService(application.state.settings.database_path).verify(
+        Path(backup["backup_path"])
+    )
+    assert tampered_result.assistant_files_checksum_matches is False
+    assert tampered_result.valid is False

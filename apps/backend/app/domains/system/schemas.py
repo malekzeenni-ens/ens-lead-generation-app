@@ -9,6 +9,8 @@ class WorkspaceSettings(BaseModel):
     default_campaign_radius_miles: int = Field(default=25, ge=1, le=500)
     default_weekly_shortlist_size: int = Field(default=5, ge=1, le=50)
     weekly_outreach_global_limit: int = Field(default=20, ge=1, le=100)
+    local_campaign_assistant_enabled: bool = True
+    protect_design_software_resources: bool = True
 
 
 class WorkspaceSettingsUpdate(BaseModel):
@@ -19,6 +21,8 @@ class WorkspaceSettingsUpdate(BaseModel):
     default_campaign_radius_miles: int | None = Field(default=None, ge=1, le=500)
     default_weekly_shortlist_size: int | None = Field(default=None, ge=1, le=50)
     weekly_outreach_global_limit: int | None = Field(default=None, ge=1, le=100)
+    local_campaign_assistant_enabled: bool | None = None
+    protect_design_software_resources: bool | None = None
 
     @model_validator(mode="after")
     def require_change(self) -> WorkspaceSettingsUpdate:

@@ -23,6 +23,164 @@ export interface Campaign {
   updated_at: string;
 }
 
+export interface CampaignDraftCampaign {
+  name: string;
+  description: string | null;
+  segment: string;
+  primary_location: string;
+  radius_miles: number;
+  keywords: string[];
+  exclusion_keywords: string[];
+  product_categories: string[];
+  product_family_id: string | null;
+  discovery_sources: string[];
+  weekly_shortlist_size: number;
+  minimum_score_threshold: number;
+  preferred_channels: string[];
+  offer_settings: Record<string, boolean>;
+  discovery_mode: "manual" | "scheduled" | "combined";
+  weekly_outreach_enabled: boolean;
+  weekly_outreach_template_id: string | null;
+  weekly_outreach_provider: "scoring" | "google_places" | "instagram" | "public_registries";
+  status: "active" | "paused" | "inactive";
+}
+
+export interface CampaignDraftOverrideItem {
+  item_id: string;
+  rule_id: string;
+  field: string;
+  playbook_recommendation: unknown;
+  requested_value: unknown;
+  impact: string;
+  decision: "pending" | "confirmed" | "rejected";
+}
+
+export interface CampaignDraftOverride {
+  id: string;
+  draft_id: string;
+  draft_version: number;
+  status: "pending" | "confirmed" | "partially_confirmed" | "rejected" | "superseded";
+  summary: string;
+  items: CampaignDraftOverrideItem[];
+  playbook_version: string;
+  created_at: string;
+  confirmed_at: string | null;
+  rejected_at: string | null;
+}
+
+export interface CampaignDraftRevision {
+  id: string;
+  version: number;
+  revision_source: string;
+  user_instruction: string | null;
+  payload: CampaignDraftCampaign | null;
+  assistant_message: string;
+  assumptions: string[];
+  warnings: string[];
+  questions: string[];
+  resource_profile: "standard" | "design_software";
+  model_name: string;
+  prompt_version: string;
+  created_at: string;
+}
+
+export interface CampaignDraft {
+  id: string;
+  status:
+    | "generating"
+    | "awaiting_input"
+    | "awaiting_override_confirmation"
+    | "ready"
+    | "generation_failed"
+    | "approved"
+    | "discarded";
+  original_request: string;
+  campaign: CampaignDraftCampaign | null;
+  assistant_message: string;
+  assumptions: string[];
+  warnings: string[];
+  questions: string[];
+  version: number;
+  model_name: string;
+  prompt_version: string;
+  resource_profile: "standard" | "design_software";
+  generation_duration_ms: number | null;
+  prompt_token_count: number | null;
+  output_token_count: number | null;
+  approved_campaign_id: string | null;
+  created_at: string;
+  updated_at: string;
+  approved_at: string | null;
+  overrides: CampaignDraftOverride[];
+  revisions: CampaignDraftRevision[];
+}
+
+export interface CampaignAssistantStatus {
+  enabled: boolean;
+  ollama_reachable: boolean;
+  model_installed: boolean;
+  model_loaded: boolean;
+  model: string;
+  resource_profile: "standard" | "design_software";
+  protected_applications: string[];
+  ready: boolean;
+  message: string;
+}
+
+export interface AssistantAttachment {
+  id: string;
+  direction: "uploaded" | "generated";
+  filename: string;
+  media_type: string;
+  size_bytes: number;
+  processing_status: "text_extracted" | "stored_image_text_model" | "generated";
+  download_url: string;
+  created_at: string;
+}
+
+export interface AssistantMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  model_name: string | null;
+  resource_profile: "standard" | "design_software" | null;
+  generation_duration_ms: number | null;
+  campaign_draft_suggested: boolean;
+  attachments: AssistantAttachment[];
+  created_at: string;
+}
+
+export interface AssistantConversation {
+  id: string;
+  title: string;
+  messages: AssistantMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssistantAttachmentInput {
+  filename: string;
+  media_type: string;
+  content_base64: string;
+}
+
+export type AssistantContextKind =
+  | "workspace"
+  | "campaign"
+  | "lead"
+  | "outreach_batch"
+  | "shortlist";
+
+export interface AssistantContextSelection {
+  kind: AssistantContextKind;
+  id: string | null;
+}
+
+export interface CampaignDraftApprovalResult {
+  draft: CampaignDraft;
+  campaign: Campaign;
+}
+
 export interface CampaignDeleteResult {
   deleted: boolean;
   campaign_id: string;
@@ -194,6 +352,8 @@ export interface WorkspaceSettings {
   default_campaign_radius_miles: number;
   default_weekly_shortlist_size: number;
   weekly_outreach_global_limit: number;
+  local_campaign_assistant_enabled: boolean;
+  protect_design_software_resources: boolean;
 }
 
 export interface Diagnostics {
@@ -561,4 +721,59 @@ export interface Shortlist {
   items: ShortlistItem[];
   created_at: string;
   updated_at: string;
+}
+
+export interface OutreachDraftRefineInput {
+  subject: string;
+  body: string;
+  instruction?: string;
+}
+
+export interface OutreachDraftRefineResult {
+  subject: string;
+  body: string;
+}
+
+export interface LeadFilterTranslateResult {
+  stage: string | null;
+  suppressed: boolean | null;
+  campaign_id: string | null;
+  source_type: string | null;
+  keyword: string | null;
+}
+
+export interface LeadBriefing {
+  summary: string;
+  talking_points: string[];
+  watch_out_for: string | null;
+}
+
+export interface LeadAutofillSuggestion {
+  personalisation_observation: string | null;
+  relevance_opportunity: string | null;
+  offer_angle: string | null;
+  desired_next_step: string | null;
+}
+
+export interface LeadAutofillResultItem {
+  lead_id: string;
+  business_name: string;
+  suggestion: LeadAutofillSuggestion | null;
+  skipped_reason: string | null;
+}
+
+export interface LeadAutofillResponse {
+  items: LeadAutofillResultItem[];
+}
+
+export interface StalledLeadSuggestion {
+  lead_id: string;
+  business_name: string;
+  days_stale: number;
+  suggested_action: string;
+}
+
+export interface StalledLeadDigest {
+  generated_at: string;
+  items: StalledLeadSuggestion[];
 }

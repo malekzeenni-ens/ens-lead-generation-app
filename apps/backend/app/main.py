@@ -12,11 +12,14 @@ from fastapi.responses import JSONResponse
 
 from app.api.dependencies import Authenticated
 from app.api.routes import (
+    assistant,
     automation,
     backups,
+    campaign_assistant,
     campaigns,
     catalogue,
     health,
+    lead_assistant,
     leads,
     outreach,
     qualification,
@@ -31,7 +34,9 @@ from app.db.migrations import run_migrations
 from app.db.session import Database
 from app.domains.automation.manager import CampaignRunManager
 from app.domains.automation.providers import MetaInstagramProvider
+from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.system.meta import MetaConnectionService
+from app.domains.system.service import SystemService
 
 logger = logging.getLogger(__name__)
 
@@ -70,14 +75,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     campaign_run_manager = CampaignRunManager(
         database, runtime_settings, instagram_provider=instagram_provider
     )
+    campaign_assistant_manager = CampaignAssistantManager(runtime_settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):  # type: ignore[no-untyped-def]
         campaign_run_manager.resume_incomplete()
+        with database.session_factory() as session:
+            campaign_assistant_manager.set_protection_enabled(
+                SystemService().get_settings(session).protect_design_software_resources
+            )
+        campaign_assistant_manager.start()
         try:
             yield
         finally:
             logger.info("Etch N Shine local backend shutdown started")
+            campaign_assistant_manager.shutdown()
             campaign_run_manager.shutdown()
             meta_connection_service.shutdown()
             database.close()
@@ -95,6 +107,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = runtime_settings
     app.state.database = database
     app.state.campaign_run_manager = campaign_run_manager
+    app.state.campaign_assistant_manager = campaign_assistant_manager
     app.state.meta_connection_service = meta_connection_service
 
     app.add_middleware(
@@ -162,7 +175,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     prefix = "/api/v1"
     app.include_router(health.router, prefix=prefix)
     app.include_router(campaigns.router, prefix=prefix)
+    app.include_router(campaign_assistant.router, prefix=prefix)
+    app.include_router(assistant.router, prefix=prefix)
     app.include_router(automation.router, prefix=prefix)
+    app.include_router(lead_assistant.router, prefix=prefix)
     app.include_router(leads.router, prefix=prefix)
     app.include_router(catalogue.router, prefix=prefix)
     app.include_router(qualification.router, prefix=prefix)

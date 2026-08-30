@@ -1,3 +1,5 @@
+import builtins
+
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -8,12 +10,14 @@ from app.db.models import (
     LeadCampaign,
     LeadNote,
     LeadSocialIdentity,
+    ScoreRun,
     SourceObservation,
+    SourceSystem,
     SuppressionRecord,
 )
 
 _LEAD_OPTIONS = (
-    selectinload(Lead.campaigns),
+    selectinload(Lead.campaigns).selectinload(LeadCampaign.campaign),
     selectinload(Lead.observations).selectinload(SourceObservation.source_system),
     selectinload(Lead.social_identities),
     selectinload(Lead.stage_events),
@@ -21,6 +25,7 @@ _LEAD_OPTIONS = (
     selectinload(Lead.follow_ups),
     selectinload(Lead.communications),
     selectinload(Lead.suppression_records),
+    selectinload(Lead.score_runs).selectinload(ScoreRun.campaign),
 )
 
 
@@ -107,3 +112,14 @@ class LeadRepository:
 
     def add_communication(self, session: Session, communication: Communication) -> None:
         session.add(communication)
+
+    def distinct_source_types(self, session: Session) -> builtins.list[str]:
+        return builtins.list(
+            session.scalars(
+                select(SourceSystem.source_type)
+                .join(SourceObservation)
+                .where(SourceSystem.source_type != "website")
+                .distinct()
+                .order_by(SourceSystem.source_type)
+            )
+        )

@@ -9,6 +9,7 @@ from app.domains.leads.schemas import (
     CommunicationCreate,
     FollowUpComplete,
     FollowUpCreate,
+    LeadBulkUpdateRequest,
     LeadCreate,
     LeadDeleteResult,
     LeadRead,
@@ -73,6 +74,16 @@ def export_leads(
 @router.get("/{lead_id}", response_model=LeadRead)
 def get_lead(lead_id: str, _: Authenticated, session: DatabaseSession) -> LeadRead:
     return service.get(session, lead_id)
+
+
+@router.patch("/bulk", response_model=list[LeadRead])
+def bulk_update_leads(
+    data: LeadBulkUpdateRequest,
+    request: Request,
+    _: Authenticated,
+    session: DatabaseSession,
+) -> list[LeadRead]:
+    return service.bulk_update(session, data, request.state.correlation_id)
 
 
 @router.patch("/{lead_id}", response_model=LeadRead)

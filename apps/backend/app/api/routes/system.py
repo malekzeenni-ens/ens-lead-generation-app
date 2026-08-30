@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request, status
 
 from app.api.dependencies import Authenticated, DatabaseSession
 from app.core.config import Settings
+from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.system.meta import MetaConnectionService
 from app.domains.system.meta_schemas import (
     MetaAccountSelect,
@@ -39,7 +40,13 @@ def update_settings(
     _: Authenticated,
     session: DatabaseSession,
 ) -> WorkspaceSettings:
-    return service.update_settings(session, data, request.state.correlation_id)
+    updated = service.update_settings(session, data, request.state.correlation_id)
+    manager = cast(
+        CampaignAssistantManager,
+        request.app.state.campaign_assistant_manager,
+    )
+    manager.set_protection_enabled(updated.protect_design_software_resources)
+    return updated
 
 
 @router.get("/diagnostics", response_model=DiagnosticsRead)

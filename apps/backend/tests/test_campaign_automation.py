@@ -370,6 +370,7 @@ def test_enrichment_checks_contact_pages_for_public_contacts(
             return httpx.Response(
                 200,
                 text=(
+                    "Contact our bakery team for bespoke cake details."
                     '<a href="mailto:hello@example.com">Email</a>'
                     '<a href="tel:+441582123456">Call</a>'
                     '<a href="https://instagram.com/examplecakes">Instagram</a>'
@@ -380,6 +381,7 @@ def test_enrichment_checks_contact_pages_for_public_contacts(
             200,
             text=(
                 "<title>Example Cakes</title>"
+                "Celebration cakes made in Luton."
                 '<a href="/contact">Contact us</a>'
                 '<a href="https://facebook.com/examplecakes">Facebook</a>'
             ),
@@ -398,3 +400,5 @@ def test_enrichment_checks_contact_pages_for_public_contacts(
         "https://instagram.com/examplecakes",
     }
     assert evidence.pages_checked == ["https://example.com", "https://example.com/contact"]
+    assert "Celebration cakes made in Luton" in evidence.visible_text
+    assert "bespoke cake details" in evidence.visible_text

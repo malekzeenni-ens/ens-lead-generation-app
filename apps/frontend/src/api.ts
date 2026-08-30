@@ -2,20 +2,32 @@ import { invoke } from "@tauri-apps/api/core";
 
 import type {
   ApiErrorShape,
+  AssistantAttachmentInput,
+  AssistantContextSelection,
+  AssistantConversation,
   BackupResult,
   AutomationCapabilities,
   Campaign,
+  CampaignAssistantStatus,
   CampaignDeleteResult,
+  CampaignDraft,
+  CampaignDraftApprovalResult,
+  CampaignDraftCampaign,
   CampaignRun,
   DiscoveryCandidate,
   Diagnostics,
   Lead,
+  LeadAutofillResponse,
+  LeadBriefing,
+  LeadFilterTranslateResult,
   InstagramProfilePreview,
   MetaAuthorizationStart,
   MetaConnection,
   OperationsSummary,
   OutreachBatch,
   OutreachDraft,
+  OutreachDraftRefineInput,
+  OutreachDraftRefineResult,
   OutreachZohoHandoff,
   OutreachLeadOption,
   Product,
@@ -25,6 +37,7 @@ import type {
   ScoringWeights,
   ShopifyImportResult,
   Shortlist,
+  StalledLeadDigest,
   Template,
   VerificationResult,
   WorkspaceSettings,
@@ -118,6 +131,8 @@ export interface CampaignUpdate {
   discovery_sources?: string[];
   weekly_shortlist_size?: number;
   minimum_score_threshold?: number;
+  preferred_channels?: string[];
+  offer_settings?: Record<string, boolean>;
   discovery_mode?: "manual" | "scheduled" | "combined";
   weekly_outreach_enabled?: boolean;
   weekly_outreach_template_id?: string | null;
@@ -200,6 +215,10 @@ export interface OutreachDraftEditInput {
   body: string;
 }
 
+export interface LeadBulkUpdateInput {
+  items: Array<{ lead_id: string; changes: LeadUpdate }>;
+}
+
 export interface SocialCandidateInput {
   campaign_id: string;
   platform: "instagram" | "facebook";
@@ -264,6 +283,90 @@ export const api = {
     request<Campaign>(`/campaigns/${campaignId}/duplicate`, jsonBody("POST", { name })),
   deleteCampaign: (campaignId: string) =>
     request<CampaignDeleteResult>(`/campaigns/${campaignId}`, { method: "DELETE" }),
+  campaignAssistantStatus: () =>
+    request<CampaignAssistantStatus>("/campaign-assistant/status"),
+  assistantConversations: () =>
+    request<AssistantConversation[]>("/assistant/conversations"),
+  createAssistantConversation: (title?: string) =>
+    request<AssistantConversation>(
+      "/assistant/conversations",
+      jsonBody("POST", { title }),
+    ),
+  sendAssistantMessage: (
+    conversationId: string,
+    content: string,
+    attachments: AssistantAttachmentInput[] = [],
+    context: AssistantContextSelection = { kind: "workspace", id: null },
+  ) =>
+    request<AssistantConversation>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/messages`,
+      jsonBody("POST", { content, attachments, context }),
+    ),
+  createCampaignDraftFromConversation: (conversationId: string) =>
+    request<CampaignDraft>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/campaign-draft`,
+      jsonBody("POST", {}),
+    ),
+  downloadAssistantAttachment: async (downloadUrl: string): Promise<DownloadResult> => {
+    const response = await rawRequest(downloadUrl);
+    const disposition = response.headers.get("Content-Disposition") ?? "";
+    const utfMatch = /filename\*=utf-8''([^;]+)/i.exec(disposition);
+    const match = /filename="([^"]+)"/.exec(disposition);
+    return {
+      blob: await response.blob(),
+      filename: utfMatch
+        ? decodeURIComponent(utfMatch[1] ?? "assistant-file")
+        : (match?.[1] ?? "assistant-file"),
+    };
+  },
+  campaignDrafts: (status?: CampaignDraft["status"]) =>
+    request<CampaignDraft[]>(
+      `/campaign-assistant/drafts${status ? `?status=${encodeURIComponent(status)}` : ""}`,
+    ),
+  createCampaignDraft: (message: string) =>
+    request<CampaignDraft>(
+      "/campaign-assistant/drafts",
+      jsonBody("POST", { message }),
+    ),
+  sendCampaignDraftMessage: (draftId: string, message: string, expectedVersion: number) =>
+    request<CampaignDraft>(
+      `/campaign-assistant/drafts/${encodeURIComponent(draftId)}/messages`,
+      jsonBody("POST", { message, expected_version: expectedVersion }),
+    ),
+  updateCampaignDraft: (
+    draftId: string,
+    changes: Partial<CampaignDraftCampaign>,
+    expectedVersion: number,
+  ) =>
+    request<CampaignDraft>(
+      `/campaign-assistant/drafts/${encodeURIComponent(draftId)}`,
+      jsonBody("PATCH", { changes, expected_version: expectedVersion }),
+    ),
+  decideCampaignDraftOverride: (
+    draftId: string,
+    overrideId: string,
+    decision: "confirm" | "reject" | "partial",
+    expectedVersion: number,
+    confirmedItemIds: string[] = [],
+  ) =>
+    request<CampaignDraft>(
+      `/campaign-assistant/drafts/${encodeURIComponent(draftId)}/overrides/${encodeURIComponent(overrideId)}/decision`,
+      jsonBody("POST", {
+        decision,
+        expected_version: expectedVersion,
+        confirmed_item_ids: confirmedItemIds,
+      }),
+    ),
+  approveCampaignDraft: (draftId: string, expectedVersion: number) =>
+    request<CampaignDraftApprovalResult>(
+      `/campaign-assistant/drafts/${encodeURIComponent(draftId)}/approve`,
+      jsonBody("POST", { expected_version: expectedVersion }),
+    ),
+  discardCampaignDraft: (draftId: string, expectedVersion: number) =>
+    request<CampaignDraft>(
+      `/campaign-assistant/drafts/${encodeURIComponent(draftId)}/discard`,
+      jsonBody("POST", { expected_version: expectedVersion }),
+    ),
   automationCapabilities: () =>
     request<AutomationCapabilities>("/campaign-runs/capabilities"),
   campaignRuns: () => request<CampaignRun[]>("/campaign-runs"),
@@ -311,6 +414,28 @@ export const api = {
   createLead: (data: LeadInput) => request<Lead>("/leads", jsonBody("POST", data)),
   updateLead: (leadId: string, data: LeadUpdate) =>
     request<Lead>(`/leads/${leadId}`, jsonBody("PATCH", data)),
+  bulkUpdateLeads: (data: LeadBulkUpdateInput) =>
+    request<Lead[]>("/leads/bulk", jsonBody("PATCH", data)),
+  translateLeadFilter: (query: string) =>
+    request<LeadFilterTranslateResult>(
+      "/lead-assistant/search-filter",
+      jsonBody("POST", { query }),
+    ),
+  briefLead: (leadId: string) =>
+    request<LeadBriefing>(
+      `/lead-assistant/leads/${leadId}/briefing`,
+      jsonBody("POST", {}),
+    ),
+  autofillLeads: (leadIds: string[]) =>
+    request<LeadAutofillResponse>(
+      "/lead-assistant/autofill",
+      jsonBody("POST", { lead_ids: leadIds }),
+    ),
+  stalledLeadDigest: (limit?: number) =>
+    request<StalledLeadDigest>(
+      "/lead-assistant/stalled-digest",
+      jsonBody("POST", { limit }),
+    ),
   changeLeadStage: (leadId: string, stage: string, reason?: string) =>
     request<Lead>(`/leads/${leadId}/stage`, jsonBody("POST", { stage, reason })),
   addLeadNote: (leadId: string, content: string) =>
@@ -434,6 +559,11 @@ export const api = {
     request<OutreachBatch>("/outreach/batches", jsonBody("POST", data)),
   editOutreachDraft: (draftId: string, data: OutreachDraftEditInput) =>
     request<OutreachDraft>(`/outreach/drafts/${draftId}`, jsonBody("PATCH", data)),
+  refineOutreachDraft: (draftId: string, data: OutreachDraftRefineInput) =>
+    request<OutreachDraftRefineResult>(
+      `/outreach/drafts/${draftId}/refine`,
+      jsonBody("POST", data),
+    ),
   approveOutreachDraft: (draftId: string) =>
     request<OutreachDraft>(`/outreach/drafts/${draftId}/approve`, jsonBody("POST", {})),
   approveOutreachDrafts: (draftIds: string[]) =>

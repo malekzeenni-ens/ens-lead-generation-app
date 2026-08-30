@@ -81,6 +81,8 @@ export function SettingsWorkspace({
       default_campaign_radius_miles: Number(formValue(form, "default-radius")),
       default_weekly_shortlist_size: Number(formValue(form, "default-shortlist")),
       weekly_outreach_global_limit: Number(formValue(form, "weekly-outreach-limit")),
+      local_campaign_assistant_enabled: form.has("local-campaign-assistant-enabled"),
+      protect_design_software_resources: form.has("protect-design-software-resources"),
     });
   }
 
@@ -375,6 +377,28 @@ export function SettingsWorkspace({
                   </span>
                   <input name="weekly-outreach-limit" type="number" min="1" max="100" defaultValue={settings.weekly_outreach_global_limit} required />
                   <small className="field-hint">Start with 2–3 drafts while testing, then increase it when the review workload feels comfortable.</small>
+                </label>
+                <label className="choice-row">
+                  <input
+                    name="local-campaign-assistant-enabled"
+                    type="checkbox"
+                    defaultChecked={settings.local_campaign_assistant_enabled}
+                  />
+                  <span>
+                    <strong>Enable the local AI assistant</strong>
+                    <small>Answers questions, creates files and prepares campaign drafts through local Ollama. No paid AI API is called.</small>
+                  </span>
+                </label>
+                <label className="choice-row">
+                  <input
+                    name="protect-design-software-resources"
+                    type="checkbox"
+                    defaultChecked={settings.protect_design_software_resources}
+                  />
+                  <span>
+                    <strong>Protect LightBurn and xTool resources</strong>
+                    <small>Uses reduced model limits only while either design application is running; normal local performance resumes afterward.</small>
+                  </span>
                 </label>
                 <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save settings</button>
               </form>

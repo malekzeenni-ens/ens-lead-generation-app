@@ -53,7 +53,13 @@ class CampaignService:
             )
 
     def create(self, session: Session, data: CampaignCreate, correlation_id: str) -> Campaign:
-        return self._create(session, data, correlation_id, action="campaign.created")
+        return self._create(session, data, correlation_id, action="campaign.created", commit=True)
+
+    def create_in_transaction(
+        self, session: Session, data: CampaignCreate, correlation_id: str
+    ) -> Campaign:
+        """Add a validated campaign without committing the caller-owned transaction."""
+        return self._create(session, data, correlation_id, action="campaign.created", commit=False)
 
     def _create(
         self,
@@ -62,6 +68,7 @@ class CampaignService:
         correlation_id: str,
         *,
         action: str,
+        commit: bool,
         source_campaign_id: str | None = None,
     ) -> Campaign:
         if self.repository.get_by_name(session, data.name) is not None:
@@ -114,8 +121,9 @@ class CampaignService:
                 **({"source_campaign_id": source_campaign_id} if source_campaign_id else {}),
             },
         )
-        session.commit()
-        session.refresh(campaign)
+        if commit:
+            session.commit()
+            session.refresh(campaign)
         return campaign
 
     def list(
@@ -221,6 +229,7 @@ class CampaignService:
             duplicate,
             correlation_id,
             action="campaign.duplicated",
+            commit=True,
             source_campaign_id=source.id,
         )
 

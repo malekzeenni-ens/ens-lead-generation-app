@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  Bot,
   Database,
   FileText,
   GitBranch,
@@ -24,6 +25,7 @@ import {
   type CampaignRunProvider,
   type CampaignInput,
   type CampaignUpdate,
+  type LeadBulkUpdateInput,
   type LeadInput,
   type LeadUpdate,
   type OutreachBatchInput,
@@ -36,6 +38,7 @@ import {
   type TemplateInput,
   type TemplateUpdate,
 } from "./api";
+import { AssistantWorkspace } from "./components/AssistantWorkspace";
 import { CatalogueWorkspace } from "./components/CatalogueWorkspace";
 import { CampaignWorkspace } from "./components/CampaignWorkspace";
 import { ConnectionBadge, type HealthState, NavigationItem } from "./components/DesignSystem";
@@ -51,6 +54,7 @@ import { mailtoUrl } from "./contact";
 import { WorkspaceActionsContext, type WorkspaceActions } from "./WorkspaceActionsContext";
 import type {
   AutomationCapabilities,
+  AssistantContextSelection,
   BackupResult,
   Campaign,
   CampaignRun,
@@ -101,6 +105,7 @@ async function copyTextToClipboard(value: string): Promise<void> {
 
 const SECTION_LABELS: Record<WorkspaceSection, string> = {
   overview: "Overview",
+  assistant: "AI assistant",
   campaigns: "Campaigns",
   leads: "All leads",
   catalogue: "Catalogue",
@@ -213,6 +218,10 @@ export default function App() {
     "campaigns",
   );
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [assistantContext, setAssistantContext] = useState<AssistantContextSelection>({
+    kind: "workspace",
+    id: null,
+  });
   const [leadsLandingFilter, setLeadsLandingFilter] = useState<"" | "review">("");
 
   async function refresh(showLoading = false): Promise<void> {
@@ -435,6 +444,14 @@ export default function App() {
         "Campaign created and stored locally.",
         ["campaigns", "summary"],
       )) !== null
+    );
+  }
+
+  async function approveCampaignDraft(draftId: string, expectedVersion: number) {
+    return perform(
+      () => api.approveCampaignDraft(draftId, expectedVersion),
+      "Campaign approved and saved as a paused campaign.",
+      ["campaigns", "summary"],
     );
   }
 
@@ -673,6 +690,18 @@ export default function App() {
       (await perform(() => api.updateLead(leadId, data), "Lead details saved.", [
         "leads",
         "summary",
+        "outreachLeadOptions",
+        "outreachBatches",
+      ])) !== null
+    );
+  }
+
+  async function bulkUpdateLeads(
+    data: LeadBulkUpdateInput,
+  ): Promise<boolean> {
+    return (
+      (await perform(() => api.bulkUpdateLeads(data), "Lead context saved.", [
+        "leads",
         "outreachLeadOptions",
         "outreachBatches",
       ])) !== null
@@ -1173,7 +1202,12 @@ export default function App() {
     },
     goToCatalogue: () => setActiveSection("catalogue"),
     goToEmailDrafts: () => setActiveSection("drafts"),
+    askAssistant: (context) => {
+      setAssistantContext(context);
+      setActiveSection("assistant");
+    },
     createCampaign,
+    approveCampaignDraft,
     updateCampaign,
     duplicateCampaign,
     deleteCampaign,
@@ -1190,6 +1224,7 @@ export default function App() {
     decideDiscoveryCandidate,
     createLead,
     updateLead,
+    bulkUpdateLeads,
     changeLeadStage,
     addNote,
     addFollowUp,
@@ -1241,6 +1276,21 @@ export default function App() {
         settings={settings}
         shortlists={shortlists}
         outreachBatches={outreachBatches}
+      />
+    ),
+    assistant: (
+      <AssistantWorkspace
+        capabilities={automationCapabilities}
+        productFamilies={productFamilies}
+        campaigns={campaigns}
+        leads={leads}
+        batches={outreachBatches}
+        shortlists={shortlists}
+        initialContext={assistantContext}
+        onCampaignApproved={() => {
+          setCampaignLandingTask("campaigns");
+          setActiveSection("campaigns");
+        }}
       />
     ),
     campaigns: (
@@ -1345,6 +1395,10 @@ export default function App() {
           <nav aria-label="Workspace navigation">
             <p className="navigation-label">Lead acquisition</p>
             <NavigationItem href="#overview" icon={LayoutDashboard} label="Overview" active={activeSection === "overview"} onSelect={() => setActiveSection("overview")} />
+            <NavigationItem href="#assistant" icon={Bot} label="AI assistant" active={activeSection === "assistant"} onSelect={() => {
+              setAssistantContext({ kind: "workspace", id: null });
+              setActiveSection("assistant");
+            }} />
             <NavigationItem href="#campaigns" icon={Megaphone} label="Campaigns" count={campaigns.length} active={activeSection === "campaigns"} onSelect={() => {
               setCampaignLandingTask("campaigns");
               setActiveSection("campaigns");

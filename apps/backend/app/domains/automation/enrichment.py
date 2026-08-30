@@ -33,6 +33,7 @@ class WebsiteEvidence:
     contact_links: list[str]
     same_host_links: list[str]
     pages_checked: list[str]
+    visible_text: str
 
 
 _EMAIL_PATTERN = re.compile(r"(?<![\w.+-])([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})(?![\w.-])", re.I)
@@ -52,6 +53,8 @@ class _EvidenceParser(HTMLParser):
         self.same_host_links: set[str] = set()
         self._in_title = False
         self._ignored_depth = 0
+        self._visible_text_parts: list[str] = []
+        self._visible_text_length = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = {key.casefold(): value or "" for key, value in attrs}
@@ -111,6 +114,12 @@ class _EvidenceParser(HTMLParser):
             return
         if self._in_title:
             self.title_parts.append(data)
+        visible = " ".join(data.split())
+        if visible and not self._in_title and self._visible_text_length < 4_000:
+            remaining = 4_000 - self._visible_text_length
+            part = visible[:remaining]
+            self._visible_text_parts.append(part)
+            self._visible_text_length += len(part)
         for email in _EMAIL_PATTERN.findall(data):
             if len(email) <= 320:
                 self.public_emails.add(email)
@@ -123,12 +132,17 @@ class _EvidenceParser(HTMLParser):
 class SafeWebsiteEnricher:
     def __init__(self, settings: Settings, client: httpx.Client | None = None) -> None:
         self.settings = settings
+        self._owns_client = client is None
         self.client = client or httpx.Client(
             timeout=settings.enrichment_timeout_seconds,
             follow_redirects=False,
             trust_env=False,
             headers={"User-Agent": USER_AGENT, "Accept": "text/html, text/plain;q=0.5"},
         )
+
+    def close(self) -> None:
+        if self._owns_client:
+            self.client.close()
 
     @staticmethod
     def _validate_and_pin_address(value: str) -> str:
@@ -279,6 +293,10 @@ class SafeWebsiteEnricher:
 
         title = " ".join(" ".join(home.title_parts).split())[:500] or None
         descriptions = [parser.description for parser in parsers if parser.description]
+        visible_text = " ".join(
+            part for parser in parsers for part in parser._visible_text_parts
+        )
+        visible_text = " ".join(visible_text.split())[:3_000]
         return WebsiteEvidence(
             final_url=final_url,
             title=title,
@@ -299,4 +317,5 @@ class SafeWebsiteEnricher:
                 {value for parser in parsers for value in parser.same_host_links}
             )[:100],
             pages_checked=pages_checked,
+            visible_text=visible_text,
         )

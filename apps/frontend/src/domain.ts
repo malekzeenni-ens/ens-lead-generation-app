@@ -2,6 +2,7 @@ import type { FollowUp, Lead } from "./types";
 
 export type WorkspaceSection =
   | "overview"
+  | "assistant"
   | "campaigns"
   | "leads"
   | "catalogue"

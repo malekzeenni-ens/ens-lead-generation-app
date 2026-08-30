@@ -84,6 +84,181 @@ class Campaign(Base):
     product_family: Mapped[ProductFamily | None] = relationship(back_populates="campaigns")
 
 
+class CampaignDraft(Base):
+    __tablename__ = "campaign_draft"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('generating', 'awaiting_input', 'awaiting_override_confirmation', "
+            "'ready', 'generation_failed', 'approved', 'discarded')",
+            name="ck_campaign_draft_status",
+        ),
+        CheckConstraint("version > 0", name="ck_campaign_draft_version_positive"),
+        Index("ix_campaign_draft_status_updated", "status", "updated_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="generating")
+    original_request: Mapped[str] = mapped_column(Text, nullable=False)
+    current_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    assistant_message: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    assumptions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    warnings: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    questions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    model_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    model_digest: Mapped[str | None] = mapped_column(String(100))
+    prompt_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    resource_profile: Mapped[str] = mapped_column(String(40), nullable=False)
+    generation_duration_ms: Mapped[int | None] = mapped_column(Integer)
+    prompt_token_count: Mapped[int | None] = mapped_column(Integer)
+    output_token_count: Mapped[int | None] = mapped_column(Integer)
+    approved_campaign_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("campaign.id", ondelete="SET NULL"), unique=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    revisions: Mapped[list[CampaignDraftRevision]] = relationship(
+        back_populates="draft", cascade="all, delete-orphan", passive_deletes=True
+    )
+    overrides: Mapped[list[CampaignDraftOverride]] = relationship(
+        back_populates="draft", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class CampaignDraftRevision(Base):
+    __tablename__ = "campaign_draft_revision"
+    __table_args__ = (
+        UniqueConstraint("draft_id", "version", name="uq_campaign_draft_revision_version"),
+        Index("ix_campaign_draft_revision_created", "draft_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    draft_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("campaign_draft.id", ondelete="CASCADE"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    revision_source: Mapped[str] = mapped_column(String(40), nullable=False)
+    user_instruction: Mapped[str | None] = mapped_column(Text)
+    payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    assistant_message: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    assumptions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    warnings: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    questions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    resource_profile: Mapped[str] = mapped_column(String(40), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    draft: Mapped[CampaignDraft] = relationship(back_populates="revisions")
+
+
+class CampaignDraftOverride(Base):
+    __tablename__ = "campaign_draft_override"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'confirmed', 'partially_confirmed', 'rejected', 'superseded')",
+            name="ck_campaign_draft_override_status",
+        ),
+        Index("ix_campaign_draft_override_status", "draft_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    draft_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("campaign_draft.id", ondelete="CASCADE"), nullable=False
+    )
+    draft_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="pending")
+    originating_message: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    items: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
+    playbook_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    draft: Mapped[CampaignDraft] = relationship(back_populates="overrides")
+
+
+class AssistantConversation(Base):
+    __tablename__ = "assistant_conversation"
+    __table_args__ = (Index("ix_assistant_conversation_updated", "updated_at"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    title: Mapped[str] = mapped_column(String(200), nullable=False, default="New conversation")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    messages: Mapped[list[AssistantMessage]] = relationship(
+        back_populates="conversation", cascade="all, delete-orphan", passive_deletes=True
+    )
+    attachments: Mapped[list[AssistantAttachment]] = relationship(
+        back_populates="conversation", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class AssistantMessage(Base):
+    __tablename__ = "assistant_message"
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'assistant')", name="ck_assistant_message_role"),
+        Index("ix_assistant_message_conversation_created", "conversation_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    conversation_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("assistant_conversation.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    model_name: Mapped[str | None] = mapped_column(String(100))
+    resource_profile: Mapped[str | None] = mapped_column(String(40))
+    generation_duration_ms: Mapped[int | None] = mapped_column(Integer)
+    campaign_draft_suggested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    conversation: Mapped[AssistantConversation] = relationship(back_populates="messages")
+    attachments: Mapped[list[AssistantAttachment]] = relationship(
+        back_populates="message", passive_deletes=True
+    )
+
+
+class AssistantAttachment(Base):
+    __tablename__ = "assistant_attachment"
+    __table_args__ = (
+        CheckConstraint(
+            "direction IN ('uploaded', 'generated')",
+            name="ck_assistant_attachment_direction",
+        ),
+        Index("ix_assistant_attachment_conversation", "conversation_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    conversation_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("assistant_conversation.id", ondelete="CASCADE"), nullable=False
+    )
+    message_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("assistant_message.id", ondelete="SET NULL")
+    )
+    direction: Mapped[str] = mapped_column(String(20), nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    extracted_text: Mapped[str | None] = mapped_column(Text)
+    processing_status: Mapped[str] = mapped_column(String(40), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    conversation: Mapped[AssistantConversation] = relationship(back_populates="attachments")
+    message: Mapped[AssistantMessage | None] = relationship(back_populates="attachments")
+
+
 class Lead(Base):
     __tablename__ = "lead"
     __table_args__ = (
@@ -378,6 +553,9 @@ class BackupManifest(Base):
     integrity_result: Mapped[str] = mapped_column(String(100), nullable=False)
     schema_version: Mapped[str] = mapped_column(String(100), nullable=False)
     application_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    assistant_files_archive: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    assistant_files_checksum_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    assistant_files_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 

@@ -1,20 +1,25 @@
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Query, Request, status
 
 from app.api.dependencies import Authenticated, DatabaseSession
+from app.core.config import Settings
+from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.outreach.schemas import (
     OutreachBatchCreate,
     OutreachBatchRead,
     OutreachDraftApproveMany,
     OutreachDraftEdit,
     OutreachDraftRead,
+    OutreachDraftRefineRequest,
+    OutreachDraftRefineResult,
     OutreachDraftReject,
     OutreachLeadOptionRead,
     OutreachZohoHandoffRead,
     OutreachZohoOpenFailure,
 )
 from app.domains.outreach.service import OutreachService
+from app.domains.system.service import SystemService
 
 router = APIRouter(prefix="/outreach", tags=["outreach"])
 service = OutreachService()
@@ -58,6 +63,27 @@ def edit_draft(
     session: DatabaseSession,
 ) -> OutreachDraftRead:
     return service.edit_draft(session, draft_id, data, request.state.correlation_id)
+
+
+@router.post("/drafts/{draft_id}/refine", response_model=OutreachDraftRefineResult)
+def refine_draft(
+    draft_id: str,
+    data: OutreachDraftRefineRequest,
+    request: Request,
+    _: Authenticated,
+    session: DatabaseSession,
+) -> OutreachDraftRefineResult:
+    manager = cast(CampaignAssistantManager, request.app.state.campaign_assistant_manager)
+    runtime_settings = cast(Settings, request.app.state.settings)
+    workspace_settings = SystemService().get_settings(session)
+    return service.refine_draft(
+        session,
+        draft_id,
+        data,
+        manager=manager,
+        runtime_settings=runtime_settings,
+        workspace_settings=workspace_settings,
+    )
 
 
 @router.post("/drafts/approve-many", response_model=list[OutreachDraftRead])

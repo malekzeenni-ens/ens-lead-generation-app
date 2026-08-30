@@ -7,8 +7,35 @@
 - `uv`
 - Node.js 22 or newer and npm (the kickoff machine uses Node 24)
 - Stable Rust with Cargo, rustfmt, and Clippy
+- Optional for local questions, files and campaign drafting: Ollama for Windows and the `llama3.2:3b` model
 
 No provider credentials are needed to run scoring, matching, shortlists, or any existing-lead workflow. Google Places and Meta Instagram credentials are optional and are needed only for their external discovery sources.
+
+## Optional local AI assistant
+
+The assistant runs entirely through Ollama on this computer and does not require a cloud AI key or paid model API. Install Ollama for Windows, start it, then download the configured model once:
+
+```powershell
+ollama pull llama3.2:3b
+```
+
+Start Etch N Shine normally and open **AI assistant** from the left navigation. **App copilot** answers only about the application and receives fresh, bounded local context with every message. Use the context selector to focus the next answer on the whole workspace, one campaign, one lead, an email-draft batch or a weekly shortlist. You can also choose **Ask AI** beside a record; the app opens the dedicated AI tab and selects that exact record automatically. The backend resolves the selection from the local database, so the assistant does not depend on which screen remains open and does not trust record details supplied by the browser.
+
+The selected record is primary context and a smaller workspace snapshot supplies supporting campaigns, leads, follow-ups, catalogue, templates, drafts, settings and operating information. The assistant can prepare app-related TXT, CSV or DOCX artifacts. Up to four TXT, CSV, DOCX, JPEG or PNG files can be attached to one message, with a 5 MB limit per file. TXT, CSV and DOCX text is extracted locally. JPEG/PNG is retained and can be downloaded, but `llama3.2:3b` is text-only and cannot inspect the image; a future local vision model would be required for visual analysis.
+
+Choose **Prepare campaign** to turn the current conversation and any optional generated playbook into a guarded campaign draft. If there is no custom playbook, the draft uses the built-in versioned campaign playbook and workspace defaults. The **Campaign draft** mode shows assumptions, override confirmations and the complete editable form. **Approve paused campaign** is still a separate action. Conversation or draft generation alone never creates or runs a campaign.
+
+Normal model limits are used unless LightBurn or xTool Creative Space is currently running. While either application is detected, the assistant automatically uses its reduced-resource profile and unloads the model after generation; normal operation resumes when they close. Both the assistant and this resource protection can be switched on or off under **Settings → Defaults**.
+
+The default runtime values are local-only and normally need no configuration. For troubleshooting, the relevant non-secret overrides are:
+
+```powershell
+$env:ENS_CAMPAIGN_ASSISTANT_ENABLED = 'true'
+$env:ENS_OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
+$env:ENS_ASSISTANT_ATTACHMENT_MAX_BYTES = '5242880'
+```
+
+The backend rejects a non-loopback Ollama address. Removing Ollama or disabling the assistant does not affect manual campaign creation.
 
 ## Install the locked workspace
 
@@ -48,7 +75,7 @@ $env:ENS_DISCOVERY_MAX_QUERIES = '3'
 npm.cmd run desktop:dev
 ```
 
-Environment variables must be set in the terminal that launches the app. The repository does not auto-load `.env` files and the key is never stored in SQLite or sent to the frontend. In **Campaigns**, select **Discover with Google Places** on the campaigns that may use the provider. A run without that selection refreshes existing leads only. AI and outbound messaging remain disabled in either mode.
+Environment variables must be set in the terminal that launches the app. The repository does not auto-load `.env` files and the key is never stored in SQLite or sent to the frontend. In **Campaigns**, select **Discover with Google Places** on the campaigns that may use the provider. A run without that selection refreshes existing leads only. The local campaign assistant does not call Google Places while drafting, and outbound messaging remains disabled in either mode.
 
 ## Optional Instagram profile import and enrichment
 

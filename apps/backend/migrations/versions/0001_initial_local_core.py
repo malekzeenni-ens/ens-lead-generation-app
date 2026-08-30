@@ -37,9 +37,15 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=30), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.CheckConstraint("minimum_score_threshold BETWEEN 0 AND 100", name="ck_campaign_score_threshold"),
+        sa.CheckConstraint(
+            "minimum_score_threshold BETWEEN 0 AND 100",
+            name="ck_campaign_score_threshold",
+        ),
         sa.CheckConstraint("radius_miles > 0", name="ck_campaign_radius_positive"),
-        sa.CheckConstraint("weekly_shortlist_size BETWEEN 1 AND 50", name="ck_campaign_shortlist_size"),
+        sa.CheckConstraint(
+            "weekly_shortlist_size BETWEEN 1 AND 50",
+            name="ck_campaign_shortlist_size",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
     )
@@ -170,4 +176,3 @@ def downgrade() -> None:
     op.drop_table("lead")
     op.drop_index("ix_campaign_status_segment", table_name="campaign")
     op.drop_table("campaign")
-

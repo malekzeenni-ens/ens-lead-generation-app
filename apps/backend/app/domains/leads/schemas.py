@@ -386,6 +386,19 @@ class LeadUpdate(BaseModel):
         return self
 
 
+class LeadBulkUpdateItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lead_id: str
+    changes: LeadUpdate
+
+
+class LeadBulkUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[LeadBulkUpdateItem] = Field(min_length=1, max_length=20)
+
+
 class StageChange(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
