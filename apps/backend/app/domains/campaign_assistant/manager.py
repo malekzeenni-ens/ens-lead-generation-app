@@ -61,6 +61,22 @@ class CampaignAssistantManager:
             return ResourceProfile.DESIGN_SOFTWARE
         return ResourceProfile.STANDARD
 
+    def set_preferred_model(self, model: str) -> None:
+        """Apply the operator's model choice from workspace settings.
+
+        An empty string means follow the configured default. Switching models unloads the
+        previous one so a larger model does not sit in memory unused.
+        """
+        if model == self.ollama.preferred_model:
+            return
+        if not self._generation_lock.locked():
+            self.ollama.unload()
+        self.ollama.preferred_model = model
+
+    @property
+    def active_model(self) -> str:
+        return self.ollama.model_for(self.resource_profile(self._protect_resources))
+
     def set_protection_enabled(self, enabled: bool) -> None:
         self._protect_resources = enabled
         if not enabled:

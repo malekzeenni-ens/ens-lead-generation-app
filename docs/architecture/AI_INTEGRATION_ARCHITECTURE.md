@@ -1,9 +1,9 @@
 # Local AI integration architecture
 
 - **Status:** Implemented
-- **Updated:** 30 August 2026
+- **Updated:** 27 September 2026
 - **Runtime:** Ollama 0.33.2 with `llama3.2:3b`
-- **Decision records:** [ADR-018](../adr/ADR-018-local-campaign-assistant.md) and [ADR-019](../adr/ADR-019-general-local-assistant-and-files.md)
+- **Decision records:** [ADR-018](../adr/ADR-018-local-campaign-assistant.md), [ADR-019](../adr/ADR-019-general-local-assistant-and-files.md) and [ADR-020](../adr/ADR-020-brand-and-operator-identity.md)
 - **Revision history:** 2026-08-29 — initial version covering ADR-018 and ADR-019.
   2026-08-29 — architecture review pass: closed the `assistant_files` backup gap (migration
   `0014_backup_manifest_assistant_files`), backfilled campaign/general-assistant test coverage
@@ -15,6 +15,8 @@
   2026-08-30 — added an explicit per-request context selector and server-resolved campaign, lead,
   outreach-batch and shortlist context, with record-level **Ask AI** handoffs into the dedicated
   assistant workspace.
+  2026-09-27 — added the shared brand and operator identity (ADR-020) to every prompt builder,
+  served at three token-budgeted tiers from `app/domains/brand/profile.py` (§22).
   Update this line whenever a change described in §20 lands, so drift between this document and
   the code is visible at a glance.
 
@@ -597,7 +599,7 @@ than added speculatively.
 - Campaign handoff currently retains only an approximately 2,000-character recent transcript.
 - Conversation rename/delete and attachment-retention controls are not yet exposed in the UI.
 - Backup/restore now covers `assistant_files` bytes as of migration
-  `0014_backup_manifest_assistant_files` (§7, §22). Remaining gap: the bundle is a single ZIP
+  `0014_backup_manifest_assistant_files` (§7, §23). Remaining gap: the bundle is a single ZIP
   archive with no incremental/delta strategy, so a workstation with a very large accumulated
   `assistant_files` directory will see backup time and size grow linearly with total attachment
   history, not just recent activity. Revisit if that becomes noticeable in practice.
@@ -717,7 +719,56 @@ assuming it is already covered.
 - Full Ruff, formatting, strict mypy, ESLint, TypeScript, frontend build, backend regression and
   desktop Cargo checks.
 
-## 22. Source map
+## 22. Brand and operator identity
+
+Decision record: [ADR-020](../adr/ADR-020-brand-and-operator-identity.md).
+
+`apps/backend/app/domains/brand/profile.py` is the single source of truth for who the business
+is, who the operator is and how Etch 'N' Shine is allowed to sound. Every prompt builder imports
+`identity_block` from it rather than restating voice rules, so the surfaces cannot drift apart.
+Its content mirrors the `etch-n-shine` brand-voice reference used elsewhere in the toolchain.
+
+`identity_block(tier)` serves three token-budgeted tiers, because the standard window is 8,192
+tokens and halves to 4,096 in the protected profile, where the workspace snapshot already
+consumes most of it:
+
+| Tier | Approximate cost | Used by |
+|---|---|---|
+| `BRIEF` | 300 tokens | Campaign planner, lead briefing, reviewed-context autofill, stalled-lead digest, and general chat while resources are protected |
+| `CORE` | 1,100 tokens | General app copilot in the standard profile |
+| `WRITING` | 1,500 tokens | Outreach draft refinement |
+
+The lead-filter translator receives no identity block. Mapping a phrase onto dropdown values
+needs no brand voice, and the context window is better spent on the candidate values.
+
+Rules for changing this module:
+
+- Identity is instruction-grade and belongs in the system prompt, above the trusted workspace
+  snapshot. Never move it into the snapshot JSON, which the model is told to treat as data it
+  must not obey.
+- Bump `BRAND_PROFILE_VERSION` on any content change. `assistant.message.generated` audit events
+  record it next to the prompt version, so stored conversations remain explainable.
+- Keep worked examples labelled as calibration samples with an explicit instruction not to copy
+  them. A 3B model otherwise lifts example sentences verbatim into outreach copy and drops the
+  recipient's own details to make room. Verify this with a live refinement smoke test.
+- Re-measure the tier costs after editing. `BRIEF` must stay small enough to leave the protected
+  4,096-token window usable once the snapshot is added.
+- Prefer facts the operator can act on over description. The profile exists to remove rework, not
+  to document the brand.
+- Never write a price, a price range or a count of anything into the profile. Pricing is the
+  operator's to give, and the live workspace snapshot is authoritative for quantities, so a number
+  written into the profile goes stale silently. The test suite enforces both.
+- When a rule contradicts a task instruction, state which one wins. Outreach refinement is told to
+  preserve concrete facts, so the price-stripping rule has to say explicitly that it overrides
+  that. Without the precedence the model kept the figures.
+- Keep the operator addressed as "you". Naming him without that instruction makes the copilot
+  answer in the third person and tell the reader to ask Malek.
+
+Coverage lives in `apps/backend/tests/test_brand_identity.py`, which asserts the tier budgets,
+that every tier names the business, the operator, UK English and the banned phrases, and that
+each prompt builder receives the tier it is supposed to receive.
+
+## 23. Source map
 
 | Concern | Source |
 |---|---|
@@ -743,6 +794,7 @@ assuming it is already covered.
 | Outreach refinement | `apps/backend/app/domains/outreach/prompt.py`, `service.py`, `apps/backend/app/api/routes/outreach.py` |
 | Lead filter, briefing, autofill and digest | `apps/backend/app/domains/lead_assistant/`, `apps/backend/app/api/routes/lead_assistant.py` |
 | Deterministic lead activity/staleness | `apps/backend/app/domains/leads/activity.py`, `apps/backend/app/domains/lead_assistant/staleness.py` |
+| Brand and operator identity | `apps/backend/app/domains/brand/profile.py` |
 | Workspace settings | `apps/backend/app/domains/system/schemas.py` |
-| Backend tests | `apps/backend/tests/test_campaign_assistant.py`, `test_general_assistant.py`, `test_backup_restore.py` |
-| Architecture decisions | `docs/adr/ADR-018-local-campaign-assistant.md`, `ADR-019-general-local-assistant-and-files.md` |
+| Backend tests | `apps/backend/tests/test_campaign_assistant.py`, `test_general_assistant.py`, `test_brand_identity.py`, `test_backup_restore.py` |
+| Architecture decisions | `docs/adr/ADR-018-local-campaign-assistant.md`, `ADR-019-general-local-assistant-and-files.md`, `ADR-020-brand-and-operator-identity.md` |

@@ -257,7 +257,7 @@ def test_export_settings_diagnostics_and_formula_protection(
     diagnostics = client.get("/api/v1/system/diagnostics")
     assert diagnostics.status_code == 200
     body = diagnostics.json()
-    assert body["schema_version"] == "0014_backup_manifest_assistant_files"
+    assert body["schema_version"] == "0015_product_assistant_fields"
     assert body["journal_mode"] == "wal"
     assert body["foreign_keys_enabled"] is True
     assert body["provider_mode"] == "disabled"

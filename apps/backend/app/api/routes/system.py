@@ -46,6 +46,7 @@ def update_settings(
         request.app.state.campaign_assistant_manager,
     )
     manager.set_protection_enabled(updated.protect_design_software_resources)
+    manager.set_preferred_model(updated.local_ai_model)
     return updated
 
 

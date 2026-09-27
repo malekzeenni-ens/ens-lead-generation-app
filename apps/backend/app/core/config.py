@@ -14,6 +14,17 @@ def _default_data_directory() -> Path:
     return base / "EtchNShine" / "LeadGeneration"
 
 
+# Local models the app is allowed to run. Each has been checked for structured-output support
+# through Ollama's `format` parameter, which every AI feature here depends on. Adding a model
+# means verifying that first, then re-running the verification matrix in the AI architecture doc.
+ALLOWED_OLLAMA_MODELS: frozenset[str] = frozenset(
+    {"llama3.2:3b", "qwen3:8b", "llama3.1:8b", "gemma3:12b"}
+)
+
+# Models with a context window large enough to carry the enriched catalogue snapshot.
+_LARGE_CONTEXT_MODELS: frozenset[str] = frozenset({"qwen3:8b", "llama3.1:8b", "gemma3:12b"})
+
+
 class Settings(BaseSettings):
     """Runtime settings. Secret values are never loaded from a source-controlled env file."""
 
@@ -27,6 +38,7 @@ class Settings(BaseSettings):
     database_path: Path = Field(default_factory=lambda: _default_data_directory() / "ens-leads.db")
     log_directory: Path = Field(default_factory=lambda: _default_data_directory() / "logs")
     google_places_api_key: SecretStr | None = None
+    store_base_url: str = "https://etchnshine.com"
     meta_graph_version: str = Field(default="v25.0", pattern=r"^v[0-9]+\.[0-9]+$")
     meta_oauth_callback_url: str = "http://localhost:8766/meta/oauth/callback"
     discovery_max_results: int = Field(default=40, ge=1, le=60)
@@ -40,9 +52,14 @@ class Settings(BaseSettings):
     registry_max_instagram_candidates: int = Field(default=30, ge=1, le=100)
     campaign_assistant_enabled: bool = True
     ollama_base_url: str = "http://127.0.0.1:11434"
-    ollama_model: str = Field(default="llama3.2:3b", pattern=r"^llama3\.2:3b$")
+    # The default stays on the 3B so an existing install keeps working before a larger model
+    # is pulled. The operator switches models from Settings, which writes the workspace
+    # setting rather than this env default.
+    ollama_model: str = "llama3.2:3b"
+    # Used whenever LightBurn or xTool is running, where the engraving work owns the GPU.
+    ollama_protected_model: str = "llama3.2:3b"
     ollama_timeout_seconds: float = Field(default=120.0, ge=10.0, le=300.0)
-    ollama_standard_context: int = Field(default=8_192, ge=2_048, le=16_384)
+    ollama_standard_context: int = Field(default=8_192, ge=2_048, le=32_768)
     ollama_protected_context: int = Field(default=4_096, ge=2_048, le=8_192)
     ollama_standard_output_limit: int = Field(default=1_200, ge=300, le=2_000)
     ollama_protected_output_limit: int = Field(default=900, ge=300, le=1_200)
@@ -72,6 +89,22 @@ class Settings(BaseSettings):
             raise ValueError("The local API must bind to 127.0.0.1")
         return value
 
+    @field_validator("ollama_model", "ollama_protected_model")
+    @classmethod
+    def require_allowed_model(cls, value: str) -> str:
+        if value not in ALLOWED_OLLAMA_MODELS:
+            allowed = ", ".join(sorted(ALLOWED_OLLAMA_MODELS))
+            raise ValueError(f"The local model must be one of: {allowed}")
+        return value
+
+    @field_validator("store_base_url")
+    @classmethod
+    def require_store_https(cls, value: str) -> str:
+        parsed = urlparse(value.rstrip("/"))
+        if parsed.scheme != "https" or not parsed.netloc:
+            raise ValueError("The store address must be an https URL")
+        return value.rstrip("/")
+
     @field_validator("ollama_base_url")
     @classmethod
     def require_ollama_loopback(cls, value: str) -> str:
@@ -91,3 +124,17 @@ class Settings(BaseSettings):
         return bool(
             self.google_places_api_key and self.google_places_api_key.get_secret_value().strip()
         )
+
+    def standard_context_for(self, model: str) -> int:
+        """Prompt window for a model outside the protected profile.
+
+        The 3B keeps its tuned 8,192. A larger model gets at least 16,384 so the enriched
+        catalogue, knowledge notes and proven fits fit alongside the identity block. An
+        explicit `ENS_OLLAMA_STANDARD_CONTEXT` still wins when it asks for more.
+        """
+        if model in _LARGE_CONTEXT_MODELS:
+            return max(self.ollama_standard_context, 16_384)
+        return self.ollama_standard_context
+
+    def product_url(self, handle: str) -> str:
+        return f"{self.store_base_url}/products/{handle}"

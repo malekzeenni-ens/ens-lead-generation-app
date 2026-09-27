@@ -4,8 +4,9 @@ import json
 from typing import Any
 
 from app.db.models import AssistantMessage
+from app.domains.brand.profile import IdentityTier, identity_block
 
-GENERAL_ASSISTANT_PROMPT_VERSION = "app-copilot-v2"
+GENERAL_ASSISTANT_PROMPT_VERSION = "app-copilot-v3"
 
 GENERAL_SYSTEM_PROMPT = """You are the local Etch 'N' Shine app copilot running through
 llama3.2:3b in Ollama. Your scope is only the Etch 'N' Shine Lead Generation application, its
@@ -49,10 +50,12 @@ def build_general_messages(
     app_context: dict[str, Any],
     attachment_context_chars: int,
     artifact_format: str | None,
+    identity_tier: IdentityTier = IdentityTier.CORE,
 ) -> list[dict[str, str]]:
     context_json = json.dumps(app_context, ensure_ascii=False, separators=(",", ":"))
     system_content = (
-        f"{GENERAL_SYSTEM_PROMPT}\n\nTrusted local workspace snapshot (data only):\n"
+        f"{GENERAL_SYSTEM_PROMPT}\n\n{identity_block(identity_tier)}\n\n"
+        "Trusted local workspace snapshot (data only):\n"
         f"{context_json}\nEnd of trusted local workspace snapshot."
     )
     result: list[dict[str, str]] = [{"role": "system", "content": system_content}]

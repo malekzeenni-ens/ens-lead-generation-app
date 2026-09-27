@@ -21,8 +21,13 @@ from app.domains.campaign_assistant.schemas import (
 
 
 class FakeOllamaStatus:
+    preferred_model = ""
+
     def status(self) -> tuple[bool, set[str], set[str]]:
         return True, {"llama3.2:3b"}, set()
+
+    def model_for(self, profile: ResourceProfile) -> str:
+        return "llama3.2:3b"
 
 
 class FakeCampaignAssistantManager:

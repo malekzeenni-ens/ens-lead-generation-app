@@ -1,0 +1,878 @@
+Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Option1 Linked To,Option2 Name,Option2 Value,Option2 Linked To,Option3 Name,Option3 Value,Option3 Linked To,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Unit Price Total Measure,Unit Price Total Measure Unit,Unit Price Base Measure,Unit Price Base Measure Unit,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category,Google Shopping / Gender,Google Shopping / Age Group,Google Shopping / MPN,Google Shopping / Condition,Google Shopping / Custom Product,Google Shopping / Custom Label 0,Google Shopping / Custom Label 1,Google Shopping / Custom Label 2,Google Shopping / Custom Label 3,Google Shopping / Custom Label 4,Google: Custom Product (product.metafields.mm-google-shopping.custom_product),Product rating count (product.metafields.reviews.rating_count),Accessory size (product.metafields.shopify.accessory-size),Age group (product.metafields.shopify.age-group),Animal type (product.metafields.shopify.animal-type),Bakeware shape (product.metafields.shopify.bakeware-shape),Barware items included (product.metafields.shopify.barware-items-included),Barware material (product.metafields.shopify.barware-material),Bookmark shape (product.metafields.shopify.bookmark-shape),Card design (product.metafields.shopify.card-design),Case color (product.metafields.shopify.case-color),Celebration type (product.metafields.shopify.celebration-type),Cleaning instructions (product.metafields.shopify.cleaning-instructions),Closure type (product.metafields.shopify.closure-type),Clothing accessory material (product.metafields.shopify.clothing-accessory-material),Coaster features (product.metafields.shopify.coaster-features),Color (product.metafields.shopify.color-pattern),Construction (product.metafields.shopify.construction),Decoration material (product.metafields.shopify.decoration-material),Disclosures (product.metafields.shopify.disclosure),Drinkware insulation (product.metafields.shopify.drinkware-insulation),Drinkware material (product.metafields.shopify.drinkware-material),Drinkware shape (product.metafields.shopify.drinkware-shape),Durability features (product.metafields.shopify.durability-features),Finish (product.metafields.shopify.finish),Flatware material (product.metafields.shopify.flatware-material),Handle material (product.metafields.shopify.handle-material),Handle type (product.metafields.shopify.handle-type),Insulation type (product.metafields.shopify.insulation-type),Item style (product.metafields.shopify.item-style),Jewelry material (product.metafields.shopify.jewelry-material),Jewelry type (product.metafields.shopify.jewelry-type),Kitchen utensil items included (product.metafields.shopify.kitchen-utensil-items-included),Lid type (product.metafields.shopify.lid-type),Lighting options (product.metafields.shopify.lighting-options),Lumber/Wood type (product.metafields.shopify.lumber-wood-type),Material (product.metafields.shopify.material),Mounting hardware (product.metafields.shopify.mounting-hardware),Mounting type (product.metafields.shopify.mounting-type),Notepad design (product.metafields.shopify.notepad-design),Occasion (product.metafields.shopify.occasion),Orientation (product.metafields.shopify.orientation),Paper type (product.metafields.shopify.paper-type),Pen type (product.metafields.shopify.pen-type),Personalization options (product.metafields.shopify.personalization-options),Pet control accessory features (product.metafields.shopify.pet-control-accessory-features),Portability (product.metafields.shopify.portability),Power source (product.metafields.shopify.power-source),Retail/Sale sign design (product.metafields.shopify.retail-sale-sign-design),Safety certifications (product.metafields.shopify.safety-certifications),Shape (product.metafields.shopify.shape),Spout type (product.metafields.shopify.spout-type),Suitable space (product.metafields.shopify.suitable-space),Surface reflectivity (product.metafields.shopify.surface-reflectivity),Tableware material (product.metafields.shopify.tableware-material),Target gender (product.metafields.shopify.target-gender),Theme (product.metafields.shopify.theme),Tool/Utensil material (product.metafields.shopify.tool-utensil-material),Usage type (product.metafields.shopify.usage-type),Wallet features (product.metafields.shopify.wallet-features),Watch display (product.metafields.shopify.watch-display),Watch material (product.metafields.shopify.watch-material),Wood finish (product.metafields.shopify.wood-finish),Wood grain orientation (product.metafields.shopify.wood-grain-orientation),Complementary products (product.metafields.shopify--discovery--product_recommendation.complementary_products),Related products (product.metafields.shopify--discovery--product_recommendation.related_products),Related products settings (product.metafields.shopify--discovery--product_recommendation.related_products_display),Search product boosts (product.metafields.shopify--discovery--product_search_boost.queries),Variant Image,Variant Weight Unit,Variant Tax Code,Cost per item,Included / United Kingdom,Price / United Kingdom,Compare At Price / United Kingdom,Included / European Union,Price / European Union,Compare At Price / European Union,Included / International,Price / International,Compare At Price / International,Status
+personalised-acrylic-tags-laser-engraved,Personalised Acrylic Tag – Laser Engraved Custom Label,"<h2>Personalised acrylic tags, laser engraved to order</h2>
+<p>Personalised acrylic tags in mirror finish — tied to a wedding favour, resting against a birthday cake, or labelling a handmade gift. The right tag finishes the whole thing.</p>
+<h3>Why they work</h3>
+<ul>
+  <li>Laser engraving is permanent — the text won't rub off, fade, or peel over time</li>
+  <li>Mirror acrylic catches the light without competing with the gift it's attached to</li>
+  <li>Three sizes mean the tag suits the occasion, from small chocolate bars to centrepiece cakes</li>
+</ul>
+<h3>Product details</h3>
+<ul>
+  <li>Material: acrylic (mirror finish)</li>
+  <li>Small: 70mm × 20mm — suits chocolates, sweet bags, and small favours</li>
+  <li>Medium: 100mm × 30mm — suits cakes, gift boxes, and event labels</li>
+  <li>Large: 130mm × 45mm — suits bottles, larger gifts, and display tags</li>
+  <li>Dimensions are approximate — the final engraved area may vary depending on your artwork, wording, or design</li>
+  <li>Finish: laser engraved</li>
+  <li>Pre-drilled hole for ribbon or twine</li>
+</ul>
+<h3>Personalisation</h3>
+<p>Select your pack quantity and size above, then add your colour choice, engraving details, and any file uploads using the product options below. Custom text and logo uploads are both supported.</p>
+<h3>Engraving guide</h3>
+<ul>
+  <li>Text: names, dates, short messages, or event wording — up to 2–3 lines depending on size</li>
+  <li>Logos: upload a high-resolution PNG, SVG, or PDF file at checkout for best results</li>
+  <li>Script and block fonts available — specify your preference in the notes at checkout</li>
+  <li>The engraving removes the mirror coating to reveal a contrasting matte finish beneath</li>
+  <li>For bulk or branded orders, send your artwork to info@etchnshine.com before placing your order</li>
+</ul>
+<h3>Perfect for</h3>
+<ul>
+  <li>Wedding and event favours</li>
+  <li>Cake decorations and dessert table labels</li>
+  <li>Housewarming and baby shower gifts</li>
+  <li>Father's Day, birthdays, and milestone occasions</li>
+  <li>Corporate branding, product tags, and gift packaging</li>
+</ul>
+<h3>Delivery and dispatch</h3>
+<ul>
+  <li>Dispatched within 1–3 business days once personalisation details are confirmed</li>
+  <li>UK delivery: 2–4 business days after dispatch via Royal Mail, DPD, or EVRI</li>
+  <li>Production begins when your personalisation is confirmed — not when the order is placed</li>
+  <li>Orders are not processed on weekends or UK bank holidays</li>
+  <li>Tracking provided at the point of dispatch</li>
+</ul>
+<p>Choose your pack quantity and size above, then add your colour, engraving details, and any file uploads in the product options.</p>",Etch 'N' Shine,Arts & Entertainment > Party & Celebration > Gift Giving > Gift Wrapping > Gift Tags & Labels,Acrylic Tag,"celebrations, corporate, fathersday, her, him, housewarming, kids, lovedones, party",true,Quantity,Pack of 10,,Size,Small (70mm × 20mm),,,,,ACR-TAG-10-SM,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/mirror-acrylic-tags-small-v2.jpg?v=1782062675,1,Two gold mirror acrylic tags with engraved text on a white surface,false,Personalised Acrylic Tags | Etch 'N' Shine,"Personalised acrylic tags in gold, silver, rose gold, pink and teal mirror. Custom text or logo engraved. For events, cakes and gifts. Etch 'N' Shine.",8213,,,,,,,,,,,,,,,,,,,,,,,,,,,gold,solid,,,,,,,,,,,,,,,,,,,acrylic,,,,,,,,,,,,,,rectangular,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 10,,,Medium (100mm × 30mm),,,,,ACR-TAG-10-MD,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/mirror-acrylic-tags-small.jpg?v=1782062833,2,"Hand holding a cake with a blue ribbon and 'Happy Father's Day' mirror acrylic tag, with a blurred background.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 10,,,Large (130mm × 45mm),,,,,ACR-TAG-10-LG,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/mirror-acrylic-sheets-colour-catalog.png?v=1780960318,3,"Five rectangular panels in gold, silver, blue, pink, and rose gold with 'Etch N Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 25,,,Small (70mm × 20mm),,,,,ACR-TAG-25-SM,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 25,,,Medium (100mm × 30mm),,,,,ACR-TAG-25-MD,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 25,,,Large (130mm × 45mm),,,,,ACR-TAG-25-LG,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 50,,,Small (70mm × 20mm),,,,,ACR-TAG-50-SM,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 50,,,Medium (100mm × 30mm),,,,,ACR-TAG-50-MD,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 50,,,Large (130mm × 45mm),,,,,ACR-TAG-50-LG,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 100,,,Small (70mm × 20mm),,,,,ACR-TAG-100-SM,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 100,,,Medium (100mm × 30mm),,,,,ACR-TAG-100-MD,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-tags-laser-engraved,,,,,,,,,Pack of 100,,,Large (130mm × 45mm),,,,,ACR-TAG-100-LG,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+mirror-acrylic-bakery-logo-cake-charm,"Mirror Acrylic Bakery Logo Cake Charm – Pack of 10, 25, 50 or 100","<h2>Mirror acrylic cake charm with your bakery logo</h2>
+<p>Your logo on every cake that leaves your kitchen. These mirror acrylic charms are laser-cut to your design — place them directly on buttercream or attach with edible glue. Clean finish, consistent result, reorderable.</p>
+<h3>Why bakers use them</h3>
+<ul>
+<li>Mirror finish catches the light on a finished cake — gold, silver, pink, blue or rose gold</li>
+<li>Your logo reproduced precisely — lines, text, and fine detail hold cleanly in laser-cut acrylic</li>
+<li>Approx. 30–40mm across (varies slightly by logo shape) — sized to sit on a cake without overpowering the decoration</li>
+<li>Bulk packs mean you always have stock — no reordering between every order run</li>
+</ul>
+<h3>Product details</h3>
+<ul>
+<li>Material: acrylic</li>
+<li>Finish: mirror acrylic — silver, gold, or rose gold</li>
+<li>Size: approx. 30–40mm (determined by logo shape)</li>
+<li>Available in packs of 10, 25, 50, or 100</li>
+<li>For display purposes only — remove before consuming</li>
+<li>Dispatched within 3–5 working days</li>
+</ul>
+<h3>Personalisation</h3>
+<p>Upload your bakery logo above — PNG, SVG, or high-resolution PDF. We cut to your design exactly as supplied. For complex logos or irregular shapes, message us before ordering and we'll confirm the cut file first.</p>
+<h3>Available options</h3>
+<ul>
+<li>Mirror finish: Silver / Gold / Rose Gold / Pink / Blue</li>
+<li>Pack size: 10 / 25 / 50 / 100</li>
+</ul>
+<h3>Perfect for</h3>
+<ul>
+<li>Home bakeries and independent cake businesses branding their finished cakes</li>
+<li>Bakers who photograph their work — mirror charms add reflection and detail to product shots</li>
+<li>Market stalls and event catering where consistent presentation across every cake matters</li>
+</ul>
+<p>Choose your pack size above and upload your logo — everything is on this page.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, corporate, unique",true,Pack size,Pack of 10,,,,,,,,ACR-LOGOMC-10,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Mirror-acrylic-cake-tags.png?v=1781830231,1,Collection of cake name tags with various bakery names displayed in front of three cakes.,false,Mirror Acrylic Bakery Logo Cake Charm | Etch 'N' Shine,"Mirror acrylic cake charms laser-cut with your bakery logo. Packs of 10–100, from £0.50/charm. Gold, silver, rose gold. Order at Etch 'N' Shine.",4630,,,,,TRUE,,,,,,TRUE,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+mirror-acrylic-bakery-logo-cake-charm,,,,,,,,,Pack of 25,,,,,,,,ACR-LOGOMC-25,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/mirror-acrylic-sheets-colour-catalog.png?v=1780960318,2,"Five rectangular panels in gold, silver, blue, pink, and rose gold with 'Etch N Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+mirror-acrylic-bakery-logo-cake-charm,,,,,,,,,Pack of 50,,,,,,,,ACR-LOGOMC-50,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+mirror-acrylic-bakery-logo-cake-charm,,,,,,,,,Pack of 100,,,,,,,,ACR-LOGOMC-100,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-travel-tumbler-with-handle-350ml,Personalised travel tumbler with carry handle 350ml – Stainless steel,"<h2>The 350ml travel tumbler with a carry handle on top</h2>
+
+<p>Coffee for the commute, water for the gym, anything in between. The top-mount handle clips onto a bag strap or hooks over a finger when both hands are full.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>Carry handle moulded into the lid — no separate strap to lose</li>
+  <li>Double-walled vacuum insulation keeps drinks hot for around 6 hours, cold for 12</li>
+  <li>Engraved into the matte panel with a diode laser — fade-proof and dishwasher-safe on the outside</li>
+  <li>Leak-proof screw lid with a single-hand drinking spout</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: 304 stainless steel, double-walled vacuum insulated</li>
+  <li>Capacity: 350ml (12oz)</li>
+  <li>Finish: matte exterior, polished interior</li>
+  <li>Care: hand wash only — outer surface dishwasher-safe, lid hand wash</li>
+</ul>
+
+<h3>Personalisation</h3>
+<p>Add a name, short message, or logo at checkout. For business orders — staff gifts, branded bulk runs, conference giveaways — get in touch about pricing and consistent engraving across the batch.</p>
+
+<h3>Available variants</h3>
+<ul>
+  <li>Stone grey — matte finish</li>
+  <li>Midnight black — matte finish</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Father's Day, birthdays, and the gift you'd actually use yourself</li>
+  <li>Corporate orders — onboarding kits, conference swag, staff appreciation</li>
+  <li>Gym bags, commutes, weekend hikes — the handle earns its keep</li>
+</ul>
+
+<p>Choose your colour and engraving above. Dispatched within 2–3 working days.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Food & Beverage Carriers > Water Bottles,,"corporate, fathersday, her, him, justbecause, lovedones, metal",true,Colour,Creamy White,,,,,,,,SS-TUMBLER-HDL-GRY,0.0,shopify,1,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/double_top_handle_travel_mugs_engraved.png?v=1780836910,1,Personalised engraved stainless steel travel mugs with dual carry handles – personalised travel mugs – Etch 'N' Shine,false,Personalised Travel Tumbler with Handle | Etch 'N' Shine,"Engraved 350ml travel tumbler with a carry handle on top. Stainless steel, vacuum insulated. Add a name, message or logo with Etch 'N' Shine.",3809,,,,,,,,,,,,,,,,,,,,,,,,screw-on,,,,,,,,,,,,,,short,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/double-top-handle-tumber.jpg?v=1777649384,kg,,,true,,,true,,,true,,,active
+personalised-travel-tumbler-with-handle-350ml,,,,,,,,,Sage Green,,,,,,,,SS-TUMBLER-HDL-BLK,0.0,shopify,1,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/double-top-handle-tumber.jpg?v=1777649384,2,"Two insulated travel mugs, one green and one beige, on a light purple background.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/double-top-handle-tumber.jpg?v=1777649384,kg,,,,,,,,,,,,
+personalised-travel-tumbler-with-handle-350ml,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/double-top-handle-tumbler2.jpg?v=1777649441,3,Two cylindrical containers with handles on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-bamboo-notebook-with-pen-engraved,Personalised bamboo notebook with pen – engraved cover,"<h2>A personalised bamboo notebook with your name or logo engraved on the cover</h2>
+
+<p>Bamboo cover, spiral-bound, lined pages — with a matching bamboo pen tucked into the elastic closure. The engraving sits cleanly in the grain: a name, a short phrase, or a logo reproduced with precision. The kind of thing that stays on a desk rather than in a drawer.</p>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Birthday, Christmas, or leaving gifts for writers, journalers, and planners</li>
+  <li>Teacher appreciation gifts — name or a message engraved to order</li>
+  <li>Corporate branded stationery with logo or company name</li>
+</ul>
+
+<h3>What gets engraved</h3>
+<p>A name, short text, or logo — laser engraved directly into the bamboo front cover. For logo uploads, supply a clean black-and-white file for the sharpest result. Text and names can be entered at checkout.</p>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: Bamboo cover with lined recycled paper pages</li>
+  <li>Size: A5 (approx. 148 × 210 mm)</li>
+  <li>Binding: Spiral-bound with elastic closure</li>
+  <li>Includes: One bamboo ballpoint pen</li>
+  <li>Finish: Laser engraved cover</li>
+</ul>
+
+<h3>How to personalise</h3>
+<p>Type your name or text in the personalisation field at checkout, or upload your logo file. Each notebook is engraved to order — not pre-made, not printed on.</p>
+
+<p>Upload your design or add your text above — fully personalised to order.</p>",Etch 'N' Shine,Office Supplies > General Office Supplies > Paper Products > Notebooks & Notepads > Notepads,,"appreciation, bamboo, celebrations, corporate, her, him, justbecause, lovedones, stationery",true,Title,Default Title,,,,,,,,,0.0,shopify,3,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/bamboo-notebook-engraved.png?v=1777048582,1,"Three wooden notebooks with spiral binding and pen holders, featuring 'Wildpeak Adventures' and personalized names.",false,Personalised bamboo notebook with pen | Etch 'N' Shine,"Bamboo spiral notebook with matching pen, laser engraved with your name, text, or logo. Dispatched in 1–3 days. Personalise yours – Etch 'N' Shine.
+",961,,,,,,,,,,,,,,,,,,,,,,,,,,,beige,,,,,,,,,,,,,,,,,,,,,,,composition,,,lined,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-bamboo-notebook-with-pen-engraved,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/bamboo-notebook3.jpg?v=1777048279,2,Notebook with pen and pencil on a light background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-bamboo-notebook-with-pen-engraved,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/bamboo-notebook2.jpg?v=1777048224,3,Three wooden notebooks with black ribbons on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-bamboo-notebook-with-pen-engraved,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/bamboo-notebook1.jpg?v=1777048124,4,Set of three wooden notebooks with black spiral binding on a gradient background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-black-acrylic-table-business-sign,"Custom black acrylic QR code sign – salons, cafés, and pop-ups","<h2>Your counter doing the work. QR codes, social handles, or a full price list.</h2>
+
+<p>Gloss black acrylic, precision laser engraved to reveal sharp white detail. This sign sits on your counter, desk, or display and handles the friction points that cost you customers — a booking link that's hard to find, a price list people have to ask for, social handles that don't get followed. One sign. Mounted on a natural wooden base. Built to stay where it's placed.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>High-contrast white engraving on gloss black acrylic reads clearly under salon lighting, café counters, and exhibition stands</li>
+  <li>Two layout options — Connect Sign for social and QR links, Price List Sign for services and pricing — designed around real customer use cases</li>
+  <li>Natural wooden base included: no sourcing separate stands or drilling into surfaces</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: acrylic</li>
+  <li>Dimensions: approx. 100mm × 180mm, 3mm thick</li>
+  <li>Finish: high-gloss black acrylic, precision laser engraved in white</li>
+  <li>Base: natural wooden stand included</li>
+  <li>Care: wipe clean with a soft dry cloth; avoid abrasive materials</li>
+</ul>
+
+<h3>Available variants</h3>
+<ul>
+  <li>Connect Sign — social handles and up to 2 QR codes (Instagram, booking link, reviews, website); optional logo</li>
+  <li>Price List Sign — up to 15 services with pricing; optional logo and QR code</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Hair salons, barbers, nail technicians, and beauty professionals</li>
+  <li>Cafés, reception desks, and checkout counters</li>
+  <li>Market stalls, pop-ups, and exhibition stands</li>
+</ul>
+
+<p>Choose your layout and provide your details above</p>", Etch ‘n’ Shine,Business & Industrial > Signage > Retail & Sale Signs,,"bizzsign, corporate",true,Title,Default Title,,,,,,,,,0.0,shopify,10,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-black-acrylic-qr-code-business-sign-7864516.jpg?v=1775076195,1,Black acrylic sign with custom text and QR codes on a wood base – Etch 'N' Shine,false,Custom acrylic QR code table sign | Etch 'N' Shine,"Black acrylic table sign, 10 × 18cm, with QR code or price list. For salons, cafés, and pop-ups. Upload your design – Etch 'N' Shine.",5898,,,,,,,,,,,,,,,,,,,,,,,,,,,black,,,,,,,,,,,,,,,,,,,,acrylic; wood,,tabletop; counter,,,,,,,,portable,,custom,,,,indoors,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-black-acrylic-table-business-sign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-black-acrylic-qr-code-business-sign-8551055.jpg?v=1775076195,2,"Black acrylic price list sign with custom text, logo placeholder and QR code on a wooden stand – Etch 'N' Shine",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-black-acrylic-table-business-sign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-black-acrylic-qr-code-business-sign-2221331.jpg?v=1775076196,3,Black acrylic sign with custom text and QR code on wooden stand – personalised acrylic sign – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-black-acrylic-table-business-sign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-black-acrylic-qr-code-business-sign-2307786.jpg?v=1775076196,4,Black acrylic sign with QR codes and custom text on a stand – engraved acrylic sign – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+custom-acrylic-business-logo-sign-450x300mm,Custom Business Logo Sign – Acrylic 2D Effect | Rectangular 450x300mm - Perfect Finish by Shumi,"<p><strong>A modern branding piece designed to present your logo with clean impact.</strong><br>
+This custom acrylic business logo sign features a premium 2D layered design, creating a crisp, professional look for offices, studios, storefronts, and event displays.</p>
+
+<p>Cut from durable acrylic sheets with precise laser detailing, the sign combines a clean rectangular format with layered background and lettering for a sleek finish. With custom colour options available, it’s a reliable way to display your brand in a polished, visually consistent way.</p>
+
+<p><strong>Perfect for:</strong></p>
+<ul>
+  <li>Office walls, studios, and reception areas</li>
+  <li>Indoor storefront displays and counter signage</li>
+  <li>Events, pop-ups, and brand activations</li>
+</ul>
+
+<p><strong>Product details:</strong></p>
+<ul>
+  <li>
+<strong>Material:</strong> 3 mm acrylic sheets</li>
+  <li>
+<strong>Design:</strong> 2D layered effect (background and letters laser cut)</li>
+  <li>
+<strong>Shape:</strong> Rectangle</li>
+  <li>
+<strong>Size:</strong> 450 mm × 300 mm</li>
+  <li>
+<strong>Colour options:</strong> Midnight black, Parma Violet, white</li>
+  <li>
+<strong>Recommended use:</strong> Indoor display</li>
+  <li>
+<strong>Production timeframe:</strong> 5–10 business days</li>
+</ul>
+
+<p><strong>Care notes:</strong><br>
+Wipe clean with a soft, dry cloth. Avoid abrasive materials and strong cleaners to help preserve the acrylic surface and finish.</p>
+
+<p><strong>Designed and engraved in the UK by Etch ’n’ Shine</strong> — premium acrylic signage created to showcase your brand with precision and style.</p>
+", Etch ‘n’ Shine,Business & Industrial > Signage > Retail & Sale Signs,,"acrylic, bizzsign",true,Title,Default Title,,,,,,,,BLS-450300,900.0,shopify,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/custom-business-logo-sign-acrylic-2d-effect-rectangular-450x300mm-perfect-finish-by-shumi-2277437.png?v=1775076311,1,Dark acrylic business sign with custom brand name on a marble shelf – personalised acrylic sign – Etch 'N' Shine,false,Custom Business Logo Sign | Etch 'N' Shine,"2D layered acrylic business sign, 450 × 300mm, with custom logo and colour options. For offices, studios, and storefronts. Dispatched in 1–3 days.",5898,,,,,TRUE,,,,,,TRUE,,,,,,,,,,,,,,,,black-1; white; purple,,,,,,,,,,,,,,,,,,,,acrylic,,,,,,,,,,,,custom,,,,indoors; outdoors,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,unlisted
+business-sign-custom-laser-cut-acrylic-shop-sign-37x30cm,Personalised Business Sign – Acrylic 2D Effect | Rectangular 450x300mm - Cakylicious,"<p><strong>A striking signage piece designed to showcase your brand with clarity and style.</strong><br>
+This custom laser-cut acrylic business sign adds a polished, professional touch to shopfronts, bakeries, cafés, and retail spaces, helping your brand stand out at first glance.</p>
+
+<p>Crafted from high-quality acrylic and finished with precise laser cutting, the sign combines bold colour contrast with clean detailing for a modern, eye-catching result. Lightweight yet durable, it is suitable for both indoor and outdoor display, making it a versatile branding solution.</p>
+
+<p><strong>Perfect for:</strong></p>
+<ul>
+  <li>Bakeries, cafés, and food businesses</li>
+  <li>Retail shops and small business branding</li>
+  <li>Shopfronts, counters, and display areas</li>
+</ul>
+
+<p><strong>Product details:</strong></p>
+<ul>
+  <li>
+<strong>Material:</strong> Premium acrylic</li>
+  <li>
+<strong>Design:</strong> Laser-cut sign with contrasting text and decorative detail</li>
+  <li>
+<strong>Size:</strong> Approx. 37 cm × 30 cm</li>
+  <li>
+<strong>Finish:</strong> Smooth, vibrant acrylic surface</li>
+  <li>
+<strong>Use:</strong> Suitable for indoor or outdoor display</li>
+  <li>
+<strong>Customisation:</strong> Choice of colours, fonts, and design elements</li>
+</ul>
+
+<p><strong>Care notes:</strong><br>
+Wipe clean with a soft, dry cloth. Avoid abrasive cleaners to help preserve the acrylic surface and finish.</p>
+
+<p><strong>Designed and engraved in the UK by Etch ’n’ Shine</strong> — custom signage created to highlight your brand with precision and confidence.</p>
+", Etch ‘n’ Shine,Business & Industrial > Signage > Retail & Sale Signs,,"acrylic, bizzsign",true,Title,Default Title,,,,,,,,BS-3730,800.0,shopify,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-business-sign-acrylic-2d-effect-rectangular-450x300mm-cakylicious-4895296.jpg?v=1775076336,1,Custom business name sign with cupcake graphic mounted on a wall – personalised acrylic 2D effect sign – Etch 'N' Shine,false,Custom acrylic shop sign laser cut | Etch 'N' Shine,"Boost your brand with a sleek Acrylic Business Sign from Etch ‘n’ Shine! Custom acrylic shop signs with precision etching for a modern, professional look. Order now!",5898,,,,,TRUE,,,,,,TRUE,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,acrylic,,wall,,,,,,,,,,custom,,,,outdoors; indoors,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,unlisted
+business-sign-custom-laser-cut-acrylic-shop-sign-37x30cm,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-business-sign-acrylic-2d-effect-rectangular-450x300mm-cakylicious-5517824.jpg?v=1775076337,2,Teal acrylic sign with custom text and cupcake graphic – personalised business sign – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+business-sign-custom-laser-cut-acrylic-shop-sign-37x30cm,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/custom-business-logo-sign-acrylic-2d-effect-rectangular-450x300mm-perfect-finish-by-shumi-2277437.png?v=1775076311,3,Dark acrylic business sign with custom brand name on a marble shelf – personalised acrylic sign – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-number-and-name-cake-topper-set,Personalised acrylic number and name cake topper set,"<h2>Personalised acrylic number and name cake topper set — two toppers, your choice of colour</h2>
+<p>The number and the name, each in the colour you choose. Order both together and pick a colour for each topper separately — match them or contrast them, 13 solid gloss and pastel options per topper.</p>
+<h3>Why it works</h3>
+<ul>
+<li>Two toppers in one order — number and name, each with its own colour</li>
+<li>13 solid gloss and pastel colours per topper — mix or match</li>
+<li>Sized to the cake: each topper is cut to fit the tier it's going on</li>
+<li>Laser cut from 3mm acrylic with a matching acrylic spike<br>
+</li>
+</ul>
+<h3>Product details</h3>
+<ul>
+<li>Material: 3mm solid acrylic — gloss and pastel finishes available</li>
+<li>Includes: one personalised number topper and one personalised name topper</li>
+<li>Finish: laser cut, clean edges</li>
+<li>Spike: matching acrylic, included with both toppers</li>
+<li>Available for 4 inch, 6 inch, 8 inch, 10 inch, and 12 inch cakes</li>
+</ul>
+<h3>Perfect for</h3>
+<ul>
+<li>Milestone birthdays — 18th, 21st, 30th, 40th, 50th, 60th, 70th, 80th, 100th</li>
+<li>Celebrations where the cake needs both an age and a name</li>
+<li>Children's parties where a colour combination ties the cake together</li>
+</ul>
+<p>Both toppers are cut and dispatched together.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, her, kids, lovedones, party",true,Cake size,4 inch cake,,,,,,,,ACR-BDLNUMNM-SOL-4,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/number_and_name_topper_bundle.png?v=1782078785,1,Decorative cake topper with '21' in purple and 'Isabella' in pink on a marble surface.,false,Acrylic number and name cake topper set | Etch 'N' Shine,"Number and name toppers in matching solid acrylic, 13 colours, sized to your cake. Bundle and save with Etch 'N' Shine.",4630,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-number-and-name-cake-topper-set,,,,,,,,,6 inch cake,,,,,,,,ACR-BDLNUMNM-SOL-6,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-sheets-colour-catalog.png?v=1780960318,2,"Pastel acrylic color swatches labeled Blue, Lilac, Purple, Teal, Orange, and Pink on a white background with 'Etch N' Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-number-and-name-cake-topper-set,,,,,,,,,8 inch cake,,,,,,,,ACR-BDLNUMNM-SOL-8,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-sheets-colour-catalog.png?v=1780960318,3,Solid gloss acrylic colors displayed with labels on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-number-and-name-cake-topper-set,,,,,,,,,10 inch cake,,,,,,,,ACR-BDLNUMNM-SOL-10,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/sparkle-acrylic-sheets-colour-catalog.png?v=1780960833,4,Gold and silver sparkle acrylic colours with Etch 'N Shine branding on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-number-and-name-cake-topper-set,,,,,,,,,12 inch cake,,,,,,,,ACR-BDLNUMNM-SOL-12,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-numbers-charms_5_7.jpg?v=1781215583,5,Blue and pink numbers '5' and '7' on a light gray background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-number-and-name-cake-topper-set,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Font-style-chart-acrylic.jpg?v=1781395770,6,Font style chart with various fonts displayed on a white background Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-number-and-name-cake-topper-set,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Number_Font_Style_Chart.jpg?v=1781046371,7,"Number font style chart with various numeric designs on a white background, branded 'Etch N' Shine'.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-mirror-acrylic-number-and-name-cake-topper-set,Personalised mirror acrylic number and name cake topper set,"<h2>Personalised mirror number and name cake topper set — two toppers, your choice of finish</h2>
+<p>The number and the name, each in the finish you choose. Order both together and select a mirror colour for each — match them for a clean look, or contrast them to make both stand out on the cake.</p>
+<h3>Why it works</h3>
+<ul>
+<li>Two toppers in one order — number and name, each with its own mirror finish</li>
+<li>Five mirror finishes per topper — gold, silver, rose gold, black, and copper</li>
+<li>Sized to the cake: each topper is scaled to fit the tier it's going on</li>
+<li>Laser cut from 3mm mirror acrylic with a matt back and matching acrylic spike<br>
+</li>
+</ul>
+<h3>Product details</h3>
+<ul>
+<li>Material: 3mm mirror acrylic — gloss reflective front, matt white back</li>
+<li>Includes: one personalised number topper and one personalised name topper</li>
+<li>Finish: laser cut, clean edges</li>
+<li>Spike: matching acrylic, included with both toppers</li>
+<li>Available for 4 inch, 6 inch, 8 inch, 10 inch, and 12 inch cake</li>
+</ul>
+<h3>Available variants</h3>
+<ul>
+<li>4 inch cake</li>
+<li>6 inch cake</li>
+<li>8 inch cake</li>
+<li>10 inch cake</li>
+<li>12 inch cake</li>
+</ul>
+<h3>Perfect for</h3>
+<ul>
+<li>Milestone birthdays — 18th, 21st, 30th, 40th, 50th, 60th, 70th, 80th, 100th</li>
+<li>Celebrations where the cake needs both an age and a name</li>
+<li>Weddings and anniversaries</li>
+</ul>
+<p>Both toppers are cut and dispatched together.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, her, kids, lovedones, party",true,Cake size,4 inch cake,,,,,,,,ACR-BDLNUMNM-MIR-4,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/number_and_name_topper_bundle-mirror.png?v=1782078893,1,Silver '18' and gold 'Sophia' cake toppers on a stone surface.,false,Mirror number and name cake topper set | Etch 'N' Shine,"Number and name toppers in matching mirror acrylic, sized to your cake. Five mirror finishes. Bundle and save with Etch 'N' Shine.",4630,,,,,,,,,,,,,,,,,,,,,,,,,,,silver; gold,,,,,,,,,,,,,,,,,,,,acrylic,,,,,,,,,,,,,,,,,,,,,,reusable,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-mirror-acrylic-number-and-name-cake-topper-set,,,,,,,,,6 inch cake,,,,,,,,ACR-BDLNUMNM-MIR-6,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Font-style-chart-acrylic.jpg?v=1781395770,2,Font style chart with various fonts displayed on a white background Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-mirror-acrylic-number-and-name-cake-topper-set,,,,,,,,,8 inch cake,,,,,,,,ACR-BDLNUMNM-MIR-8,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Number_Font_Style_Chart.jpg?v=1781046371,3,"Number font style chart with various numeric designs on a white background, branded 'Etch N' Shine'.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-mirror-acrylic-number-and-name-cake-topper-set,,,,,,,,,10 inch cake,,,,,,,,ACR-BDLNUMNM-MIR-10,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/mirror-acrylic-sheets-colour-catalog.png?v=1780960318,4,"Five rectangular panels in gold, silver, blue, pink, and rose gold with 'Etch N Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-mirror-acrylic-number-and-name-cake-topper-set,,,,,,,,,12 inch cake,,,,,,,,ACR-BDLNUMNM-MIR-12,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+express-delivery-next-day,Rush order – express next-business-day delivery,"<p>Need it faster? Choose Express Delivery at checkout and receive your order the next business day!</p>
+<ul>
+<li><span>🚚 Fast-track your delivery</span></li>
+<li><span>✅ Priority dispatch for orders placed before 2pm (Mon–Thu)</span></li>
+<li><span>Skip the queue at anytime </span></li>
+<li><span>📍 Available across mainland UK</span></li>
+<li><span>📬 Includes full tracking and delivery notifications</span></li>
+</ul>
+<p> </p>
+<p><span>Note: This service does not apply to weekends or bank holidays. Orders placed after 2pm or on weekends will be dispatched the next business day.</span></p>
+<p><span>Make sure to reference your order number in the section above.</span></p>", Etch ‘n’ Shine,Uncategorized,,,true,Title,Default Title,,,,,,,,,0.0,,-1,deny,manual,9.99,,false,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/express-delivery.svg?v=1749978000,1,,false,Next Day Express Delivery | Etch 'N' Shine,"Express Delivery from Etch 'N' Shine – just £3.99 for next business day UK delivery. Order by 2pm Mon–Thu for fast, tracked shipping!",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+mothers-day-appreciation-board,Mothers Day Appreciation Board,, Etch ‘n’ Shine,Uncategorized,,,false,Title,Default Title,,,,,,,,,0.0,,-1,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Mothers-day-appreciation-board.png?v=1745562535,1,Two wooden boards with handprint bouquet engravings and custom text – Mother's Day plaque – Etch 'N' Shine,false,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,false,,,false,,,false,,,draft
+option-set-1342661-buttons-1,Personalisation Options,,Etch 'N' Shine,Uncategorized,,"globo-product-options, option-set-1342661-buttons-1",true,Title,Yes - Text,,,,,,,,,0.0,,-11,continue,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/engraved-4893390.jpg?v=1775076215,1,Black outline icon of a pencil writing on a square – monochrome edit icon graphic – Etch 'N' Shine,false,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+option-set-1342661-buttons-1,,,,,,,,,Yes - Logo / Image,,,,,,,,,0.0,,0,continue,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+option-set-1342661-buttons-1,,,,,,,,,Yes - Text & Logo/Image,,,,,,,,,0.0,,-2,continue,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+option-set-1434639-radio-1,Back Engraving,, Etch ‘n’ Shine,Uncategorized,,"globo-product-options, option-set-1434639-radio-1",true,Title,Yes,,,,,,,,,0.0,,0,continue,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/engraved-4893390.jpg?v=1775076215,1,Black outline icon of a pencil writing on a square – monochrome edit icon graphic – Etch 'N' Shine,false,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-wedding-cake-charm,Personalised Acrylic Wedding Cake Charm – Initials,"<h2>The detail that makes the cake unmistakably theirs</h2>
+
+<p>Two initials. A single &amp;. Cut from 3mm acrylic and pressed gently into the icing — it reads as intentional from across the room. The kind of detail that appears in every photograph without anyone planning it.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>Mirror finish catches the light and reads clearly in photographs; gloss and pastel sit clean against icing without competing with the cake</li>
+  <li>Laser cut for clean, precise edges — no rough finish to catch on icing</li>
+  <li>No stick required — attaches flat to the side of the cake with a dab of buttercream or royal icing</li>
+  <li>Multiple finishes and colours available — choose yours on this page</li>
+  <li>Dispatched within 2–3 working days</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: acrylic — 3mm</li>
+  <li>Finish: mirror, gloss, pastel, and other finishes available (selectable on this page)</li>
+  <li>Available widths: 10cm (4""), 13cm (5""), 15cm (6""), 18cm (7""), 20cm (8""), 23cm (9""), 25cm (10"")</li>
+  <li>Food safe</li>
+  <li>Charm only — no stick included</li>
+</ul>
+
+<h3>Personalisation</h3>
+<p>Enter your two initials in the personalisation field on this page — for example, E &amp; S. The &amp; symbol is included as standard. Capital letters throughout. If you have a specific layout in mind or a design query, add a note in the field below and we will accommodate where possible.</p>
+
+<h3>Available sizes</h3>
+<ul>
+  <li>10cm (4"") — suits most single-tier and intimate wedding cakes</li>
+  <li>13cm (5"") — works well on two-tier cakes and larger single tiers</li>
+  <li>15cm (6"") — for statement tiers and larger wedding cakes</li>
+  <li>18cm (7"") — for multi-tier or more formal arrangements</li>
+  <li>20cm (8""), 23cm (9""), 25cm (10"") — for large showpiece cakes or when the charm is the centrepiece</li>
+</ul>
+<p>All sizes refer to the total width of the charm. Height varies depending on letter choice and font.</p>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Wedding cakes — side placement on the main tier or all tiers</li>
+  <li>Engagement party cakes</li>
+  <li>Anniversary celebration cakes</li>
+</ul>
+
+<p>Select your size above, choose your finish and colour, and add your initials in the personalisation field.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Wedding Cake Charm,"baking, celebrations, her, lovedones, party",true,Charm Size,"4"" (10cm)",,,,,,,,ACR-CAKE-CHARM-4IN,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Letter-style-chart.jpg?v=1781908755,1,"Letter style chart with four different letter options on a white background, featuring the brand 'Etch 'N' Shine'.",false,Personalised Wedding Cake Charm | Etch 'N' Shine,"Personalised acrylic wedding cake charm by Etch 'N' Shine. Mirror, gloss, pastel and more finishes. From £5. Dispatched in 2–3 days.",4630,,,,,,,,,,,,,,,,,,,,,,,,,,,clear; white; blue; gold,,,,,,,,,,,,,,,,,,,,acrylic,,,,,,,,,,,,,,,,,,,,,,reusable,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-wedding-cake-charm,,,,,,,,,"5"" (13cm)",,,,,,,,ACR-CAKE-CHARM-5IN,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/style_chart.jpg?v=1781912247,2,Comparison chart of ampersand symbols with 'Etch N' Shine' branding at the bottom.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-wedding-cake-charm,,,,,,,,,"6"" (15cm)",,,,,,,,ACR-CAKE-CHARM-6IN,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/mirror-acrylic-sheets-colour-catalog.png?v=1780960318,3,"Five rectangular panels in gold, silver, blue, pink, and rose gold with 'Etch N Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-wedding-cake-charm,,,,,,,,,"7"" (18cm)",,,,,,,,ACR-CAKE-CHARM-7IN,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-sheets-colour-catalog.png?v=1780960318,4,"Pastel acrylic color swatches labeled Blue, Lilac, Purple, Teal, Orange, and Pink on a white background with 'Etch N' Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-wedding-cake-charm,,,,,,,,,"8"" (20cm)",,,,,,,,ACR-CAKE-CHARM-8IN,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-sheets-colour-catalog.png?v=1780960318,5,Solid gloss acrylic colors displayed with labels on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-wedding-cake-charm,,,,,,,,,"9"" (23cm)",,,,,,,,ACR-CAKE-CHARM-9IN,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/sparkle-acrylic-sheets-colour-catalog.png?v=1780960833,6,Gold and silver sparkle acrylic colours with Etch 'N Shine branding on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-wedding-cake-charm,,,,,,,,,"10"" (25cm)",,,,,,,,ACR-CAKE-CHARM-10IN,0.0,,0,deny,manual,9.99,,true,true,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-wooden-cake-tag,"Custom wooden cake tag – bakery logo, reusable and eco-friendly","<h2>Wooden cake tag with your bakery logo</h2>
+<p>Your logo on every cake that leaves your kitchen. These plywood tags are laser-engraved to your design — sit them directly in buttercream, position them on a drip cake, or tuck them into a dessert box. Natural wood finish, reusable, and consistent across every order.</p>
+<h3>Why bakers use them</h3>
+<ul>
+  <li>Laser engraving into plywood is permanent — the logo won't smudge, fade, or transfer onto the fondant the way printed labels can</li>
+  <li>Your logo reproduced precisely — lines, text, and fine detail hold cleanly in engraved wood</li>
+  <li>Approx. 30mm across — compact enough to sit in a cake without overpowering the decoration</li>
+  <li>Reusable — wipe clean after each use and they're ready for the next bake</li>
+  <li>Bulk packs mean you always have stock — no reordering between every order run</li>
+</ul>
+<h3>Product details</h3>
+<ul>
+  <li>Material: plywood</li>
+  <li>Finish: natural wood, laser engraved</li>
+  <li>Size: approx. 30mm (determined by logo shape)</li>
+  <li>Available in packs of 10, 25, 50, or 100</li>
+  <li>For display purposes only — remove before consuming</li>
+  <li>Dispatched within 3–5 working days</li>
+</ul>
+<h3>Personalisation</h3>
+<p>Upload your bakery logo above — PNG, SVG, or high-resolution PDF. We engrave to your design exactly as supplied. For complex logos or fine-detail artwork, message us before ordering and we'll confirm the file first.</p>
+<h3>Available options</h3>
+<ul>
+  <li>Pack size: 10 / 25 / 50 / 100</li>
+</ul>
+<h3>Perfect for</h3>
+<ul>
+  <li>Home bakeries and independent cake businesses branding their finished cakes</li>
+  <li>Bakers who photograph their work — engraved wood tags add texture and warmth to product shots</li>
+  <li>Market stalls and event catering where consistent presentation across every cake matters</li>
+</ul>
+<p>Choose your pack size above and upload your logo — everything is on this page.</p>", Etch ‘n’ Shine,Home & Garden > Kitchen & Dining > Food Storage Accessories > Food & Beverage Labels,,"baking, justbecause",true,Pack size,Pack of 10,,,,,,,,WD-CAKETAG-10,0.0,shopify,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-cake-tag-custom-bakery-logo-9154491.jpg?v=1775076282,1,Four engraved wooden cake tags with custom text – personalised wood cake tags – Etch 'N' Shine,false,Wooden Bakery Logo Cake Tag | Etch 'N' Shine,"Wooden cake tags laser-engraved with your bakery logo. Packs of 10–100, from £0.40/tag. Reusable. Order at Etch 'N' Shine.",499924,,,,,TRUE,,,,,,TRUE,1,,,,,,,,,,,,,,,beige,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-wooden-cake-tag,,,,,,,,,Pack of 25,,,,,,,,WD-CAKETAG-25,0.0,shopify,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-cake-tag-custom-bakery-logo-4730319.jpg?v=1775076281,2,Engraved wooden cake tag with custom text displayed on a decorated cake – personalised wooden cake tag – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-wooden-cake-tag,,,,,,,,,Pack of 50,,,,,,,,WD-CAKETAG-50,0.0,shopify,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-cake-tag-custom-bakery-logo-2921716.jpg?v=1775076285,3,Engraved wooden cake tag with custom text on card – personalised wood tag – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-wooden-cake-tag,,,,,,,,,Pack of 100,,,,,,,,WD-CAKETAG-100,0.0,shopify,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-cake-tag-custom-bakery-logo-9876095.jpg?v=1775076280,4,Wooden cake tag with custom text on white cake board – engraved wooden tag – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalized-wooden-keychains,Personalised wooden keyring – engraved with name or initials,"<h2>Three shapes. One name. Made to last in a pocket.</h2>
+
+<p>A wooden keyring with a name, initials, or logo cut into it — it's a simple thing that gets carried every day. Three shape options mean the right one can be chosen for the right person, occasion, or brand mark.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>Three shapes to choose from — rectangular, round, or curved-edge rectangle</li>
+  <li>Natural plywood takes laser engraving cleanly, whether it's a name, a logo, or a short phrase</li>
+  <li>Lightweight and durable — built for daily carry rather than shelf display</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: plywood</li>
+  <li>Shape options and dimensions:
+    <ul>
+      <li>Rectangle: 53mm × 32mm</li>
+      <li>Round: 40mm diameter</li>
+      <li>Curved-edge rectangle: 50mm × 32mm</li>
+    </ul>
+  </li>
+  <li>Thickness: 3mm</li>
+  <li>Finish: natural wood, laser engraved</li>
+  <li>Includes keyring fitting</li>
+</ul>
+
+<h3>Available variants</h3>
+<ul>
+  <li>Rectangle: 53mm × 32mm</li>
+  <li>Round: 40mm diameter</li>
+  <li>Curved-edge rectangle: 50mm × 32mm</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Birthday gifts and small personal tokens</li>
+  <li>Party favours and eco-conscious event gifts</li>
+  <li>Brand merchandise and corporate giveaways</li>
+</ul>
+
+<p>Choose your shape and add your personalisation above</p>", Etch ‘n’ Shine,Apparel & Accessories > Handbag & Wallet Accessories > Keychains,,"clearance, corporate, fathersday, her, him, justbecause, kids, lovedones, wood",true,Shape,Round,,,,,,,,EN-WoodenKeychain-MultiShape-1,20.0,shopify,10,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/wooden-keyrings-engraved.jpg?v=1780855050,1,Engraved bamboo keyrings with custom names laid flat on a neutral surface – personalised wooden keyrings – Etch 'N' Shine,false,Personalised wooden keyring – engraved | Etch 'N' Shine,Engraved wooden keyrings in multiple shapes. From £2.45. Dispatched in 1–3 business days. Personalise yours today – Etch 'N' Shine.,166,,,,new,TRUE,,,,,,TRUE,1,,,,,,,,,,,,,,,beige,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,unisex,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-1501823.jpg?v=1775076325,g,,,true,,,true,,,true,,,active
+personalized-wooden-keychains,,,,,,,,,Curved Rectangle,,,,,,,,EN-WoodenKeychain-MultiShape-2,20.0,shopify,6,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-4000511.jpg?v=1775076285,2,Three shape variants of plain wooden keyring – personalised engraved wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-1872922.jpg?v=1775076287,g,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,Rectangle,,,,,,,,EN-WoodenKeychain-MultiShape-3,20.0,shopify,6,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-5255115.jpg?v=1775076286,3,Round engraved wooden disc keyring with custom text and medal icon – personalised wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-1137944.jpg?v=1775076290,g,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-4139333.jpg?v=1775076286,4,Hand holding engraved wooden keyring with custom text – personalised wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-5740165.jpg?v=1775076321,5,Round wooden keyring with engraved text held in hand – personalised wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-1291669.jpg?v=1775076289,6,"Three laser-engraved wooden keyrings with custom text, shown outdoors – personalised wooden keyrings – Etch 'N' Shine",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-6952225.jpg?v=1775076287,7,Round wooden keyrings with engraved custom text – personalised wooden keyrings – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-4244240.jpg?v=1775076288,8,Round wooden keyring engraved with koala illustration – personalised wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-6146284.jpg?v=1775076291,9,Round wooden keyring with custom text held in hand – engraved wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-6114319.jpg?v=1775076288,10,Engraved wooden keyring with dad design held in hand – personalised wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-7045706.jpg?v=1775076325,11,"Rounded wooden keyring with custom text and engraved year, silver split ring – personalised wooden keyring – Etch 'N' Shine",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-1501823.jpg?v=1775076325,12,Round wooden disc keyring in wicker bowl – personalised engraved wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-1137944.jpg?v=1775076290,13,Rectangular wooden keyring with silver split ring on a card in a rattan tray – personalised wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalized-wooden-keychains,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-wooden-keychains-custom-engraved-1872922.jpg?v=1775076287,14,Rounded wooden keyring with silver split ring resting in a wicker bowl – personalised wooden keyring – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,Personalised acrylic cupcake charms,"<h2>Personalised acrylic cupcake charms – 13 solid and pastel colours, two sizes</h2>
+
+<p>Flat acrylic charms laser-cut with a name or number. Press into buttercream or fondant — no spike, no pick. Available in Small (3cm) or Large (4.5cm), in sets of 2, 4, or 6.</p>
+
+<h3>Why it works</h3>
+<ul>
+<li>Small (3cm) sits neatly on a cupcake — readable without crowding the decoration</li>
+<li>Large (4.5cm) makes a clear visual statement, ideal for names or numbers that need to read across a table</li>
+<li>13 colours across solid gloss and pastel finishes for precise colour matching</li>
+<li>Sets of 2, 4, or 6 — scale the order to the display</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+<li>Material: 3mm acrylic — solid gloss or pastel finish</li>
+<li>Small: approximately 3cm wide per charm</li>
+<li>Large: approximately 4.5cm wide per charm</li>
+<li>Width may vary slightly with name length</li>
+<li>Attachment: flat — no spike or pick included</li>
+<li>Food safe</li>
+</ul>
+
+<h3>Personalisation</h3>
+<p>One name, number, or short text per charm, cut exactly as entered. For sets with different names, list each in order separated by a forward slash in the personalisation box — for example: Sarah / Emma / Jack / Lily. Select your size, quantity, and colour above.</p>
+
+<h3>Available variants</h3>
+<ul>
+<li>Size: Small (3cm) or Large (4.5cm)</li>
+<li>Sets: 2, 4, or 6 charms</li>
+<li>Solid gloss: Black, White, Red, Yellow, Blue, Orange, Green</li>
+<li>Pastel: Pastel Blue, Pastel Lilac, Pastel Purple, Pastel Teal, Pastel Peach, Pastel Pink</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+<li>Birthday cupcake displays where each cupcake carries a guest's name</li>
+<li>Wedding and celebration cupcakes with a colour-matched personalised detail</li>
+<li>Table settings where each place has its own named cupcake</li>
+</ul>
+
+<p>Select your size, set, and colour above, then enter each name or number at checkout. Dispatched within 1–3 working days.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, her, kids, lovedones, party",true,Set,Set of 2,,Size,Small - 3cm,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-cake-charms.png?v=1781398373,1,Collection of colorful birthday and decorative lettering on a light pink background - Etch 'N' Shine,false,Personalised Acrylic Cupcake Charms | Etch 'N' Shine,"Personalised 3cm acrylic cupcake charms in solid gloss and pastel colours. Sets of 2, 4, or 6. Sized for cupcakes. Order at Etch 'N' Shine.",4630,,,,,,,,,,,,,,,,,,,,,,,,,,,black; white; blue,,,,,,,,,,,,,,,,,,,,acrylic,,,,,,,,,,,,,,,,,,,,,,reusable,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-cupcake-charms,,,,,,,,,Set of 4,,,Small - 3cm,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/music-note-acrylic-cake-toppers-pastel.jpg?v=1781739117,2,Three colorful music note-shaped objects on a light gray background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,,,,,,,,,Set of 6,,,Small - 3cm,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/acrylic-musical-charms.jpg?v=1781739048,3,Laser-cut acrylic musical note charms in mirror finish – personalised acrylic music charms – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,,,,,,,,,Set of 2,,,Large - 4.5cm,,,,,,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-numbers-charms_5_7.jpg?v=1781215583,4,Blue and pink numbers '5' and '7' on a light gray background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,,,,,,,,,Set of 4,,,Large - 4.5cm,,,,,,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-5-number-charm.jpg?v=1781215610,5,Blue number '5' on a light gray background - Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,,,,,,,,,Set of 6,,,Large - 4.5cm,,,,,,0.0,,0,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-sheets-colour-catalog.png?v=1780960318,6,Solid gloss acrylic colors displayed with labels on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/sparkle-acrylic-sheets-colour-catalog.png?v=1780960833,7,Gold and silver sparkle acrylic colours with Etch 'N Shine branding on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-sheets-colour-catalog.png?v=1780960318,8,"Pastel acrylic color swatches labeled Blue, Lilac, Purple, Teal, Orange, and Pink on a white background with 'Etch N' Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Font-style-chart-acrylic.jpg?v=1781395770,9,Font style chart with various fonts displayed on a white background Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/happy-font-chart.jpg?v=1781395709,10,"Font style chart with 'Happy' text in various styles on a white background, featuring the brand  Etch 'N' Shine",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-cupcake-charms,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Number_Font_Style_Chart.jpg?v=1781046371,11,"Number font style chart with various numeric designs on a white background, branded 'Etch N' Shine'.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-cake-charms,Personalised acrylic cake charms,"<h2>Personalised acrylic cake charms – solid colours, sized to the cake, laser-cut to order</h2>
+
+<p>Flat acrylic charms cut with a name or number. No spike. Choose your cake size and each charm is proportioned to that tier — 4"", 6"", 8"", or 10"". Thirteen solid gloss and pastel colours for precise colour matching.</p>
+
+<h3>Why it works</h3>
+<ul>
+<li>Sized to the cake — proportioned to the tier, not a one-size guess</li>
+<li>13 colours across solid gloss and pastel finishes — closer to a cake scheme than mirror finishes allow</li>
+<li>No spike means placement anywhere on the tier</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+<li>Material: 3mm acrylic — solid gloss or pastel finish</li>
+<li>Charm dimensions: approximately 3–4cm tall for a 4"" cake, 4–5cm for 6"", 5–7cm for 8"", 7–9cm for 10""</li>
+<li>Attachment: flat — no spike or pick included</li>
+<li>Food safe</li>
+</ul>
+
+<h3>Personalisation</h3>
+<p>One name or number per charm, cut exactly as entered. Select your quantity and cake size above, then add your name or number and colour in the personalisation box at checkout. For mixed names across a set, list each in order.</p>
+
+<h3>Available variants</h3>
+<ul>
+<li>Quantity: Set of 2 or Set of 4</li>
+<li>Cake size: 4"", 6"", 8"", or 10""</li>
+<li>Solid gloss: Black, White, Red, Yellow, Blue, Orange, Green</li>
+<li>Pastel: Pastel Blue, Pastel Lilac, Pastel Purple, Pastel Teal, Pastel Peach, Pastel Pink</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+<li>Colour-matched cakes where the charm needs to fit a specific scheme</li>
+<li>Pairing alongside a main topper as a secondary personalised detail</li>
+<li>Cakes that suit a flat matte or gloss finish over a mirror acrylic</li>
+</ul>
+
+<p>Choose your quantity and cake size above, then add your personalisation at checkout. Dispatched within 1–3 working days.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, her, kids, lovedones, party",true,Quantity,Set of 2,,Cake Size,4 inch cake,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-cake-charms-2.png?v=1781398709,1,"Collection of colorful decorative items including numbers, letters, and symbols on a pink background - Etch 'N' Shine",false,Personalised Acrylic Gloss Cake Charms | Etch 'N' Shine,"Acrylic cake charms in solid gloss and pastel colours. Sets of 2 or 4, sized to the tier. No spike, personalised with name or number. Order at Etch 'N' Shine.",4630,,,,,,,,,,,,,,,,,,,,,,,,,,,purple; gold; silver; black; white; blue,,,,,,,,,,,,,,,,,,,,acrylic,,,,,,,,,,,,,,,,,,,,,,reusable,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-cake-charms,,,,,,,,,Set of 2,,,6 inch cake,,,,,,0.0,,0,deny,manual,9.99,,false,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/just-married-gold-acrylic-charm.jpg?v=1781739257,2,Gold 'Just Married' decoration on a textured white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cake-charms,,,,,,,,,Set of 2,,,8 inch cake,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/silver-mirror-acrylic-charms_2.jpg?v=1781739211,3,Set of decorative silver door and window shapes on a brown surface,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cake-charms,,,,,,,,,Set of 2,,,10 inch cake,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/music-note-acrylic-cake-toppers-pastel.jpg?v=1781739117,4,Three colorful music note-shaped objects on a light gray background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cake-charms,,,,,,,,,Set of 4,,,4 inch cake,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-sheets-colour-catalog.png?v=1780960318,5,Solid gloss acrylic colors displayed with labels on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cake-charms,,,,,,,,,Set of 4,,,6 inch cake,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Font-style-chart-acrylic.jpg?v=1781395770,6,Font style chart with various fonts displayed on a white background Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cake-charms,,,,,,,,,Set of 4,,,8 inch cake,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/happy-font-chart.jpg?v=1781395709,7,"Font style chart with 'Happy' text in various styles on a white background, featuring the brand  Etch 'N' Shine",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cake-charms,,,,,,,,,Set of 4,,,10 inch cake,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Number_Font_Style_Chart.jpg?v=1781046371,8,"Number font style chart with various numeric designs on a white background, branded 'Etch N' Shine'.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-cake-charms,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/sparkle-acrylic-sheets-colour-catalog.png?v=1780960833,9,Gold and silver sparkle acrylic colours with Etch 'N Shine branding on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-cake-charms,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-sheets-colour-catalog.png?v=1780960318,10,"Pastel acrylic color swatches labeled Blue, Lilac, Purple, Teal, Orange, and Pink on a white background with 'Etch N' Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+custom-slate-sign-plaque,"Personalised slate house sign – garden bar, shed and door plaque","<h2>Your name, your number, or your bar — cut into natural slate.</h2>
+
+<p>Slate is one of the few materials that looks more at home outdoors than in. Ten millimetres of solid stone, precision-engraved with whatever the space is called — a house name, a door number, a garden bar title — and mounted with the fixings included. Built to last through weather rather than just survive it.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>10mm solid natural slate — substantial enough to carry presence beside a front door or on a garden wall</li>
+  <li>Deep laser engraving holds clarity through rain, frost, and direct sun without fading or filling</li>
+  <li>Wall mounting fixings included — arrives ready to go up without sourcing additional hardware</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: slate</li>
+  <li>Thickness: 10mm solid stone</li>
+  <li>Available sizes:
+    <ul>
+      <li>Small: 150 × 300mm</li>
+      <li>Medium: 200 × 300mm</li>
+      <li>Large: 300 × 400mm</li>
+    </ul>
+  </li>
+  <li>Finish: natural slate with smooth cut edges, laser engraved</li>
+  <li>Use: suitable for indoor and outdoor display</li>
+  <li>Includes: wall mounting fixings</li>
+  <li>Care: wipe clean with a soft cloth; avoid abrasive cleaners to preserve the engraved finish</li>
+</ul>
+
+<h3>Available variants</h3>
+<ul>
+  <li>Small: 150 × 300mm</li>
+  <li>Medium: 200 × 300mm</li>
+  <li>Large: 300 × 400mm</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>House name and door number plaques</li>
+  <li>Garden bars, sheds, home offices, and outbuildings</li>
+  <li>Housewarming and milestone birthday gifts</li>
+</ul>
+
+<p>Choose your size and add your wording above</p>", Etch ‘n’ Shine,Home & Garden > Decor > Address Signs,,"housewarming, lovedones, slate",true,Size,Small - 150 x 300mm,,,,,,,,,0.0,shopify,2,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/slate-house-sign-engraved.png?v=1780836909,1,Engraved slate house sign with custom name and number on a dark surface – personalised slate house sign – Etch 'N' Shine,false,Personalised slate house sign | Etch 'N' Shine,"Natural slate house sign, laser-engraved to order. Three sizes: 150–400mm. For doors, bars, and sheds. Dispatched in 1–3 business days – Etch 'N' Shine.",572,,,,,,,,,,,,,,,,,,,,,,,,,,,gray; black,,,,,,,,matte,,,,,,,,,,non-illuminated,,,,wall,,,horizontal,,,,,,,,,rectangular,,,non-reflective,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-house-sign-garden-or-bar-plaque-1122351.jpg?v=1775076203,kg,,,true,,,true,,,true,,,active
+custom-slate-sign-plaque,,,,,,,,,Medium - 200 x 300mm,,,,,,,,,0.0,shopify,2,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-house-sign-garden-or-bar-plaque-1038599.jpg?v=1775076203,2,Dark slate house sign with engraved custom text and corner mounting holes – personalised slate door plaque – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-house-sign-garden-or-bar-plaque-3168281.jpg?v=1775076202,kg,,,,,,,,,,,,
+custom-slate-sign-plaque,,,,,,,,,Large - 300 x 400mm,,,,,,,,,0.0,shopify,2,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-house-sign-garden-or-bar-plaque-8146147.jpg?v=1775076205,3,Plain slate plaque with corner mounting holes showing 400x300mm dimensions – personalised slate sign – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-house-sign-garden-or-bar-plaque-8146147.jpg?v=1775076205,kg,,,,,,,,,,,,
+custom-slate-sign-plaque,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-house-sign-garden-or-bar-plaque-3168281.jpg?v=1775076202,4,Plain slate plaque shown with 300x200mm dimensions – personalised slate house sign – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+custom-slate-sign-plaque,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-house-sign-garden-or-bar-plaque-1122351.jpg?v=1775076203,5,Blank slate plaque with 300x150mm dimensions shown – personalised slate house sign – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+custom-engraved-slate-placemat,Personalised slate placemat – engraved with photo or text,"<h2>Natural slate that earns a place on the table.</h2>
+
+<p>A 20 × 30cm slate placemat protects the table, holds the heat, and looks like something that was chosen deliberately. Engraved with a photo, text, or logo — sealed for durability and finished with padded feet — it works equally well for daily dining and professional table settings.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>Natural slate surface handles heat directly from plates and dishes without warping or marking</li>
+  <li>Sealed finish makes it easy to wipe clean while protecting the engraved detail from daily wear</li>
+  <li>Padded feet protect the surface beneath — suitable for wood, glass, and stone tables</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: slate</li>
+  <li>Dimensions: 20 × 30cm</li>
+  <li>Finish: sealed, laser engraved; natural textured slate edges</li>
+  <li>Base: soft padded feet to protect surfaces</li>
+  <li>Engraving options: text, photo, or logo</li>
+  <li>Care: wipe clean only; not dishwasher safe; natural variations in slate texture are part of the character</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Family dining and everyday table settings</li>
+  <li>Wedding, housewarming, and anniversary gifts</li>
+  <li>Restaurants, cafés, and branded hospitality displays</li>
+</ul>
+
+<p>Add your personalisation above</p>", Etch ‘n’ Shine,Home & Garden > Linens & Bedding > Table Linens > Placemats,,"celebrations, housewarming, lovedones, slate",true,Quantity,1 Placemat,,,,,,,,,0.0,shopify,4,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-placements.jpg?v=1780855623,1,"Set of four Peronsalised slate placemats for events, occasions, wedding favours - Etch 'N' Shine",false,Personalised slate placemat engraved | Etch 'N' Shine,"Natural slate placemats, 20 × 30cm, padded feet. Engraved with photo, text, or logo. Dispatched in 1–3 business days. Order yours today – Etch 'N' Shine.",2547,,,,,,,,,,,,1,,,,,,,,,,,,,,,black,,,,,,,,,,,,,,,,,,,,,,,,everyday; special-occasion,,,,,,,,,,rectangular,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+custom-engraved-slate-placemat,,,,,,,,,Set of 2,,,,,,,,,0.0,shopify,4,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-placemat-engraved-photo-or-text-7745975.jpg?v=1775076196,2,Laser-engraved slate placemat with decorative scrollwork and custom text – personalised slate placemat – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+custom-engraved-slate-placemat,,,,,,,,,Set of 4,,,,,,,,,0.0,shopify,4,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-placemat-engraved-photo-or-text-5198321.jpg?v=1775076196,3,Laser-engraved slate placemat with custom family name in script font – personalised slate placemat – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+custom-engraved-slate-placemat,,,,,,,,,Set of 6,,,,,,,,,0.0,shopify,4,deny,manual,9.99,,true,true,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/personalised-slate-placemat-engraved-photo-or-text-2747218.jpg?v=1775076195,4,Laser-engraved slate plaque with personalised message against a wooden backdrop – engraved slate plaque – Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-name-cake-topper,Personalised acrylic name cake topper,"<h2>Personalised acrylic name cake topper</h2>
+
+<p>The name, in the colour that suits the cake. Laser cut from 3mm acrylic — solid gloss or pastel — with a matching spike from the same sheet. Some occasions don't need anything else.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>Just the name — clean, without the script that sometimes competes with the cake itself</li>
+  <li>13 colours make it the most flexible design in the range for matching a colour scheme</li>
+  <li>Works for any occasion where a name is the right call — birthdays, weddings, christenings, retirements</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: 3mm acrylic — solid gloss or pastel finish</li>
+  <li>Spike: included — food safe, cut from the same sheet</li>
+  <li>Available for cakes sized 4"", 6"", 8"", 10"", and 12""</li>
+  <li>Use: decorative — remove before cutting the cake</li>
+</ul>
+
+<h3>Personalisation</h3>
+<p>Enter the name in the personalisation box at checkout. The name is cut exactly as entered. For a name with ""Happy Birthday"" or an age, see the other toppers in this range.</p>
+
+<h3>Available variants</h3>
+<ul>
+  <li>Solid gloss: Black, White, Red, Yellow, Blue, Orange, Green</li>
+  <li>Pastel: Pastel Blue, Pastel Lilac, Pastel Purple, Pastel Teal, Pastel Peach, Pastel Pink</li>
+  <li>Cake size: 4"", 6"", 8"", 10"", 12""</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Birthday cakes where the name alone is the centrepiece</li>
+  <li>Wedding and anniversary cakes</li>
+  <li>Christenings, naming days, and baby showers</li>
+</ul>
+
+<p>Choose your colour and cake size above, then enter the name at checkout. Dispatched within 1–3 working days.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, her, kids, lovedones, party",true,Cake Size,4 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Solid-colours-name-toppers.png?v=1781736950,1,Colorful name signs on a neutral background with flowers,false,Personalised Acrylic Name Cake Topper | Etch 'N' Shine,"Just the name, in the colour that suits the cake. Solid gloss or pastel acrylic, laser cut with a matching spike. Order at Etch 'N' Shine.",4630,,,,,,,,,,,,,,,,,,,,,,,,,,,black; gold; white; blue,,,,,,,,,,,,,,,,,,,,acrylic,,,,,,,,,,,,,,,,,,,,,,reusable,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-name-cake-topper,,,,,,,,,6 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/sparkle-acrylic-sheets-colour-catalog.png?v=1780960833,2,Gold and silver sparkle acrylic colours with Etch 'N Shine branding on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-name-cake-topper,,,,,,,,,8 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-sheets-colour-catalog.png?v=1780960318,3,Solid gloss acrylic colors displayed with labels on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-name-cake-topper,,,,,,,,,10 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-sheets-colour-catalog.png?v=1780960318,4,"Pastel acrylic color swatches labeled Blue, Lilac, Purple, Teal, Orange, and Pink on a white background with 'Etch N' Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-name-cake-topper,,,,,,,,,12 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Font-style-chart-acrylic.jpg?v=1781395770,5,Font style chart with various fonts displayed on a white background Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-birthday-name-cake-topper,Personalised acrylic happy birthday name cake topper,"<h2>Personalised acrylic happy birthday name cake topper</h2>
+
+<p>""Happy Birthday"" is fixed. You add the name. Laser cut from 3mm acrylic in solid gloss or pastel — the script and the name come as one piece, sized to your cake with a matching spike from the same sheet.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>Name-led design — the right choice when the person matters more than the number</li>
+  <li>Script and name are cut together as a balanced piece, not assembled from separate parts</li>
+  <li>13 colours across solid gloss and pastel, so the finish can match the cake scheme</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: 3mm acrylic — solid gloss or pastel finish</li>
+  <li>Spike: included — food safe, cut from the same sheet</li>
+  <li>Available for cakes sized 4"", 6"", 8"", 10"", and 12""</li>
+  <li>Use: decorative — remove before cutting the cake</li>
+</ul>
+
+<h3>Personalisation</h3>
+<p>Enter the name in the personalisation box at checkout. ""Happy Birthday"" is fixed into the design. The name is cut exactly as entered — capitalisation included.</p>
+
+<h3>Available variants</h3>
+<ul>
+  <li>Solid gloss: Black, White, Red, Yellow, Blue, Orange, Green</li>
+  <li>Pastel: Pastel Blue, Pastel Lilac, Pastel Purple, Pastel Teal, Pastel Peach, Pastel Pink</li>
+  <li>Cake size: 4"", 6"", 8"", 10"", 12""</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Birthday cakes where the name is the focus</li>
+  <li>Children's parties where colour-matching is part of the brief</li>
+  <li>Adults who'd rather have their name on the cake than their age</li>
+</ul>
+
+<p>Choose your colour and cake size above, then enter the name at checkout. Dispatched within 1–3 working days.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, her, kids, lovedones, party",true,Cake Size,4 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Solid-colours-happybirthdayname-toppers.png?v=1781737235,1,Personalized 'Happy Birthday' cake toppers in various colors on a marble surface.,false,Personalised Acrylic Birthday Name Topper | Etch 'N' Shine,'Happy Birthday' is fixed — you add the name. Solid gloss or pastel acrylic in 13 colours and 5 sizes. Order at Etch 'N' Shine.,4630,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-happy-birthday-name-cake-topper,,,,,,,,,6 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-sheets-colour-catalog.png?v=1780960318,2,Solid gloss acrylic colors displayed with labels on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-birthday-name-cake-topper,,,,,,,,,8 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-sheets-colour-catalog.png?v=1780960318,3,"Pastel acrylic color swatches labeled Blue, Lilac, Purple, Teal, Orange, and Pink on a white background with 'Etch N' Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-birthday-name-cake-topper,,,,,,,,,10 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/sparkle-acrylic-sheets-colour-catalog.png?v=1780960833,4,Gold and silver sparkle acrylic colours with Etch 'N Shine branding on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-birthday-name-cake-topper,,,,,,,,,12 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/happy-font-chart.jpg?v=1781395709,5,"Font style chart with 'Happy' text in various styles on a white background, featuring the brand  Etch 'N' Shine",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-birthday-name-cake-topper,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/birthday_font_style_chart.jpg?v=1781650585,6,Birthday font style chart with different font options on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-happy-birthday-name-cake-topper,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Font-style-chart-acrylic.jpg?v=1781395770,7,Font style chart with various fonts displayed on a white background Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-happy-age-and-name-cake-topper,Personalised acrylic happy age and name cake topper,"<h2>Personalised acrylic happy birthday age and name cake topper</h2>
+
+<p>Happy, the age, and the name — cut as one piece. Laser cut from 3mm acrylic in solid gloss or pastel, sized to your cake, with a matching spike from the same sheet.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>Everything on one piece — no assembly, no alignment needed on the day</li>
+  <li>Script, number, and name are laid out as a single balanced design</li>
+  <li>13 colours to choose from, so the topper can match the cake rather than the other way around</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: 3mm acrylic — solid gloss or pastel finish</li>
+  <li>Spike: included — food safe, cut from the same sheet</li>
+  <li>Available for cakes sized 4"", 6"", 8"", 10"", and 12""</li>
+  <li>Use: decorative — remove before cutting the cake</li>
+</ul>
+
+<h3>Personalisation</h3>
+<p>Enter the name and age in the personalisation box at checkout, and note the order you'd like them. ""Happy"" and ""Birthday"" are fixed. The name is cut exactly as entered — check spelling before confirming.</p>
+
+<h3>Available variants</h3>
+<ul>
+  <li>Solid gloss: Black, White, Red, Yellow, Blue, Orange, Green</li>
+  <li>Pastel: Pastel Blue, Pastel Lilac, Pastel Purple, Pastel Teal, Pastel Peach, Pastel Pink</li>
+  <li>Cake size: 4"", 6"", 8"", 10"", 12""</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Milestone birthdays where both the name and age belong on the cake</li>
+  <li>Colour-matched party cakes</li>
+  <li>Photographs where you want the full name to be clearly readable</li>
+</ul>
+
+<p>Choose your colour and cake size above, then enter the name and age at checkout. Dispatched within 1–3 working days.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, her, kids, lovedones, party",true,Cake Size,4 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Solid-colours-happyagebirthdayname-toppers.png?v=1781737467,1,Personalized birthday cake toppers with names and ages on a neutral background.,false,Personalised Acrylic Happy Age Name Topper | Etch 'N' Shine,"Happy, your age, and name cut as one piece from solid or pastel acrylic. 13 colours and 5 sizes. Dispatched in 1–3 days by Etch 'N' Shine.",4630,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-happy-age-and-name-cake-topper,,,,,,,,,6 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-sheets-colour-catalog.png?v=1780960318,2,"Pastel acrylic color swatches labeled Blue, Lilac, Purple, Teal, Orange, and Pink on a white background with 'Etch N' Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-age-and-name-cake-topper,,,,,,,,,8 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-sheets-colour-catalog.png?v=1780960318,3,Solid gloss acrylic colors displayed with labels on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-age-and-name-cake-topper,,,,,,,,,10 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/sparkle-acrylic-sheets-colour-catalog.png?v=1780960833,4,Gold and silver sparkle acrylic colours with Etch 'N Shine branding on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-age-and-name-cake-topper,,,,,,,,,12 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/happy-font-chart.jpg?v=1781395709,5,"Font style chart with 'Happy' text in various styles on a white background, featuring the brand  Etch 'N' Shine",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-age-and-name-cake-topper,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Number_Font_Style_Chart.jpg?v=1781046371,6,"Number font style chart with various numeric designs on a white background, branded 'Etch N' Shine'.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-happy-age-and-name-cake-topper,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Font-style-chart-acrylic.jpg?v=1781395770,7,Font style chart with various fonts displayed on a white background Etch 'N' Shine,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-happy-age-cake-topper,Personalised acrylic happy age cake topper,"<h2>Personalised acrylic happy birthday age cake topper — your colour, your age</h2>
+
+<p>""Happy"" is part of the design. You add the age. The word and the number are laser cut as a single piece of 3mm acrylic — solid gloss or pastel — and sized to your cake with a matching spike.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>The script and number are designed together, so they read as a complete piece rather than two separate elements</li>
+  <li>Solid gloss gives a crisp, graphic result; pastels suit softer or floral schemes</li>
+  <li>13 colours — you can match the topper to the cake rather than the other way around</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: 3mm acrylic — solid gloss or pastel finish</li>
+  <li>Spike: included — food safe, cut from the same sheet</li>
+  <li>Available for cakes sized 4"", 6"", 8"", 10"", and 12""</li>
+  <li>Use: decorative — remove before cutting the cake</li>
+</ul>
+
+<h3>Personalisation</h3>
+<p>Enter the age (any number 1–99) in the personalisation box at checkout. ""Happy"" is fixed into the design. For a version that includes a name, see the happy age and name topper.</p>
+
+<h3>Available variants</h3>
+<ul>
+  <li>Solid gloss: Black, White, Red, Yellow, Blue, Orange, Green</li>
+  <li>Pastel: Pastel Blue, Pastel Lilac, Pastel Purple, Pastel Teal, Pastel Peach, Pastel Pink</li>
+  <li>Cake size: 4"", 6"", 8"", 10"", 12""</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Milestone birthdays at any age</li>
+  <li>Colour-themed party cakes where the topper needs to match the scheme</li>
+  <li>Cakes where the age is the statement and no name is needed</li>
+</ul>
+
+<p>Choose your colour and cake size above, then enter the age at checkout. Dispatched within 1–3 working days.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, her, kids, lovedones, party",true,Cake Size,4 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Gloss-acrylic-happy-number.png?v=1781220082,1,Set of colorful 'Happy Birthday' cake toppers with numbers on a light background - Etch 'N' Shine,false,Personalised Acrylic Happy Age Cake Topper | Etch 'N' Shine,'Happy' is fixed — you add the age. Solid gloss or pastel acrylic in 13 colours and 5 cake sizes. Order yours at Etch 'N' Shine.,4630,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-happy-age-cake-topper,,,,,,,,,6 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-sheets-colour-catalog.png?v=1780960318,2,"Pastel acrylic color swatches labeled Blue, Lilac, Purple, Teal, Orange, and Pink on a white background with 'Etch N' Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-age-cake-topper,,,,,,,,,8 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-sheets-colour-catalog.png?v=1780960318,3,Solid gloss acrylic colors displayed with labels on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-age-cake-topper,,,,,,,,,10 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/sparkle-acrylic-sheets-colour-catalog.png?v=1780960833,4,Gold and silver sparkle acrylic colours with Etch 'N Shine branding on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-age-cake-topper,,,,,,,,,12 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/happy-font-chart.jpg?v=1781395709,5,"Font style chart with 'Happy' text in various styles on a white background, featuring the brand  Etch 'N' Shine",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-happy-age-cake-topper,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Number_Font_Style_Chart.jpg?v=1781046371,6,"Number font style chart with various numeric designs on a white background, branded 'Etch N' Shine'.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+personalised-acrylic-number-cake-topper,Personalised acrylic number cake topper,"<h2>Personalised acrylic number cake topper — 13 colours, cut to your cake size</h2>
+
+<p>The number in the colour that fits the cake. Laser cut from 3mm acrylic — solid gloss or pastel — and we cut it to your cake size with a matching spike from the same sheet.</p>
+
+<h3>Why it works</h3>
+<ul>
+  <li>13 colours across solid gloss and pastel ranges means it works with almost any cake design</li>
+  <li>Solid gloss reads bold and graphic; pastel colours sit softer against pale or floral schemes</li>
+  <li>Cut to your cake size — no trimming or adjusting on the day</li>
+</ul>
+
+<h3>Product details</h3>
+<ul>
+  <li>Material: 3mm acrylic — solid gloss or pastel finish</li>
+  <li>Spike: included — food safe, cut from the same sheet</li>
+  <li>Available for cakes sized 4"", 6"", 8"", 10"", and 12""</li>
+  <li>Use: decorative — remove before cutting the cake</li>
+</ul>
+
+<h3>Personalisation</h3>
+<p>Any single or double digit number — 1 through 99. Enter your number in the personalisation box at checkout. For a number paired with a name or with ""Happy"", see the other toppers in this range.</p>
+
+<h3>Available variants</h3>
+<ul>
+  <li>Solid gloss: Black, White, Red, Yellow, Blue, Orange, Green</li>
+  <li>Pastel: Pastel Blue, Pastel Lilac, Pastel Purple, Pastel Teal, Pastel Peach, Pastel Pink</li>
+  <li>Cake size: 4"", 6"", 8"", 10"", 12""</li>
+</ul>
+
+<h3>Perfect for</h3>
+<ul>
+  <li>Milestone birthdays — 18th, 21st, 30th, 40th, 50th and beyond</li>
+  <li>Children's birthday cakes where colour-matching is part of the brief</li>
+  <li>Anniversary cakes where the year is the whole point</li>
+</ul>
+
+<p>Choose your colour and cake size above, then enter the number at checkout. Dispatched within 1–3 working days.</p>",Etch 'N' Shine,Home & Garden > Kitchen & Dining > Kitchen Tools & Utensils > Cake Decorating Supplies,Cake Toppers,"baking, celebrations, her, kids, lovedones, party",true,Cake Size,4 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/hero-number-preview.png?v=1781215385,1,Colorful number cake toppers on a light pink background - Etch 'N' Shine,false,Personalised Acrylic Number Cake Topper | Etch 'N' Shine,Acrylic number cake toppers in solid gloss and pastel colours. Laser cut to your cake size with a matching spike. Personalise yours at Etch 'N' Shine.,4630,,,,,,,,,,,,,,,,,,,,,,,,,,,pink,,,,,,,,,,,,,,,,,,,,acrylic,,,,,,,,,,,,,,,,,,,,,,reusable,,,,,,,,,,,kg,,,true,,,true,,,true,,,active
+personalised-acrylic-number-cake-topper,,,,,,,,,6 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/pastel-acrylic-sheets-colour-catalog.png?v=1780960318,2,"Pastel acrylic color swatches labeled Blue, Lilac, Purple, Teal, Orange, and Pink on a white background with 'Etch N' Shine' branding.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-number-cake-topper,,,,,,,,,8 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/solid-acrylic-sheets-colour-catalog.png?v=1780960318,3,Solid gloss acrylic colors displayed with labels on a white background,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-number-cake-topper,,,,,,,,,10 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/sparkle-acrylic-sheets-colour-catalog.png?v=1780960833,4,Gold and silver sparkle acrylic colours with Etch 'N Shine branding on a white background.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,
+personalised-acrylic-number-cake-topper,,,,,,,,,12 inch cake,,,,,,,,,0.0,,0,deny,manual,9.99,,true,false,,,,,,https://cdn.shopify.com/s/files/1/0913/4777/9908/files/Number_Font_Style_Chart.jpg?v=1781046371,5,"Number font style chart with various numeric designs on a white background, branded 'Etch N' Shine'.",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,kg,,,,,,,,,,,,

@@ -574,6 +574,8 @@ class Product(Base):
     __table_args__ = (
         Index("ix_product_active_category", "active", "category"),
         Index("ix_product_name", "name"),
+        Index("ix_product_b2b_relevant", "b2b_relevant"),
+        Index("ix_product_enrichment_source", "enrichment_source"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -585,10 +587,94 @@ class Product(Base):
     example_use_cases: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     image_reference: Mapped[str | None] = mapped_column(String(2048))
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Retained for the operator's own reference. It is never sent to a model or rendered
+    # into an email: pricing is quoted per job. See ADR-021.
     pricing_guidance: Mapped[str | None] = mapped_column(String(200))
     sample_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     source: Mapped[str] = mapped_column(String(40), nullable=False, default="manual")
     variant_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Sales knowledge. `enrichment_source` records who last wrote the enrichment fields:
+    # "" (never enriched), "seed" (the shipped pack), "ai" (local model) or "manual" (edited
+    # by the operator, which nothing else may overwrite).
+    summary: Mapped[str | None] = mapped_column(String(400))
+    materials: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    occasions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    product_url: Mapped[str | None] = mapped_column(String(2048))
+    b2b_relevant: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    bulk_ready: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    b2b_notes: Mapped[str | None] = mapped_column(Text)
+    custom_options: Mapped[str | None] = mapped_column(String(300))
+    attributes: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    enrichment_source: Mapped[str] = mapped_column(String(20), nullable=False, default="")
+    # `source_hash` fingerprints the listing as of the last import. `enriched_hash` records what
+    # it was when the enrichment fields were last written. They differ when the listing has
+    # changed since, which marks the enrichment stale without discarding it.
+    source_hash: Mapped[str | None] = mapped_column(String(32))
+    enriched_hash: Mapped[str | None] = mapped_column(String(32))
+    last_seen_import_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    @property
+    def stale_enrichment(self) -> bool:
+        """True when the listing changed after its sales knowledge was written."""
+        if not self.enrichment_source or self.enriched_hash is None:
+            return False
+        return self.source_hash != self.enriched_hash
+
+
+class KnowledgeNote(Base):
+    """Why a trade buys a group of products, for the assistant to cite."""
+
+    __tablename__ = "knowledge_note"
+    __table_args__ = (Index("ix_knowledge_note_title", "title"),)
+
+    # The id is the seed pack's stable slug (e.g. "premises-signage") so re-importing the
+    # pack updates rather than duplicates.
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    product_family_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("product_family.id", ondelete="SET NULL")
+    )
+    segments: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    product_handles: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(String(20), nullable=False, default="seed")
+    manual: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+
+class ProvenFit(Base):
+    """A job that actually happened, usable as evidence in outreach once confirmed."""
+
+    __tablename__ = "proven_fit"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('confirmed_from_website', 'please_confirm', 'confirmed')",
+            name="ck_proven_fit_status",
+        ),
+        Index("ix_proven_fit_segment", "segment"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    segment: Mapped[str] = mapped_column(String(120), nullable=False)
+    product_handles: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    use: Mapped[str] = mapped_column(Text, nullable=False)
+    outcome: Mapped[str] = mapped_column(String(400), nullable=False, default="")
+    client_label: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    client_name: Mapped[str | None] = mapped_column(String(200))
+    # Prospect-facing copy may name the client only when this is true.
+    share_client_name: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # "please_confirm" fits stay out of prospect-facing copy until the operator confirms them.
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="please_confirm")
+    lead_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("lead.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
@@ -930,6 +1016,9 @@ class OutreachDraftRevision(Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     editor: Mapped[str] = mapped_column(String(100), nullable=False, default="local_user")
+    # How far the approved wording drifted from version 1, set on approval only. Feeds the
+    # average on the Overview screen, which decides whether a stronger model is worth it.
+    edit_distance_ratio: Mapped[float | None] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     draft: Mapped[OutreachDraft] = relationship(back_populates="revisions")

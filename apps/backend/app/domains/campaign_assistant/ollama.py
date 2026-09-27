@@ -261,8 +261,52 @@ OLLAMA_CAMPAIGN_PROPOSAL_SCHEMA: dict[str, Any] = {
 class OllamaClient:
     def __init__(self, settings: Settings, client: httpx.Client | None = None) -> None:
         self.settings = settings
+        # The operator's model choice from workspace settings. Empty means follow the
+        # configured default. The manager sets it; generation is serialised by one lock, so a
+        # single attribute is enough.
+        self.preferred_model: str = ""
         self._owns_client = client is None
         self._client = client or self._create_client()
+
+    def model_for(self, profile: ResourceProfile) -> str:
+        """The model to run. Engraving work keeps the GPU, so protected mode uses the small one."""
+        if profile == ResourceProfile.DESIGN_SOFTWARE:
+            return self.settings.ollama_protected_model
+        return self.preferred_model or self.settings.ollama_model
+
+    def _options_for(self, profile: ResourceProfile, *, temperature: float) -> dict[str, Any]:
+        protected = profile == ResourceProfile.DESIGN_SOFTWARE
+        return {
+            "num_ctx": (
+                self.settings.ollama_protected_context
+                if protected
+                else self.settings.standard_context_for(self.model_for(profile))
+            ),
+            "num_predict": (
+                self.settings.ollama_protected_output_limit
+                if protected
+                else self.settings.ollama_standard_output_limit
+            ),
+            "temperature": temperature,
+        }
+
+    def _base_payload(
+        self, messages: list[dict[str, str]], profile: ResourceProfile, *, temperature: float
+    ) -> dict[str, Any]:
+        model = self.model_for(profile)
+        protected = profile == ResourceProfile.DESIGN_SOFTWARE
+        payload: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            "keep_alive": 0 if protected else self.settings.ollama_standard_keep_alive,
+            "options": self._options_for(profile, temperature=temperature),
+        }
+        if model.startswith("qwen3"):
+            # Qwen3 reasons out loud by default, which wastes the output budget and leaks
+            # thinking into answers the operator reads.
+            payload["think"] = False
+        return payload
 
     def _create_client(self) -> httpx.Client:
         return httpx.Client(
@@ -325,28 +369,8 @@ class OllamaClient:
         model_cls: type[ModelT],
         error_prefix: str,
     ) -> OllamaStructuredResult[ModelT]:
-        protected = profile == ResourceProfile.DESIGN_SOFTWARE
-        options = {
-            "num_ctx": (
-                self.settings.ollama_protected_context
-                if protected
-                else self.settings.ollama_standard_context
-            ),
-            "num_predict": (
-                self.settings.ollama_protected_output_limit
-                if protected
-                else self.settings.ollama_standard_output_limit
-            ),
-            "temperature": 0,
-        }
-        payload: dict[str, Any] = {
-            "model": self.settings.ollama_model,
-            "messages": messages,
-            "stream": False,
-            "keep_alive": 0 if protected else self.settings.ollama_standard_keep_alive,
-            "format": schema,
-            "options": options,
-        }
+        payload = self._base_payload(messages, profile, temperature=0)
+        payload["format"] = schema
         try:
             body = self._post_chat(payload, error_prefix=error_prefix)
             content = body["message"]["content"]
@@ -363,7 +387,7 @@ class OllamaClient:
         return OllamaStructuredResult(
             value=value,
             metrics=OllamaGenerationMetrics(
-                model=str(body.get("model") or self.settings.ollama_model),
+                model=str(body.get("model") or payload["model"]),
                 model_digest=body.get("model_digest"),
                 total_duration_ms=(
                     int(body["total_duration"] / 1_000_000)
@@ -404,7 +428,7 @@ class OllamaClient:
             if error_prefix == "CAMPAIGN_ASSISTANT":
                 message = "Ollama could not prepare the campaign draft."
             if exc.response.status_code == 404:
-                message = f"The local model {self.settings.ollama_model} is not installed."
+                message = f"The local model {payload.get('model')} is not installed."
             raise DomainError("OLLAMA_REQUEST_FAILED", message, status_code=503) from exc
 
     def chat(
@@ -414,26 +438,7 @@ class OllamaClient:
         *,
         artifact_format: str | None = None,
     ) -> OllamaChatResult:
-        protected = profile == ResourceProfile.DESIGN_SOFTWARE
-        payload: dict[str, Any] = {
-            "model": self.settings.ollama_model,
-            "messages": messages,
-            "stream": False,
-            "keep_alive": 0 if protected else self.settings.ollama_standard_keep_alive,
-            "options": {
-                "num_ctx": (
-                    self.settings.ollama_protected_context
-                    if protected
-                    else self.settings.ollama_standard_context
-                ),
-                "num_predict": (
-                    self.settings.ollama_protected_output_limit
-                    if protected
-                    else self.settings.ollama_standard_output_limit
-                ),
-                "temperature": 0.2,
-            },
-        }
+        payload = self._base_payload(messages, profile, temperature=0.2)
         if artifact_format is not None:
             payload["format"] = {
                 "type": "object",
@@ -483,7 +488,7 @@ class OllamaClient:
         except httpx.HTTPStatusError as exc:
             message = "Ollama could not answer that request."
             if exc.response.status_code == 404:
-                message = f"The local model {self.settings.ollama_model} is not installed."
+                message = f"The local model {payload['model']} is not installed."
             raise DomainError("OLLAMA_REQUEST_FAILED", message, status_code=503) from exc
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             raise DomainError(
@@ -496,7 +501,7 @@ class OllamaClient:
             artifact_filename=artifact_filename,
             artifact_content=artifact_content,
             metrics=OllamaGenerationMetrics(
-                model=str(body.get("model") or self.settings.ollama_model),
+                model=str(body.get("model") or payload["model"]),
                 model_digest=body.get("model_digest"),
                 total_duration_ms=(
                     int(body["total_duration"] / 1_000_000)
@@ -509,11 +514,20 @@ class OllamaClient:
         )
 
     def unload(self) -> None:
-        try:
-            self._client.post(
-                "/api/generate",
-                json={"model": self.settings.ollama_model, "keep_alive": 0},
-                timeout=10.0,
-            )
-        except (httpx.HTTPError, RuntimeError):
-            return
+        # Unload every model this client could have loaded. Freeing the standard model but
+        # leaving a previously selected one resident would defeat the point of protecting the
+        # engraving software's resources.
+        candidates = {
+            self.preferred_model or self.settings.ollama_model,
+            self.settings.ollama_model,
+            self.settings.ollama_protected_model,
+        }
+        for model in candidates:
+            try:
+                self._client.post(
+                    "/api/generate",
+                    json={"model": model, "keep_alive": 0},
+                    timeout=10.0,
+                )
+            except (httpx.HTTPError, RuntimeError):
+                continue

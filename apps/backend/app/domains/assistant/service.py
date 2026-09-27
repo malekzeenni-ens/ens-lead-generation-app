@@ -20,6 +20,7 @@ from app.domains.assistant.schemas import (
     AssistantMessageRead,
 )
 from app.domains.audit.service import record_audit_event
+from app.domains.brand.profile import BRAND_PROFILE_VERSION, IdentityTier
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 
 
@@ -94,6 +95,7 @@ class AssistantService:
             app_context=app_context,
             attachment_context_chars=self.settings.assistant_attachment_context_chars,
             artifact_format=artifact_format,
+            identity_tier=IdentityTier.BRIEF if protect_resources else IdentityTier.CORE,
         )
         result, profile = self.manager.chat(
             messages,
@@ -132,6 +134,7 @@ class AssistantService:
                 "resource_profile": profile.value,
                 "attachments_received": len(data.attachments),
                 "artifact_format": artifact_format,
+                "brand_profile": BRAND_PROFILE_VERSION,
             },
         )
         session.commit()

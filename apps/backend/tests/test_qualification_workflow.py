@@ -52,6 +52,7 @@ def test_shopify_csv_upserts_editable_catalogue(
         "products_created": 2,
         "products_updated": 0,
         "products_skipped": 0,
+        "products_deactivated": 0,
         "issues": [],
     }
     products = client.get("/api/v1/catalogue/products").json()

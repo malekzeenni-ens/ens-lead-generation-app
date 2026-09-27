@@ -19,8 +19,16 @@ from app.domains.campaign_assistant.schemas import (
 from tests.conftest import lead_payload
 
 
+class FakeOllamaModels:
+    preferred_model = ""
+
+    def model_for(self, profile: ResourceProfile) -> str:
+        return "llama3.2:3b"
+
+
 class FakeGeneralAssistantManager:
     def __init__(self) -> None:
+        self.ollama = FakeOllamaModels()
         self.messages: list[list[dict[str, str]]] = []
         self.artifact_filename: str | None = None
         self.artifact_content: str | None = None

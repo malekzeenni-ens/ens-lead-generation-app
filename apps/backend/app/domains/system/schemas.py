@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.core.config import ALLOWED_OLLAMA_MODELS
+
+
+def _validate_local_ai_model(value: str) -> str:
+    """An empty string means "follow the configured default", which is the shipped state."""
+    if value and value not in ALLOWED_OLLAMA_MODELS:
+        allowed = ", ".join(sorted(ALLOWED_OLLAMA_MODELS))
+        raise ValueError(f"The local model must be empty or one of: {allowed}")
+    return value
 
 
 class WorkspaceSettings(BaseModel):
@@ -11,6 +21,9 @@ class WorkspaceSettings(BaseModel):
     weekly_outreach_global_limit: int = Field(default=20, ge=1, le=100)
     local_campaign_assistant_enabled: bool = True
     protect_design_software_resources: bool = True
+    local_ai_model: str = ""
+
+    _check_model = field_validator("local_ai_model")(_validate_local_ai_model)
 
 
 class WorkspaceSettingsUpdate(BaseModel):
@@ -23,6 +36,12 @@ class WorkspaceSettingsUpdate(BaseModel):
     weekly_outreach_global_limit: int | None = Field(default=None, ge=1, le=100)
     local_campaign_assistant_enabled: bool | None = None
     protect_design_software_resources: bool | None = None
+    local_ai_model: str | None = None
+
+    @field_validator("local_ai_model")
+    @classmethod
+    def check_local_ai_model(cls, value: str | None) -> str | None:
+        return None if value is None else _validate_local_ai_model(value)
 
     @model_validator(mode="after")
     def require_change(self) -> WorkspaceSettingsUpdate:

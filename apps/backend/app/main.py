@@ -81,9 +81,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(_: FastAPI):  # type: ignore[no-untyped-def]
         campaign_run_manager.resume_incomplete()
         with database.session_factory() as session:
+            workspace_settings = SystemService().get_settings(session)
             campaign_assistant_manager.set_protection_enabled(
-                SystemService().get_settings(session).protect_design_software_resources
+                workspace_settings.protect_design_software_resources
             )
+            campaign_assistant_manager.set_preferred_model(workspace_settings.local_ai_model)
         campaign_assistant_manager.start()
         try:
             yield

@@ -1,19 +1,30 @@
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Query, Request, status
 
 from app.api.dependencies import Authenticated, DatabaseSession
+from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.catalogue.schemas import (
+    EnrichmentImport,
+    EnrichmentImportResult,
+    EnrichmentRunRequest,
+    EnrichmentRunResult,
+    EnrichmentStatus,
+    KnowledgeNoteRead,
+    KnowledgeNoteUpdate,
     ProductCreate,
     ProductFamilyCreate,
     ProductFamilyRead,
     ProductFamilyUpdate,
     ProductRead,
     ProductUpdate,
+    ProvenFitRead,
+    ProvenFitUpdate,
     ShopifyCsvImport,
     ShopifyImportResult,
 )
 from app.domains.catalogue.service import CatalogueService
+from app.domains.system.service import SystemService
 
 router = APIRouter(prefix="/catalogue", tags=["catalogue"])
 service = CatalogueService()
@@ -96,3 +107,73 @@ def import_shopify_csv(
     session: DatabaseSession,
 ) -> ShopifyImportResult:
     return service.import_shopify(session, data, request.state.correlation_id)
+
+
+@router.post("/import/enrichment", response_model=EnrichmentImportResult)
+def import_enrichment_pack(
+    data: EnrichmentImport,
+    request: Request,
+    _: Authenticated,
+    session: DatabaseSession,
+) -> EnrichmentImportResult:
+    return service.import_enrichment(session, data, request.state.correlation_id)
+
+
+@router.get("/enrichment/status", response_model=EnrichmentStatus)
+def get_enrichment_status(_: Authenticated, session: DatabaseSession) -> EnrichmentStatus:
+    return service.enrichment_status(session)
+
+
+@router.post("/enrichment/run", response_model=EnrichmentRunResult)
+def run_enrichment(
+    data: EnrichmentRunRequest,
+    request: Request,
+    _: Authenticated,
+    session: DatabaseSession,
+) -> EnrichmentRunResult:
+    """Enrich pending products with the local model, in the foreground.
+
+    Deliberately not a background job: every local generation shares one non-blocking lock, so
+    a background run would make the operator's own assistant requests fail while it worked.
+    """
+    manager = cast(CampaignAssistantManager, request.app.state.campaign_assistant_manager)
+    workspace_settings = SystemService().get_settings(session)
+    return service.run_enrichment(
+        session,
+        data,
+        manager=manager,
+        workspace_settings=workspace_settings,
+        correlation_id=request.state.correlation_id,
+    )
+
+
+@router.get("/knowledge-notes", response_model=list[KnowledgeNoteRead])
+def list_knowledge_notes(_: Authenticated, session: DatabaseSession) -> list[KnowledgeNoteRead]:
+    return service.list_notes(session)
+
+
+@router.patch("/knowledge-notes/{note_id}", response_model=KnowledgeNoteRead)
+def update_knowledge_note(
+    note_id: str,
+    data: KnowledgeNoteUpdate,
+    request: Request,
+    _: Authenticated,
+    session: DatabaseSession,
+) -> KnowledgeNoteRead:
+    return service.update_note(session, note_id, data, request.state.correlation_id)
+
+
+@router.get("/proven-fits", response_model=list[ProvenFitRead])
+def list_proven_fits(_: Authenticated, session: DatabaseSession) -> list[ProvenFitRead]:
+    return service.list_fits(session)
+
+
+@router.patch("/proven-fits/{fit_id}", response_model=ProvenFitRead)
+def update_proven_fit(
+    fit_id: str,
+    data: ProvenFitUpdate,
+    request: Request,
+    _: Authenticated,
+    session: DatabaseSession,
+) -> ProvenFitRead:
+    return service.update_fit(session, fit_id, data, request.state.correlation_id)

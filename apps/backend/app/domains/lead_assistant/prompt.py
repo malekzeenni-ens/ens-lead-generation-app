@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from app.domains.brand.profile import IdentityTier, identity_block
+
 LEAD_FILTER_PROMPT_VERSION = "lead-filter-v1"
-LEAD_BRIEFING_PROMPT_VERSION = "lead-briefing-v1"
-LEAD_AUTOFILL_PROMPT_VERSION = "lead-autofill-v1"
-LEAD_DIGEST_PROMPT_VERSION = "lead-digest-v1"
+LEAD_BRIEFING_PROMPT_VERSION = "lead-briefing-v2"
+LEAD_AUTOFILL_PROMPT_VERSION = "lead-autofill-v2"
+LEAD_DIGEST_PROMPT_VERSION = "lead-digest-v2"
 
 _OLLAMA_BRIEFING_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -40,6 +42,9 @@ _OLLAMA_AUTOFILL_SCHEMA: dict[str, Any] = {
         "desired_next_step",
     ],
 }
+
+
+_IDENTITY = identity_block(IdentityTier.BRIEF)
 
 
 def _reference_message(instruction: str, data: dict[str, Any] | list[dict[str, Any]]) -> str:
@@ -108,7 +113,9 @@ def build_briefing_messages(*, context: dict[str, Any]) -> list[dict[str, str]]:
     system = (
         "Prepare a concise briefing before a human contacts this lead. Use only supplied facts. "
         "Do not invent details, claim contact occurred, or recommend ignoring a warning. Return a "
-        "short summary, one to three talking points, and an optional caution."
+        "short summary, one to three talking points, and an optional caution. Each talking point "
+        "should connect something specific about this business to something Etch 'N' Shine "
+        "actually makes.\n\n" + _IDENTITY
     )
     return [
         {"role": "system", "content": system},
@@ -130,7 +137,8 @@ def build_autofill_messages(
     system = (
         "Suggest missing lead personalisation context using only the supplied website evidence "
         "and notes. Never invent specifics. If evidence is thin, use a generic but honest value "
-        "anchored on the supplied segment or location, or return null."
+        "anchored on the supplied segment or location, or return null. These fields are reused "
+        "verbatim in outreach copy, so they must already be in the brand's voice.\n\n" + _IDENTITY
     )
     return [
         {"role": "system", "content": system},
@@ -154,7 +162,8 @@ def build_digest_messages(*, candidates: list[dict[str, Any]]) -> list[dict[str,
     system = (
         "Suggest one practical next action for each backend-selected stalled lead. Use only the "
         "supplied facts. Do not add leads, claim an action happened, or recommend contacting a "
-        "suppressed lead. Return the supplied lead ID with each suggestion."
+        "suppressed lead. Return the supplied lead ID with each suggestion. Each action must be "
+        "something the operator can do today on his own.\n\n" + _IDENTITY
     )
     return [
         {"role": "system", "content": system},

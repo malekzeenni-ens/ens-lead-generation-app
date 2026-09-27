@@ -99,14 +99,14 @@ class CampaignAssistantService:
                 ollama_reachable=False,
                 model_installed=False,
                 model_loaded=False,
-                model=self.runtime_settings.ollama_model,
+                model=self.manager.ollama.model_for(profile),
                 resource_profile=profile,
                 protected_applications=sorted(self.manager.active_applications),
                 ready=False,
                 message="The local AI assistant is disabled in Settings.",
             )
         reachable, installed, loaded = self.manager.ollama.status()
-        model = self.runtime_settings.ollama_model
+        model = self.manager.ollama.model_for(profile)
         model_installed = model in installed or f"{model}:latest" in installed
         model_loaded = model in loaded or f"{model}:latest" in loaded
         protected = sorted(self.manager.active_applications)
@@ -152,7 +152,7 @@ class CampaignAssistantService:
         draft = CampaignDraft(
             status=DraftStatus.GENERATING.value,
             original_request=message,
-            model_name=self.runtime_settings.ollama_model,
+            model_name=self.manager.ollama.model_for(profile),
             prompt_version=CAMPAIGN_ASSISTANT_PROMPT_VERSION,
             resource_profile=profile.value,
         )
