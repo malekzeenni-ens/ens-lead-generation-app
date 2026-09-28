@@ -225,8 +225,9 @@ fn run_packaged_smoke_test() -> Result<(), String> {
     outcome
 }
 
+// A cold start from a synced folder, with pending migrations, can take well over ten seconds.
 fn wait_for_backend(child: &mut Child, port: u16) -> Result<(), String> {
-    for _ in 0..100 {
+    for _ in 0..300 {
         if TcpStream::connect(("127.0.0.1", port)).is_ok() {
             return Ok(());
         }
@@ -237,7 +238,7 @@ fn wait_for_backend(child: &mut Child, port: u16) -> Result<(), String> {
         }
         thread::sleep(Duration::from_millis(100));
     }
-    Err("Backend did not become ready within 10 seconds".to_string())
+    Err("Backend did not become ready within 30 seconds".to_string())
 }
 
 pub fn run() {

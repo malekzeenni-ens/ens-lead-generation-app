@@ -3,9 +3,13 @@ from __future__ import annotations
 import json
 import logging
 import re
+import subprocess
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import anthropic
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -43,7 +47,7 @@ def test_anthropic_errors_map_to_operator_status(
         request=request,
         headers={"retry-after": "7"},
     )
-    error_class = getattr(cloud_client.anthropic, error_type)
+    error_class = getattr(anthropic, error_type)
     if error_type in {"APITimeoutError", "APIConnectionError"}:
         error = error_class(request=request)
     else:
@@ -60,7 +64,7 @@ def test_anthropic_errors_map_to_operator_status(
         def __init__(self, **_: Any) -> None:
             pass
 
-    monkeypatch.setattr(cloud_client.anthropic, "Anthropic", FakeAnthropic)
+    monkeypatch.setattr(anthropic, "Anthropic", FakeAnthropic)
     with pytest.raises(DomainError) as caught:
         cloud_client.polish_with_anthropic(
             api_key="sk-ant-test-secret", model="claude-sonnet-5", user_message="{}"
@@ -88,7 +92,7 @@ def test_refusal_is_reported_without_reading_response_content(monkeypatch: Any) 
         def __init__(self, **_: Any) -> None:
             pass
 
-    monkeypatch.setattr(cloud_client.anthropic, "Anthropic", FakeAnthropic)
+    monkeypatch.setattr(anthropic, "Anthropic", FakeAnthropic)
     with pytest.raises(DomainError, match="general_harms"):
         cloud_client.polish_with_anthropic(
             api_key="sk-ant-test-secret", model="claude-sonnet-5", user_message="{}"
@@ -289,7 +293,7 @@ def _fake_anthropic(monkeypatch: Any, response: Any, captured: dict[str, Any]) -
         def __init__(self, **kwargs: Any) -> None:
             captured["client_kwargs"] = kwargs
 
-    monkeypatch.setattr(cloud_client.anthropic, "Anthropic", FakeAnthropic)
+    monkeypatch.setattr(anthropic, "Anthropic", FakeAnthropic)
 
 
 def _response(stop_reason: str = "end_turn", text: str | None = None) -> Any:
@@ -391,3 +395,12 @@ def test_a_refusal_through_the_endpoint_leaves_the_draft_untouched(
     unchanged = client.get(f"/api/v1/outreach/batches/{draft['batch_id']}").json()["drafts"][0]
     assert unchanged["current_revision"] == draft["current_revision"]
     assert unchanged["revision_count"] == 1
+
+
+def test_the_anthropic_sdk_is_not_imported_at_startup() -> None:
+    # The SDK import alone took ~4 s and pushed startup past the desktop host's readiness window.
+    probe = "import sys, app.main; sys.exit('anthropic' in sys.modules)"
+    completed = subprocess.run(  # noqa: S603 -- fixed interpreter and argument list
+        [sys.executable, "-c", probe], cwd=Path(__file__).parents[1], check=False
+    )
+    assert completed.returncode == 0

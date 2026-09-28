@@ -4,8 +4,6 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-import anthropic
-
 from app.core.errors import DomainError
 from app.domains.outreach.cloud_prompt import CLOUD_POLISH_SYSTEM_PROMPT
 from app.domains.outreach.schemas import OutreachDraftRefineResult
@@ -22,6 +20,10 @@ class CloudPolishResult:
 
 
 def polish_with_anthropic(*, api_key: str, model: str, user_message: str) -> CloudPolishResult:
+    # Imported here, not at module level: the SDK takes seconds to import, the feature is off by
+    # default, and the desktop host gives the backend a fixed window to start listening.
+    import anthropic
+
     client = anthropic.Anthropic(api_key=api_key, timeout=30.0, max_retries=2)
     try:
         response = client.messages.create(

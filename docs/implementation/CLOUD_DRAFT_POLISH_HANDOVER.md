@@ -61,6 +61,10 @@ The Python SDK dependency is declared in `apps/backend/pyproject.toml` and locke
 
 No real key was used and no live Anthropic call was made in the implementation or test runs. No installer was rebuilt.
 
+## Startup cost — keep the SDK import lazy
+
+`anthropic` takes about four seconds to import. Importing it at module level pushed backend startup past the desktop host's readiness window and closed the app on launch. It is imported inside `polish_with_anthropic`, and `test_the_anthropic_sdk_is_not_imported_at_startup` guards that. Do not move it back to module level.
+
 ## Review revision — 28 September 2026
 
 A review of the first implementation against the specification found and fixed:

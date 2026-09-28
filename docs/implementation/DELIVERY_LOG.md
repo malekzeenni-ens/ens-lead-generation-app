@@ -75,6 +75,19 @@ CSV import was intentionally skipped by user direction. External providers, AI, 
 
 The browser review identified and corrected workspace scroll restoration. This increment changed source, migrations, tests and documentation only; no installer was rebuilt.
 
+## 28 September 2026 — Desktop launch fix
+
+### Delivered
+
+- The desktop app closed on launch because the backend no longer started listening inside the host's 10-second window. Profiling showed `import app.main` at about 7.3 s, of which the Anthropic SDK was about 3.9 s; migrations (0.44 s) and the knowledge pack (0.41 s) were minor. The operator's database was also still two migrations behind, so a first start does extra work.
+- `cloud_client.py` now imports the SDK inside `polish_with_anthropic`, and a test asserts that `import app.main` never loads it. Startup import time is about 2.6 s.
+- `wait_for_backend` in `apps/desktop/src-tauri/src/lib.rs` now allows 30 seconds, since a cold start from a synced folder with pending migrations can exceed ten.
+
+### Verification
+
+- Launched `npm run desktop:dev` against an unmigrated copy of the operator's database: migrations ran, the pack applied (104 matched, 10 notes, 4 fits) and the window stayed up. The real database was not touched.
+- Backend: 186 pytest tests, Ruff and mypy passed. Rust: `cargo fmt --check` and `cargo check` passed.
+
 ## 28 September 2026 — Cloud polish review fixes and automatic knowledge pack
 
 ### Delivered
