@@ -75,6 +75,29 @@ CSV import was intentionally skipped by user direction. External providers, AI, 
 
 The browser review identified and corrected workspace scroll restoration. This increment changed source, migrations, tests and documentation only; no installer was rebuilt.
 
+## 28 September 2026 — Optional cloud draft polish
+
+### Delivered
+
+- Implemented the bounded Anthropic rewrite flow specified in `docs/specifications/Cloud_Draft_Polish_Specification.md`: a separate polish endpoint rewrites only the subject/body currently in the editor and never edits the stored draft.
+- Added the Anthropic SDK client, shared outreach task/brand voice prompt, fixed model allowlist, structured response/refusal handling, provider error mapping, and token/request metadata logging.
+- Added the system cloud-polish status/configure/remove endpoints and DPAPI-backed `SecretStore` credential handling. Workspace settings default to disabled and select Sonnet 5 unless the operator chooses Haiku 4.5.
+- Added price stripping and boundary checks around the outbound draft/context message and returned copy; audit events contain draft ID, model, prompt version, token counts and request ID, without copy or credentials.
+- Added Settings controls and a conditional **Polish with cloud AI** action. The result remains in the editor for review and must be saved/approved through the existing flow.
+- Added mocked backend and frontend coverage, including model-gate behavior, no snapshot/other lead context, non-mutating output, price handling, secret non-disclosure, refusal handling, SDK error mappings, and editor/button behavior.
+
+### Verification
+
+- Backend: 175 pytest tests passed; Ruff and strict mypy passed.
+- Frontend: 111 Vitest tests passed; ESLint, the app TypeScript project, and production build passed.
+- `git diff --check` passed. No test makes a real Anthropic request.
+
+### Handover and release follow-up
+
+- The operator summary metric endpoint was not available in the implementation environment. The cloud feature was implemented on the operator's explicit instruction; there is no captured measurement showing the metric justified it. The installed Ollama inventory contained only `llama3.2:3b`, so the larger-local-model comparison was not performed.
+- No real API key was supplied, so the one-draft manual Anthropic acceptance check was not performed. See `CLOUD_DRAFT_POLISH_HANDOVER.md` for ownership, entry points, invariants and the remaining checks.
+- No installer was rebuilt or released.
+
 ## 19 July 2026 — Stage 2 qualification slice
 
 ### Delivered

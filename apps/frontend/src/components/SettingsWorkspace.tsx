@@ -19,6 +19,7 @@ import type {
   MetaConnection,
   VerificationResult,
   WorkspaceSettings,
+  CloudPolishStatus,
 } from "../types";
 import { humanize } from "../domain";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
@@ -37,6 +38,7 @@ interface SettingsWorkspaceProps {
   diagnostics: Diagnostics | null;
   metaConnection: MetaConnection | null;
   metaAuthorizationUrl: string | null;
+  cloudPolishStatus: CloudPolishStatus | null;
 }
 
 function formValue(form: FormData, name: string): string {
@@ -65,6 +67,7 @@ export function SettingsWorkspace({
   diagnostics,
   metaConnection,
   metaAuthorizationUrl,
+  cloudPolishStatus,
 }: SettingsWorkspaceProps) {
   const {
     loading,
@@ -77,6 +80,8 @@ export function SettingsWorkspace({
     startMetaAuthorization: onStartMetaAuthorization,
     selectMetaAccount: onSelectMetaAccount,
     disconnectMeta: onDisconnectMeta,
+    configureCloudPolish: onConfigureCloudPolish,
+    removeCloudPolish: onRemoveCloudPolish,
   } = useWorkspaceActions();
   const [activeTask, setActiveTask] = useState("connections");
   const [backup, setBackup] = useState<BackupResult | null>(null);
@@ -119,6 +124,18 @@ export function SettingsWorkspace({
       formValue(form, "meta-app-secret"),
     );
     if (saved) formElement.reset();
+  }
+
+  async function configureCloudPolish(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const key = formValue(form, "cloud-api-key");
+    if (key && !(await onConfigureCloudPolish(key))) return;
+    await onSave({
+      cloud_polish_enabled: form.has("cloud-polish-enabled"),
+      cloud_polish_model: formValue(form, "cloud-polish-model"),
+    });
+    event.currentTarget.reset();
   }
 
   async function selectMetaAccount(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -178,6 +195,7 @@ export function SettingsWorkspace({
           <TaskPanel id="settings-tasks" tabId={activeTask}>
           <div className={`settings-grid${activeTask === "data" ? "" : " settings-grid--single"}`}>
             {activeTask === "connections" ? (
+            <>
             <section className="form-panel settings-grid__wide" aria-labelledby="meta-settings-heading">
               <div className="subsection-heading">
                 <div>
@@ -352,6 +370,31 @@ export function SettingsWorkspace({
                 </div>
               )}
             </section>
+            <section className="form-panel settings-grid__wide" aria-labelledby="cloud-polish-heading">
+              <div className="subsection-heading">
+                <div><h3 id="cloud-polish-heading">Cloud draft polish</h3><p>Optional one draft at a time rewrite through Anthropic.</p></div>
+                <KeyRound size={20} aria-hidden="true" />
+              </div>
+              <p>This sends the current draft and that lead’s details to Anthropic. Each polish costs a fraction of a penny. The key is stored in the protected credential vault and is never shown again.</p>
+              <p>{cloudPolishStatus?.configured ? "An API key is saved." : "No API key is saved."}</p>
+              <form className="form-grid" onSubmit={(event) => void configureCloudPolish(event)}>
+                <label>Anthropic API key (leave blank to keep the saved key)
+                  <input type="password" name="cloud-api-key" autoComplete="new-password" />
+                </label>
+                <label>Cloud model
+                  <select name="cloud-polish-model" defaultValue={settings.cloud_polish_model || "claude-sonnet-5"}>
+                    <option value="claude-sonnet-5">Claude Sonnet 5 (recommended)</option>
+                    <option value="claude-haiku-4-5">Claude Haiku 4.5 (lower cost)</option>
+                  </select>
+                </label>
+                <label className="checkbox-row"><input type="checkbox" name="cloud-polish-enabled" defaultChecked={settings.cloud_polish_enabled} /> Enable cloud polish</label>
+                <div className="form-actions">
+                  <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save cloud polish settings</button>
+                  {cloudPolishStatus?.configured ? <button className="tertiary-action" type="button" disabled={busy} onClick={() => void onRemoveCloudPolish()}>Remove saved key</button> : null}
+                </div>
+              </form>
+            </section>
+            </>
             ) : null}
 
             {activeTask === "defaults" ? (

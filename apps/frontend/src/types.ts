@@ -357,6 +357,14 @@ export interface WorkspaceSettings {
   local_campaign_assistant_enabled: boolean;
   protect_design_software_resources: boolean;
   local_ai_model: string;
+  cloud_polish_enabled: boolean;
+  cloud_polish_model: string;
+}
+
+export interface CloudPolishStatus {
+  configured: boolean;
+  enabled: boolean;
+  model: string;
 }
 
 export interface Diagnostics {

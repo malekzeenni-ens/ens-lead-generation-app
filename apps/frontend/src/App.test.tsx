@@ -51,6 +51,9 @@ vi.mock("./api", () => {
       summary: vi.fn(),
       settings: vi.fn(),
       diagnostics: vi.fn(),
+      cloudPolishStatus: vi.fn(),
+      configureCloudPolish: vi.fn(),
+      removeCloudPolish: vi.fn(),
       products: vi.fn(),
       latestScores: vi.fn(),
       shortlists: vi.fn(),
@@ -131,6 +134,8 @@ vi.mock("./api", () => {
       outreachBatches: vi.fn(),
       createOutreachBatch: vi.fn(),
       editOutreachDraft: vi.fn(),
+      refineOutreachDraft: vi.fn(),
+      polishOutreachDraft: vi.fn(),
       approveOutreachDraft: vi.fn(),
       approveOutreachDrafts: vi.fn(),
       rejectOutreachDraft: vi.fn(),
@@ -265,6 +270,8 @@ const settings: WorkspaceSettings = {
   local_campaign_assistant_enabled: true,
   protect_design_software_resources: true,
   local_ai_model: "",
+  cloud_polish_enabled: false,
+  cloud_polish_model: "",
 };
 
 const assistantDraft: CampaignDraft = {
@@ -690,6 +697,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.summary).mockResolvedValue(summary);
     vi.mocked(api.settings).mockResolvedValue(settings);
     vi.mocked(api.diagnostics).mockResolvedValue(diagnostics);
+    vi.mocked(api.cloudPolishStatus).mockResolvedValue({ configured: false, enabled: false, model: "claude-sonnet-5" });
     vi.mocked(api.products).mockResolvedValue([product]);
     vi.mocked(api.latestScores).mockResolvedValue([scoreRun]);
     vi.mocked(api.shortlists).mockResolvedValue([shortlist]);
@@ -786,6 +794,50 @@ describe("local operating workbench", () => {
     expect(screen.getByRole("heading", { name: "Lead intelligence dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Controlled mode")).toBeInTheDocument();
     expect(screen.getByText("Active campaigns")).toBeInTheDocument();
+  });
+
+  it("hides cloud polish until it is configured and enabled", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.outreachBatches).mockResolvedValue([outreachBatch]);
+    vi.mocked(api.outreachLeadOptions).mockResolvedValue([outreachLeadOption]);
+    vi.mocked(api.cloudPolishStatus).mockResolvedValue({
+      configured: false,
+      enabled: true,
+      model: "claude-sonnet-5",
+    });
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Email drafts/ }));
+    await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
+    expect(screen.queryByRole("button", { name: "Polish with cloud AI" })).not.toBeInTheDocument();
+  });
+
+  it("polishes one draft into the editor when cloud access is enabled", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.outreachBatches).mockResolvedValue([outreachBatch]);
+    vi.mocked(api.outreachLeadOptions).mockResolvedValue([outreachLeadOption]);
+    vi.mocked(api.cloudPolishStatus).mockResolvedValue({
+      configured: true,
+      enabled: true,
+      model: "claude-sonnet-5",
+    });
+    vi.mocked(api.polishOutreachDraft).mockResolvedValue({
+      subject: "A polished subject",
+      body: "A polished body.",
+    });
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Email drafts/ }));
+    await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
+    await user.click(await screen.findByRole("button", { name: "Polish with cloud AI" }));
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Subject" })).toHaveValue("A polished subject");
+      expect(screen.getByRole("textbox", { name: "Email body" })).toHaveValue("A polished body.");
+    });
+    expect(api.polishOutreachDraft).toHaveBeenCalledWith(outreachDraft.id, {
+      subject: outreachDraft.current_revision.subject,
+      body: outreachDraft.current_revision.body,
+    });
   });
 
   it("places the AI assistant in the sidebar instead of Campaigns", async () => {

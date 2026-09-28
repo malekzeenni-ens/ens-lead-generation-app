@@ -19,6 +19,7 @@ from app.domains.outreach.schemas import (
     OutreachZohoOpenFailure,
 )
 from app.domains.outreach.service import OutreachService
+from app.domains.system.cloud_polish import CloudPolishConfigurationService
 from app.domains.system.service import SystemService
 
 router = APIRouter(prefix="/outreach", tags=["outreach"])
@@ -83,6 +84,28 @@ def refine_draft(
         manager=manager,
         runtime_settings=runtime_settings,
         workspace_settings=workspace_settings,
+    )
+
+
+@router.post("/drafts/{draft_id}/polish", response_model=OutreachDraftRefineResult)
+def polish_draft(
+    draft_id: str,
+    data: OutreachDraftRefineRequest,
+    request: Request,
+    _: Authenticated,
+    session: DatabaseSession,
+) -> OutreachDraftRefineResult:
+    cloud = cast(
+        CloudPolishConfigurationService, request.app.state.cloud_polish_configuration_service
+    )
+    settings = SystemService().get_settings(session)
+    return service.polish_draft(
+        session,
+        draft_id,
+        data,
+        workspace_settings=settings,
+        api_key=cloud.credential(),
+        correlation_id=request.state.correlation_id,
     )
 
 

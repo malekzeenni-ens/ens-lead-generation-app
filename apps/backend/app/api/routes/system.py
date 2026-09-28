@@ -5,6 +5,11 @@ from fastapi import APIRouter, Request, status
 from app.api.dependencies import Authenticated, DatabaseSession
 from app.core.config import Settings
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
+from app.domains.system.cloud_polish import CloudPolishConfigurationService
+from app.domains.system.cloud_polish_schemas import (
+    CloudPolishConfigurationWrite,
+    CloudPolishStatusRead,
+)
 from app.domains.system.meta import MetaConnectionService
 from app.domains.system.meta_schemas import (
     MetaAccountSelect,
@@ -26,6 +31,12 @@ service = SystemService()
 
 def _meta(request: Request) -> MetaConnectionService:
     return cast(MetaConnectionService, request.app.state.meta_connection_service)
+
+
+def _cloud_polish(request: Request) -> CloudPolishConfigurationService:
+    return cast(
+        CloudPolishConfigurationService, request.app.state.cloud_polish_configuration_service
+    )
 
 
 @router.get("/settings", response_model=WorkspaceSettings)
@@ -66,6 +77,32 @@ def get_operations_summary(_: Authenticated, session: DatabaseSession) -> Operat
 @router.get("/providers/meta", response_model=MetaConnectionRead)
 def get_meta_connection(request: Request, _: Authenticated) -> MetaConnectionRead:
     return _meta(request).status()
+
+
+@router.get("/cloud-polish", response_model=CloudPolishStatusRead)
+def get_cloud_polish(
+    request: Request, _: Authenticated, session: DatabaseSession
+) -> CloudPolishStatusRead:
+    return _cloud_polish(request).status(service.get_settings(session))
+
+
+@router.put("/cloud-polish", response_model=CloudPolishStatusRead)
+def configure_cloud_polish(
+    data: CloudPolishConfigurationWrite,
+    request: Request,
+    _: Authenticated,
+    session: DatabaseSession,
+) -> CloudPolishStatusRead:
+    return _cloud_polish(request).configure(
+        data.api_key.get_secret_value(), service.get_settings(session)
+    )
+
+
+@router.delete("/cloud-polish", response_model=CloudPolishStatusRead)
+def remove_cloud_polish(
+    request: Request, _: Authenticated, session: DatabaseSession
+) -> CloudPolishStatusRead:
+    return _cloud_polish(request).remove(service.get_settings(session))
 
 
 @router.put("/providers/meta", response_model=MetaConnectionRead)

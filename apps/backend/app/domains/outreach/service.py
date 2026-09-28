@@ -23,9 +23,15 @@ from app.domains.audit.service import record_audit_event
 from app.domains.campaign_assistant.gate import require_local_ai_enabled
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.campaigns.repository import CampaignRepository
+from app.domains.catalogue.enrichment import strip_prices
 from app.domains.catalogue.repository import CatalogueRepository
 from app.domains.leads.identity import valid_public_email
 from app.domains.leads.repository import LeadRepository
+from app.domains.outreach.cloud_client import polish_with_anthropic
+from app.domains.outreach.cloud_prompt import (
+    CLOUD_POLISH_PROMPT_VERSION,
+    build_cloud_polish_user_message,
+)
 from app.domains.outreach.prompt import _OLLAMA_REFINE_SCHEMA, build_refine_messages
 from app.domains.outreach.repository import OutreachRepository
 from app.domains.outreach.schemas import (
@@ -511,9 +517,7 @@ class OutreachService:
         if draft is None:
             raise DomainError("OUTREACH_DRAFT_NOT_FOUND", "Draft not found.", status_code=404)
         template = (
-            self.template_repository.get(session, draft.template_id)
-            if draft.template_id
-            else None
+            self.template_repository.get(session, draft.template_id) if draft.template_id else None
         )
         products = self._template_products(session, template) if template else []
         context = {
@@ -535,6 +539,79 @@ class OutreachService:
             protect_resources=workspace_settings.protect_design_software_resources,
         )
         return result.value
+
+    def polish_draft(
+        self,
+        session: Session,
+        draft_id: str,
+        data: OutreachDraftRefineRequest,
+        *,
+        workspace_settings: WorkspaceSettings,
+        api_key: str | None,
+        correlation_id: str,
+    ) -> OutreachDraftRefineResult:
+        if not workspace_settings.cloud_polish_enabled:
+            raise DomainError(
+                "CLOUD_POLISH_DISABLED", "Cloud polish is disabled in Settings.", status_code=409
+            )
+        if not api_key:
+            raise DomainError(
+                "CLOUD_POLISH_NOT_CONFIGURED",
+                "Save an Anthropic API key in Settings before polishing.",
+                status_code=409,
+            )
+        draft = self.repository.get_draft(session, draft_id)
+        if draft is None:
+            raise DomainError("OUTREACH_DRAFT_NOT_FOUND", "Draft not found.", status_code=404)
+        template = (
+            self.template_repository.get(session, draft.template_id) if draft.template_id else None
+        )
+        products = self._template_products(session, template) if template else []
+        context = {
+            key: strip_prices(value)
+            for key, value in self._template_values(draft.lead, products).items()
+            if value
+        }
+        message = build_cloud_polish_user_message(
+            current_subject=strip_prices(data.subject),
+            current_body=strip_prices(data.body),
+            lead_context=context,
+            instruction=strip_prices(data.instruction or "") or None,
+        )
+        message = strip_prices(message)
+        if "£" in message:
+            raise DomainError(
+                "CLOUD_POLISH_PRICE_BLOCKED",
+                "Price information was removed before sending.",
+                status_code=409,
+            )
+        model = workspace_settings.cloud_polish_model or "claude-sonnet-5"
+        result = polish_with_anthropic(api_key=api_key, model=model, user_message=message)
+        subject = strip_prices(result.value.subject)
+        body = strip_prices(result.value.body)
+        if "£" in f"{subject}\n{body}" and re.search(r"£\s*\d", f"{subject}\n{body}"):
+            raise DomainError(
+                "CLOUD_POLISH_PRICE_BLOCKED",
+                "The cloud response contained a price and was rejected.",
+                status_code=502,
+            )
+        cleaned = OutreachDraftRefineResult(subject=subject, body=body)
+        record_audit_event(
+            session,
+            action="outreach.draft_cloud_polished",
+            entity_type="outreach_draft",
+            entity_id=draft.id,
+            correlation_id=correlation_id,
+            summary={
+                "model": model,
+                "prompt_version": CLOUD_POLISH_PROMPT_VERSION,
+                "input_tokens": result.input_tokens,
+                "output_tokens": result.output_tokens,
+                "request_id": result.request_id,
+            },
+        )
+        session.commit()
+        return cleaned
 
     def _approve_model(self, session: Session, draft: OutreachDraft, correlation_id: str) -> None:
         if draft.sync_status == "user_confirmed_sent":
@@ -579,9 +656,7 @@ class OutreachService:
         )
 
     @staticmethod
-    def _edit_distance_ratio(
-        draft: OutreachDraft, approved: OutreachDraftRevision
-    ) -> float | None:
+    def _edit_distance_ratio(draft: OutreachDraft, approved: OutreachDraftRevision) -> float | None:
         """How far the approved wording drifted from what was first generated.
 
         0.0 means the generated draft was approved untouched; 1.0 means it was rewritten

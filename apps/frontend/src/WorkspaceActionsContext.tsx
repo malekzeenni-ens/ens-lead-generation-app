@@ -29,6 +29,8 @@ import type {
   ScoringWeights,
   ShopifyImportResult,
   VerificationResult,
+  OutreachDraftRefineInput,
+  OutreachDraftRefineResult,
   WorkspaceSettings,
 } from "./types";
 
@@ -110,6 +112,8 @@ export interface WorkspaceActions {
   createBackup: (targetDirectory: string) => Promise<BackupResult | null>;
   verifyBackup: (backupPath: string) => Promise<VerificationResult | null>;
   configureMeta: (appId: string, appSecret: string) => Promise<boolean>;
+  configureCloudPolish: (apiKey: string) => Promise<boolean>;
+  removeCloudPolish: () => Promise<boolean>;
   startMetaAuthorization: () => Promise<boolean>;
   selectMetaAccount: (pageId: string) => Promise<boolean>;
   disconnectMeta: (removeConfiguration?: boolean) => Promise<boolean>;
@@ -118,6 +122,7 @@ export interface WorkspaceActions {
   deleteTemplate: (templateId: string) => Promise<boolean>;
   createOutreachBatch: (data: OutreachBatchInput) => Promise<string | null>;
   editOutreachDraft: (draftId: string, data: OutreachDraftEditInput) => Promise<boolean>;
+  polishOutreachDraft: (draftId: string, data: OutreachDraftRefineInput) => Promise<OutreachDraftRefineResult | null>;
   approveOutreachDraft: (draftId: string) => Promise<boolean>;
   approveOutreachDrafts: (draftIds: string[]) => Promise<boolean>;
   rejectOutreachDraft: (draftId: string, reason?: string) => Promise<boolean>;

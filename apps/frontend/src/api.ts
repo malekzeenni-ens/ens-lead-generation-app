@@ -14,6 +14,7 @@ import type {
   CampaignDraftApprovalResult,
   CampaignDraftCampaign,
   CampaignRun,
+  CloudPolishStatus,
   Diagnostics,
   DiscoveryCandidate,
   EnrichmentImportResult,
@@ -548,6 +549,10 @@ export const api = {
   updateSettings: (data: Partial<WorkspaceSettings>) =>
     request<WorkspaceSettings>("/system/settings", jsonBody("PATCH", data)),
   diagnostics: () => request<Diagnostics>("/system/diagnostics"),
+  cloudPolishStatus: () => request<CloudPolishStatus>("/system/cloud-polish"),
+  configureCloudPolish: (apiKey: string) =>
+    request<CloudPolishStatus>("/system/cloud-polish", jsonBody("PUT", { api_key: apiKey })),
+  removeCloudPolish: () => request<CloudPolishStatus>("/system/cloud-polish", { method: "DELETE" }),
   metaConnection: () => request<MetaConnection>("/system/providers/meta"),
   configureMeta: (appId: string, appSecret: string) =>
     request<MetaConnection>(
@@ -605,6 +610,8 @@ export const api = {
       `/outreach/drafts/${draftId}/refine`,
       jsonBody("POST", data),
     ),
+  polishOutreachDraft: (draftId: string, data: OutreachDraftRefineInput) =>
+    request<OutreachDraftRefineResult>(`/outreach/drafts/${draftId}/polish`, jsonBody("POST", data)),
   approveOutreachDraft: (draftId: string) =>
     request<OutreachDraft>(`/outreach/drafts/${draftId}/approve`, jsonBody("POST", {})),
   approveOutreachDrafts: (draftIds: string[]) =>

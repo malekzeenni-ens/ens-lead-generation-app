@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.core.config import ALLOWED_OLLAMA_MODELS
 
+ALLOWED_CLOUD_POLISH_MODELS = {"claude-haiku-4-5", "claude-sonnet-5"}
+
 
 def _validate_local_ai_model(value: str) -> str:
     """An empty string means "follow the configured default", which is the shipped state."""
@@ -22,8 +24,17 @@ class WorkspaceSettings(BaseModel):
     local_campaign_assistant_enabled: bool = True
     protect_design_software_resources: bool = True
     local_ai_model: str = ""
+    cloud_polish_enabled: bool = False
+    cloud_polish_model: str = ""
 
     _check_model = field_validator("local_ai_model")(_validate_local_ai_model)
+
+    @field_validator("cloud_polish_model")
+    @classmethod
+    def check_cloud_polish_model(cls, value: str) -> str:
+        if value and value not in ALLOWED_CLOUD_POLISH_MODELS:
+            raise ValueError("The cloud polish model must be empty or an allowed Anthropic model")
+        return value
 
 
 class WorkspaceSettingsUpdate(BaseModel):
@@ -37,11 +48,20 @@ class WorkspaceSettingsUpdate(BaseModel):
     local_campaign_assistant_enabled: bool | None = None
     protect_design_software_resources: bool | None = None
     local_ai_model: str | None = None
+    cloud_polish_enabled: bool | None = None
+    cloud_polish_model: str | None = None
 
     @field_validator("local_ai_model")
     @classmethod
     def check_local_ai_model(cls, value: str | None) -> str | None:
         return None if value is None else _validate_local_ai_model(value)
+
+    @field_validator("cloud_polish_model")
+    @classmethod
+    def check_cloud_model(cls, value: str | None) -> str | None:
+        if value and value not in ALLOWED_CLOUD_POLISH_MODELS:
+            raise ValueError("The cloud polish model must be empty or an allowed Anthropic model")
+        return value
 
     @model_validator(mode="after")
     def require_change(self) -> WorkspaceSettingsUpdate:

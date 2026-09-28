@@ -1,6 +1,6 @@
 # Specification: Polish an outreach draft with a cloud model
 
-- **Status:** Ready to build. Not yet implemented.
+- **Status:** Implemented in source; automated verification passed. Operator metric review and real-key manual acceptance remain pending.
 - **Audience:** A coding agent working in this repository with no prior context on it.
 - **Prerequisite:** ADR-021 is shipped. Read [ADR-021](../adr/ADR-021-product-sales-knowledge.md) and §22–§24 of [the AI integration architecture](../architecture/AI_INTEGRATION_ARCHITECTURE.md) before writing code.
 - **Scope:** One optional button that rewrites a single already-drafted outreach email using the Anthropic API instead of the local model. Nothing else in the application changes.

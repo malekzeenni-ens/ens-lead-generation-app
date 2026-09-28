@@ -35,6 +35,7 @@ from app.db.session import Database
 from app.domains.automation.manager import CampaignRunManager
 from app.domains.automation.providers import MetaInstagramProvider
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
+from app.domains.system.cloud_polish import CloudPolishConfigurationService
 from app.domains.system.meta import MetaConnectionService
 from app.domains.system.service import SystemService
 
@@ -71,6 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     database = Database(runtime_settings.database_path)
     secret_store = build_secret_store(runtime_settings.database_path.parent)
     meta_connection_service = MetaConnectionService(runtime_settings, secret_store)
+    cloud_polish_configuration_service = CloudPolishConfigurationService(secret_store)
     instagram_provider = MetaInstagramProvider(runtime_settings, meta_connection_service)
     campaign_run_manager = CampaignRunManager(
         database, runtime_settings, instagram_provider=instagram_provider
@@ -111,6 +113,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.campaign_run_manager = campaign_run_manager
     app.state.campaign_assistant_manager = campaign_assistant_manager
     app.state.meta_connection_service = meta_connection_service
+    app.state.cloud_polish_configuration_service = cloud_polish_configuration_service
 
     app.add_middleware(
         CORSMiddleware,

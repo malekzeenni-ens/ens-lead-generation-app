@@ -27,6 +27,7 @@ import type {
   OutreachDraft,
   OutreachLeadOption,
   Template,
+  CloudPolishStatus,
 } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import {
@@ -46,10 +47,12 @@ interface EmailDraftsWorkspaceProps {
   templates: Template[];
   leadOptions: OutreachLeadOption[];
   batches: OutreachBatch[];
+  cloudPolishStatus: CloudPolishStatus | null;
 }
 
 interface DraftEditorProps {
   draft: OutreachDraft;
+  cloudPolishStatus: CloudPolishStatus | null;
 }
 
 const AUTOFILL_FIELDS = [
@@ -89,11 +92,12 @@ function reviewDescription(draft: OutreachDraft): string {
   return "This draft is closed locally and will not be sent. It can be reopened for editing.";
 }
 
-function DraftEditor({ draft }: DraftEditorProps) {
+function DraftEditor({ draft, cloudPolishStatus }: DraftEditorProps) {
   const {
     busy,
     manageLead,
     editOutreachDraft,
+    polishOutreachDraft: onPolishOutreachDraft,
     approveOutreachDraft,
     rejectOutreachDraft,
     reopenOutreachDraft,
@@ -106,6 +110,8 @@ function DraftEditor({ draft }: DraftEditorProps) {
   const [rejectionReason, setRejectionReason] = useState("");
   const [refining, setRefining] = useState(false);
   const [refineError, setRefineError] = useState<string | null>(null);
+  const [polishing, setPolishing] = useState(false);
+  const [polishError, setPolishError] = useState<string | null>(null);
   const dirty =
     subject !== draft.current_revision.subject || body !== draft.current_revision.body;
   const rejected = draft.review_status === "rejected";
@@ -144,6 +150,21 @@ function DraftEditor({ draft }: DraftEditorProps) {
       );
     } finally {
       setRefining(false);
+    }
+  }
+
+  async function polishWithCloud(): Promise<void> {
+    setPolishing(true);
+    setPolishError(null);
+    try {
+      const result = await onPolishOutreachDraft(draft.id, { subject: subject.trim(), body: body.trim() });
+      if (!result) return;
+      setSubject(result.subject);
+      setBody(result.body);
+    } catch (error) {
+      setPolishError(error instanceof ApiError ? error.details.message : "The draft could not be polished.");
+    } finally {
+      setPolishing(false);
     }
   }
 
@@ -253,6 +274,12 @@ function DraftEditor({ draft }: DraftEditorProps) {
           <Sparkles size={17} aria-hidden="true" />
           {refining ? "Refining…" : "Refine with AI"}
         </button>
+        {cloudPolishStatus?.configured && cloudPolishStatus.enabled ? (
+          <button className="secondary-action" type="button" disabled={busy || polishing || refining || !subject.trim() || !body.trim()} onClick={() => void polishWithCloud()}>
+            <Sparkles size={17} aria-hidden="true" />
+            {polishing ? "Polishing…" : "Polish with cloud AI"}
+          </button>
+        ) : null}
         {rejected ? (
           <button
             className="primary-action"
@@ -343,6 +370,7 @@ function DraftEditor({ draft }: DraftEditorProps) {
       </div>
 
       {refineError ? <p className="form-error">{refineError}</p> : null}
+      {polishError ? <p className="form-error">{polishError}</p> : null}
 
       {draft.review_status === "approved" && !sentConfirmed ? (
         <p className="draft-handoff-help">
@@ -471,6 +499,7 @@ export function EmailDraftsWorkspace({
   templates,
   leadOptions,
   batches,
+  cloudPolishStatus,
 }: EmailDraftsWorkspaceProps) {
   const {
     busy,
@@ -998,6 +1027,7 @@ export function EmailDraftsWorkspace({
                     <DraftEditor
                       key={`${selectedDraft.id}-${selectedDraft.current_version}-${selectedDraft.review_status}-${selectedDraft.sync_status}`}
                       draft={selectedDraft}
+                      cloudPolishStatus={cloudPolishStatus}
                     />
                   ) : null}
                 </div>

@@ -59,6 +59,7 @@ import type {
   AutomationCapabilities,
   BackupResult,
   Campaign,
+  CloudPolishStatus,
   CampaignRun,
   Diagnostics,
   EnrichmentImportResult,
@@ -70,6 +71,8 @@ import type {
   MetaConnection,
   OperationsSummary,
   OutreachBatch,
+  OutreachDraftRefineInput,
+  OutreachDraftRefineResult,
   OutreachLeadOption,
   Product,
   ProductFamily,
@@ -151,6 +154,7 @@ type RefreshDomain =
   | "campaignRuns"
   | "capabilities"
   | "metaConnection"
+  | "cloudPolish"
   | "settings"
   | "diagnostics"
   | "summary"
@@ -204,6 +208,7 @@ export default function App() {
   const [automationCapabilities, setAutomationCapabilities] =
     useState<AutomationCapabilities | null>(null);
   const [metaConnection, setMetaConnection] = useState<MetaConnection | null>(null);
+  const [cloudPolishStatus, setCloudPolishStatus] = useState<CloudPolishStatus | null>(null);
   const [metaAuthorizationUrl, setMetaAuthorizationUrl] = useState<string | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [summary, setSummary] = useState<OperationsSummary | null>(null);
@@ -252,6 +257,7 @@ export default function App() {
         campaignRunResult,
         capabilityResult,
         metaConnectionResult,
+        cloudPolishResult,
         templateResult,
         productFamilyResult,
         outreachLeadOptionResult,
@@ -271,6 +277,7 @@ export default function App() {
           api.campaignRuns(),
           api.automationCapabilities(),
           api.metaConnection(),
+          api.cloudPolishStatus(),
           api.templates(),
           api.productFamilies(),
           api.outreachLeadOptions(),
@@ -289,6 +296,7 @@ export default function App() {
       setCampaignRuns(campaignRunResult);
       setAutomationCapabilities(capabilityResult);
       setMetaConnection(metaConnectionResult);
+      setCloudPolishStatus(cloudPolishResult);
       setTemplates(templateResult);
       setProductFamilies(productFamilyResult);
       setOutreachLeadOptions(outreachLeadOptionResult);
@@ -329,6 +337,7 @@ export default function App() {
     campaignRuns: async () => setCampaignRuns(await api.campaignRuns()),
     capabilities: async () => setAutomationCapabilities(await api.automationCapabilities()),
     metaConnection: async () => setMetaConnection(await api.metaConnection()),
+    cloudPolish: async () => setCloudPolishStatus(await api.cloudPolishStatus()),
     settings: async () => setSettings(await api.settings()),
     diagnostics: async () => setDiagnostics(await api.diagnostics()),
     summary: async () => setSummary(await api.summary()),
@@ -828,7 +837,19 @@ export default function App() {
     return (
       (await perform(() => api.updateSettings(data), "Workspace settings saved.", [
         "settings",
+        "cloudPolish",
       ])) !== null
+    );
+  }
+
+  async function polishOutreachDraft(
+    draftId: string,
+    data: OutreachDraftRefineInput,
+  ): Promise<OutreachDraftRefineResult | null> {
+    return perform(
+      () => api.polishOutreachDraft(draftId, data),
+      "Cloud polish is ready for review; the saved draft is unchanged.",
+      [],
     );
   }
 
@@ -840,6 +861,14 @@ export default function App() {
         ["metaConnection", "capabilities"],
       )) !== null
     );
+  }
+
+  async function configureCloudPolish(apiKey: string): Promise<boolean> {
+    return (await perform(() => api.configureCloudPolish(apiKey), "Cloud polish key saved in the protected credential vault.", ["cloudPolish"])) !== null;
+  }
+
+  async function removeCloudPolish(): Promise<boolean> {
+    return (await perform(() => api.removeCloudPolish(), "Cloud polish key removed from the protected credential vault.", ["cloudPolish"])) !== null;
   }
 
   async function startMetaAuthorization(): Promise<boolean> {
@@ -1319,6 +1348,8 @@ export default function App() {
     createBackup,
     verifyBackup,
     configureMeta,
+    configureCloudPolish,
+    removeCloudPolish,
     startMetaAuthorization,
     selectMetaAccount,
     disconnectMeta,
@@ -1327,6 +1358,7 @@ export default function App() {
     deleteTemplate,
     createOutreachBatch,
     editOutreachDraft,
+    polishOutreachDraft,
     approveOutreachDraft,
     approveOutreachDrafts,
     rejectOutreachDraft,
@@ -1417,6 +1449,7 @@ export default function App() {
         templates={templates}
         leadOptions={outreachLeadOptions}
         batches={outreachBatches}
+        cloudPolishStatus={cloudPolishStatus}
       />
     ),
     settings: (
@@ -1424,6 +1457,7 @@ export default function App() {
         settings={settings}
         diagnostics={diagnostics}
         metaConnection={metaConnection}
+        cloudPolishStatus={cloudPolishStatus}
         metaAuthorizationUrl={metaAuthorizationUrl}
       />
     ),

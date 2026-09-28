@@ -5,6 +5,7 @@ description = "Local API and domain service for Etch 'N' Shine lead intelligence
 requires-python = ">=3.13,<3.14"
 dependencies = [
   "alembic>=1.14,<2",
+  "anthropic>=0.52,<1",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
   "psutil>=6.1,<8",
