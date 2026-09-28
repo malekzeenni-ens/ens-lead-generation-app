@@ -15,6 +15,7 @@ from app.db.models import (
     DiscoveryCandidate,
     FollowUp,
     Lead,
+    OutreachDraftRevision,
     Product,
     ScoreRun,
     Shortlist,
@@ -108,6 +109,16 @@ class SystemService:
             select(Lead.pipeline_stage, func.count()).group_by(Lead.pipeline_stage)
         ).all()
         open_follow_up = FollowUp.status == "open"
+        measured = OutreachDraftRevision.edit_distance_ratio.is_not(None)
+        average_edit_ratio = session.scalar(
+            select(func.avg(OutreachDraftRevision.edit_distance_ratio)).where(measured)
+        )
+        measured_drafts = (
+            session.scalar(
+                select(func.count()).select_from(OutreachDraftRevision).where(measured)
+            )
+            or 0
+        )
         return OperationsSummary(
             campaigns=session.scalar(select(func.count()).select_from(Campaign)) or 0,
             active_campaigns=session.scalar(
@@ -166,4 +177,8 @@ class SystemService:
             )
             or 0,
             pipeline={str(stage): int(count) for stage, count in pipeline_rows},
+            average_draft_edit_ratio=(
+                round(float(average_edit_ratio), 4) if average_edit_ratio is not None else None
+            ),
+            approved_drafts_measured=measured_drafts,
         )

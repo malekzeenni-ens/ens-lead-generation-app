@@ -22,14 +22,17 @@ from app.db.models import (
     LeadNote,
     LeadSocialIdentity,
     LeadStageEvent,
+    ProvenFit,
     ShortlistItem,
     SourceObservation,
     SourceSystem,
     SuppressionRecord,
+    Template,
 )
 from app.domains.audit.repository import AuditRepository
 from app.domains.audit.service import record_audit_event
 from app.domains.campaigns.repository import CampaignRepository
+from app.domains.catalogue.repository import CatalogueRepository
 from app.domains.leads.activity import lead_activity_rows
 from app.domains.leads.identity import social_identity
 from app.domains.leads.repository import LeadRepository
@@ -601,6 +604,9 @@ class LeadService:
                 reason=data.reason,
             )
         )
+        recorded_fit = False
+        if data.stage is PipelineStage.WON:
+            recorded_fit = self._record_proven_fit(session, lead)
         record_audit_event(
             session,
             action="lead.stage_changed",
@@ -612,10 +618,61 @@ class LeadService:
                 "new_stage": data.stage.value,
                 "reason": data.reason,
                 "invalidated_outreach_drafts": invalidated_drafts,
+                "proven_fit_recorded": recorded_fit,
             },
         )
         session.commit()
         return self._reload(session, lead.id)
+
+    @staticmethod
+    def _record_proven_fit(session: Session, lead: Lead) -> bool:
+        """Capture a won lead as evidence for future outreach.
+
+        Created without a dialog, because the operator should not have to stop and fill a form to
+        record something the app already knows. It starts unconfirmed and with the client's name
+        withheld, so nothing reaches a prospect until he says it can.
+        """
+        repository = CatalogueRepository()
+        if repository.fit_exists_for_lead(session, lead.id):
+            return False
+        approved = [
+            draft
+            for draft in lead.outreach_drafts
+            if draft.review_status == "approved" or draft.sync_status == "user_confirmed_sent"
+        ]
+        handles: list[str] = []
+        for draft in approved:
+            template = (
+                session.get(Template, draft.template_id) if draft.template_id else None
+            )
+            if template is None:
+                continue
+            for family_id in template.product_family_ids:
+                family = repository.get_family(session, family_id)
+                if family is None:
+                    continue
+                for product in repository.by_ids(session, family.product_ids):
+                    if product.shopify_handle and product.shopify_handle not in handles:
+                        handles.append(product.shopify_handle)
+        location = lead.location.split(",")[0].strip() if lead.location else ""
+        label = f"a {lead.segment} in {location}" if location else f"a {lead.segment}"
+        repository.add_fit(
+            session,
+            ProvenFit(
+                segment=lead.segment,
+                product_handles=handles,
+                use=(
+                    "Won through this app. Confirm what was made before using this in an email."
+                ),
+                outcome="Won.",
+                client_label=label,
+                client_name=lead.business_name,
+                share_client_name=False,
+                status="please_confirm",
+                lead_id=lead.id,
+            ),
+        )
+        return True
 
     def add_note(
         self,

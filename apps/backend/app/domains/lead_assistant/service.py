@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.errors import DomainError
 from app.domains.automation.enrichment import EnrichmentFailure, SafeWebsiteEnricher
+from app.domains.brand.profile import IdentityTier
 from app.domains.campaign_assistant.gate import require_local_ai_enabled
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
+from app.domains.campaign_assistant.schemas import ResourceProfile
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.lead_assistant.prompt import (
     _OLLAMA_AUTOFILL_SCHEMA,
@@ -177,6 +179,16 @@ class LeadAssistantService:
                 location=lead.location,
                 website_evidence=asdict(evidence) if evidence else None,
                 existing_notes=notes,
+                # The full voice is affordable here, except when the engraving software has the
+                # resources and the window halves.
+                identity_tier=(
+                    IdentityTier.BRIEF
+                    if manager.resource_profile(
+                        workspace_settings.protect_design_software_resources
+                    )
+                    == ResourceProfile.DESIGN_SOFTWARE
+                    else IdentityTier.WRITING
+                ),
             )
             try:
                 result, _profile = manager.generate_structured(

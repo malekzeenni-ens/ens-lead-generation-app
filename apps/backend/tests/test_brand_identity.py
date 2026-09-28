@@ -23,8 +23,8 @@ from app.domains.outreach.prompt import SYSTEM_PROMPT as OUTREACH_SYSTEM_PROMPT
 # model runs an 8,192-token window that halves to 4,096 in the protected profile.
 _TIER_TOKEN_CEILINGS = {
     IdentityTier.BRIEF: 450,
-    IdentityTier.CORE: 1_100,
-    IdentityTier.WRITING: 1_500,
+    IdentityTier.CORE: 1_450,
+    IdentityTier.WRITING: 2_100,
 }
 
 
@@ -112,25 +112,68 @@ def test_outreach_refinement_gets_the_full_writing_voice() -> None:
     assert "Return only the subject and body fields." in OUTREACH_SYSTEM_PROMPT
 
 
+def test_the_outreach_rules_reach_conversation_and_copy_but_not_the_lean_tier() -> None:
+    core = identity_block(IdentityTier.CORE)
+    writing = identity_block(IdentityTier.WRITING)
+    brief = identity_block(IdentityTier.BRIEF)
+
+    # The essentials are needed whenever Malek asks for an email in conversation.
+    for tier_text in (core, writing):
+        assert "90 to 150 words" in tier_text
+        assert "One ask only" in tier_text
+        assert "[PRICE]" in tier_text
+
+    # The long tail only earns its tokens where copy is actually produced.
+    assert "circling back" in writing
+    assert "circling back" not in core
+    assert "90 to 150 words" not in brief
+
+
+def test_every_tier_refuses_to_quote_a_price() -> None:
+    for tier in IdentityTier:
+        assert "never quote" in identity_block(tier).casefold()
+
+
 def test_the_campaign_planner_gets_the_brief_voice_without_losing_its_rules() -> None:
     assert identity_block(IdentityTier.BRIEF) in CAMPAIGN_SYSTEM_PROMPT
     assert "Return exactly one JSON object matching the supplied schema." in CAMPAIGN_SYSTEM_PROMPT
     assert "draft_ready" in CAMPAIGN_SYSTEM_PROMPT
 
 
-def test_lead_briefing_autofill_and_digest_get_the_brief_voice() -> None:
+def test_lead_briefing_and_digest_get_the_brief_voice() -> None:
     brief = identity_block(IdentityTier.BRIEF)
     briefing = build_briefing_messages(context={"business_name": "Example Cafe"})
-    autofill = build_autofill_messages(
+    digest = build_digest_messages(candidates=[])
+    for messages in (briefing, digest):
+        assert brief in messages[0]["content"]
+
+
+def test_autofill_gets_the_full_writing_voice_and_the_field_formats() -> None:
+    # These four fields are pasted into an email verbatim, so they need the voice and an
+    # explicit shape, not just a topic.
+    system = build_autofill_messages(
         business_name="Example Cafe",
         segment="cafe",
         location="Bristol",
         website_evidence=None,
         existing_notes="",
-    )
-    digest = build_digest_messages(candidates=[])
-    for messages in (briefing, autofill, digest):
-        assert brief in messages[0]["content"]
+    )[0]["content"]
+    assert identity_block(IdentityTier.WRITING) in system
+    assert "one complete sentence addressed to the business" in system
+    assert "one ask" in system
+
+
+def test_autofill_drops_to_the_brief_voice_under_a_tight_window() -> None:
+    system = build_autofill_messages(
+        business_name="Example Cafe",
+        segment="cafe",
+        location="Bristol",
+        website_evidence=None,
+        existing_notes="",
+        identity_tier=IdentityTier.BRIEF,
+    )[0]["content"]
+    assert identity_block(IdentityTier.BRIEF) in system
+    assert identity_block(IdentityTier.WRITING) not in system
 
 
 def test_the_filter_translator_stays_free_of_identity_context() -> None:

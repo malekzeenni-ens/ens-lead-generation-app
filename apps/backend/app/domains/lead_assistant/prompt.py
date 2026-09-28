@@ -7,7 +7,7 @@ from app.domains.brand.profile import IdentityTier, identity_block
 
 LEAD_FILTER_PROMPT_VERSION = "lead-filter-v1"
 LEAD_BRIEFING_PROMPT_VERSION = "lead-briefing-v2"
-LEAD_AUTOFILL_PROMPT_VERSION = "lead-autofill-v2"
+LEAD_AUTOFILL_PROMPT_VERSION = "lead-autofill-v3"
 LEAD_DIGEST_PROMPT_VERSION = "lead-digest-v2"
 
 _OLLAMA_BRIEFING_SCHEMA: dict[str, Any] = {
@@ -133,12 +133,21 @@ def build_autofill_messages(
     location: str,
     website_evidence: dict[str, Any] | None,
     existing_notes: str,
+    identity_tier: IdentityTier = IdentityTier.WRITING,
 ) -> list[dict[str, str]]:
+    # These four fields are pasted into an email exactly as written, so the format rules are
+    # part of the task rather than a style preference.
     system = (
         "Suggest missing lead personalisation context using only the supplied website evidence "
-        "and notes. Never invent specifics. If evidence is thin, use a generic but honest value "
-        "anchored on the supplied segment or location, or return null. These fields are reused "
-        "verbatim in outreach copy, so they must already be in the brand's voice.\n\n" + _IDENTITY
+        "and notes. Never invent specifics. Return null for a field rather than guessing.\n"
+        "- personalisation_observation: one complete sentence addressed to the business, based "
+        "only on the supplied evidence, for example \"Your new treatment rooms on the Instagram "
+        "page look very well put together.\" Null if there is no real evidence.\n"
+        "- relevance_opportunity: one sentence naming a concrete use inside their business.\n"
+        "- offer_angle: one sentence starting with what Etch 'N' Shine would make for them. "
+        "Never a price.\n"
+        "- desired_next_step: one sentence containing one ask, for example \"Would a free "
+        "mock-up with your logo be useful?\"\n\n" + identity_block(identity_tier)
     )
     return [
         {"role": "system", "content": system},

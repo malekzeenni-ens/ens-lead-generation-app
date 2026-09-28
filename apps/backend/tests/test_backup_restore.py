@@ -41,7 +41,7 @@ def test_consistent_backup_verification_and_isolated_restore(
         "valid": True,
         "checksum_matches": True,
         "integrity_result": "ok",
-        "schema_version": "0015_product_assistant_fields",
+        "schema_version": "0016_seed_outreach_templates",
         "assistant_files_present": False,
         "assistant_files_checksum_matches": None,
         "assistant_files_count": 0,

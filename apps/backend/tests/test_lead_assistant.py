@@ -41,6 +41,9 @@ class FakeStructuredManager:
         self.busy = busy
         self.calls: list[list[dict[str, str]]] = []
 
+    def resource_profile(self, protect_resources: bool = True) -> ResourceProfile:
+        return ResourceProfile.STANDARD
+
     def generate_structured(
         self,
         messages: list[dict[str, str]],

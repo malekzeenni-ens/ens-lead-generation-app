@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
@@ -14,16 +14,20 @@ from app.core.errors import DomainError
 from app.db.models import (
     Campaign,
     FollowUp,
+    KnowledgeNote,
     Lead,
     LeadCampaign,
     OutreachBatch,
     OutreachDraft,
+    Product,
+    ProvenFit,
     Shortlist,
     ShortlistItem,
 )
 from app.domains.assistant.schemas import AssistantContextSelection
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.catalogue.repository import CatalogueRepository
+from app.domains.catalogue.service import CatalogueService
 from app.domains.leads.repository import LeadRepository
 from app.domains.outreach.repository import OutreachRepository
 from app.domains.system.service import SystemService
@@ -33,9 +37,21 @@ _LEAD_LIMIT = 12
 _CAMPAIGN_LIMIT = 12
 _PRODUCT_LIMIT = 16
 _FAMILY_LIMIT = 12
-_TEMPLATE_LIMIT = 10
+_TEMPLATE_LIMIT = 4
 _FOLLOW_UP_LIMIT = 10
 _SELECTED_ITEM_LIMIT = 10
+# A fully enriched product costs roughly 170 tokens. Sending five in full and seven as a name
+# plus a line beats sending thirty the model reads slowly and uses badly.
+_FULL_PRODUCT_LIMIT = 5
+_BRIEF_PRODUCT_LIMIT = 7
+_KNOWLEDGE_NOTE_LIMIT = 2
+_CATEGORY_LIMIT = 12
+# A knowledge note runs to 1,500 characters in the pack. The opening covers who buys and why,
+# which is the part that changes an answer.
+_NOTE_EXCERPT = 700
+_BRIEF_SUMMARY = 140
+_PROVEN_FIT_LIMIT = 2
+
 _SEARCH_STOP_WORDS = frozenset(
     {
         "about",
@@ -81,6 +97,104 @@ def _search_terms(user_request: str) -> list[str]:
 def _relevance(text: str, terms: list[str]) -> int:
     folded = text.casefold()
     return sum(1 for term in terms if term in folded)
+
+
+def _prune(value: Any) -> Any:
+    """Drop empty values before serialising.
+
+    Nulls and empty lists cost tokens and tell the model nothing. On a small context window
+    that is budget better spent on another product.
+    """
+    if isinstance(value, dict):
+        cleaned = {key: _prune(item) for key, item in value.items()}
+        return {
+            key: item
+            for key, item in cleaned.items()
+            if item not in (None, "", [], {}) or isinstance(item, bool)
+        }
+    if isinstance(value, list):
+        pruned = [_prune(item) for item in value]
+        return [item for item in pruned if item not in (None, "", [], {})]
+    return value
+
+
+def _prune_snapshot(value: dict[str, Any]) -> dict[str, Any]:
+    return cast("dict[str, Any]", _prune(value))
+
+
+def _product_score(
+    product: Product,
+    terms: list[str],
+    *,
+    lead_segments: set[str],
+    prefer_business: bool,
+) -> int:
+    haystack = " ".join(
+        (
+            product.name,
+            product.category,
+            product.summary or "",
+            product.b2b_notes or "",
+            " ".join(product.materials),
+            " ".join(product.target_segments),
+            " ".join(product.example_use_cases),
+            " ".join(product.occasions),
+        )
+    )
+    score = _relevance(haystack, terms)
+    # A product already tagged for this lead's trade is a far stronger signal than a word match.
+    score += 4 * len(lead_segments & {segment.casefold() for segment in product.target_segments})
+    if prefer_business and product.b2b_relevant:
+        score += 3
+    if prefer_business and product.bulk_ready:
+        score += 1
+    return score
+
+
+def _product_full(product: Product) -> dict[str, Any]:
+    return {
+        "name": product.name,
+        "category": product.category,
+        "summary": product.summary,
+        "materials": product.materials,
+        "target_segments": product.target_segments,
+        "example_use_cases": product.example_use_cases,
+        "b2b_notes": product.b2b_notes,
+        "custom_options": product.custom_options,
+        "business_relevant": product.b2b_relevant,
+        "bulk_ready": product.bulk_ready,
+        "url": product.product_url,
+        "sample_eligible": product.sample_eligible,
+    }
+
+
+def _product_brief(product: Product) -> dict[str, Any]:
+    return {"name": product.name, "summary": _excerpt(product.summary, _BRIEF_SUMMARY)}
+
+
+def _note_summary(note: KnowledgeNote) -> dict[str, Any]:
+    return {
+        "title": note.title,
+        "trades": note.segments,
+        "notes": _excerpt(note.body, _NOTE_EXCERPT),
+    }
+
+
+def _fit_summary(fit: ProvenFit) -> dict[str, Any]:
+    """A past job, with the client's name withheld unless sharing it was allowed.
+
+    The name is removed here rather than left to the prompt: a rule the data cannot break is
+    worth more than a rule the model is asked to follow.
+    """
+    confirmed = fit.status == "confirmed"
+    return {
+        "trade": fit.segment,
+        "client": fit.client_name if (confirmed and fit.share_client_name) else fit.client_label,
+        "what_was_made": _excerpt(fit.use, 240),
+        "outcome": fit.outcome,
+        "confirmed_by_operator": confirmed,
+        "usable_in_prospect_copy": confirmed,
+    }
 
 
 def _lead_candidates(session: Session, user_request: str) -> list[Lead]:
@@ -391,10 +505,19 @@ def build_app_context(
     instagram_connected: bool,
     selection: AssistantContextSelection,
 ) -> dict[str, Any]:
-    """Build a bounded, read-only snapshot for the app-scoped local copilot."""
+    """Build a bounded, read-only snapshot for the local assistant.
+
+    Everything in here is data the model may read, never instructions it may follow. Two rules
+    are enforced here rather than asked for in the prompt: no pricing reaches the model, and an
+    unconfirmed job never carries its client's name.
+    """
     system_service = SystemService()
     workspace_settings = system_service.get_settings(session)
     operations = system_service.operations_summary(session)
+    catalogue_service = CatalogueService(settings=runtime_settings)
+    enrichment_status = catalogue_service.enrichment_status(session)
+    catalogue_imported_at = enrichment_status.catalogue_imported_at
+    catalogue_stale = enrichment_status.catalogue_stale
     selected_context, selected_leads = _selected_context(session, selection)
     search_terms = _search_terms(f"{user_request} {selected_context['label']}")
     campaigns = CampaignRepository().list(session)
@@ -426,6 +549,41 @@ def build_app_context(
     templates = templates[:_TEMPLATE_LIMIT]
     leads = selected_leads or _lead_candidates(session, user_request)
     category_counts = Counter(product.category for product in products)
+
+    # Rank products for this request rather than sending the first N by name. A lead, campaign or
+    # draft batch means a business is the buyer, so business-ready products come first.
+    prefer_business = selection.kind in {"lead", "campaign", "outreach_batch", "shortlist"}
+    lead_segments = {lead.segment.casefold() for lead in leads if lead.segment}
+    if selection.kind == "campaign" and selected_context["record"] is not None:
+        record = selected_context["record"]
+        if isinstance(record, dict) and record.get("segment"):
+            lead_segments.add(str(record["segment"]).casefold())
+    products.sort(
+        key=lambda item: -_product_score(
+            item, search_terms, lead_segments=lead_segments, prefer_business=prefer_business
+        )
+    )
+    full_products = products[:_FULL_PRODUCT_LIMIT]
+    brief_products = products[_FULL_PRODUCT_LIMIT : _FULL_PRODUCT_LIMIT + _BRIEF_PRODUCT_LIMIT]
+
+    notes = CatalogueRepository().list_notes(session)
+    notes.sort(
+        key=lambda item: -(
+            4 * len(lead_segments & {segment.casefold() for segment in item.segments})
+            + _relevance(f"{item.title} {item.body}", search_terms)
+        )
+    )
+    relevant_notes = [
+        note
+        for note in notes[:_KNOWLEDGE_NOTE_LIMIT]
+        if lead_segments & {segment.casefold() for segment in note.segments}
+        or _relevance(f"{note.title} {note.body}", search_terms)
+    ]
+    fits = [
+        fit
+        for fit in CatalogueRepository().list_fits(session)
+        if not lead_segments or fit.segment.casefold() in lead_segments
+    ][:_PROVEN_FIT_LIMIT]
     follow_up_rows = (
         session.execute(
             select(FollowUp, Lead.business_name)
@@ -448,7 +606,8 @@ def build_app_context(
         .order_by(OutreachDraft.review_status)
     ).all()
 
-    return {
+    return _prune_snapshot(
+        {
         "snapshot_at": datetime.now(UTC).isoformat(),
         "selected_context": selected_context,
         "application": {
@@ -469,49 +628,6 @@ def build_app_context(
                 "Templates",
                 "Settings",
             ],
-            "workflow_guide": {
-                "Campaigns": (
-                    "Define a target audience, location, discovery sources, score threshold and "
-                    "product focus; runs can discover leads and refresh scoring."
-                ),
-                "All leads": (
-                    "Review source evidence, classification and reusable contact context before "
-                    "a lead becomes outreach-ready."
-                ),
-                "Weekly shortlist": (
-                    "Review the highest-scoring eligible leads and explicitly approve or reject "
-                    "recommendations."
-                ),
-                "Pipeline": (
-                    "Manage stages, notes, follow-ups, contact context, suppression and next "
-                    "actions."
-                ),
-                "Email drafts": (
-                    "Prepare, personalise, refine and approve local drafts before opening them in "
-                    "the configured mail workflow."
-                ),
-                "Catalogue": (
-                    "Store active products and product families used for scoring, matching and "
-                    "message personalisation."
-                ),
-                "Templates": (
-                    "Store reusable outreach subjects and bodies, optionally linked to product "
-                    "families."
-                ),
-            },
-            "operating_boundaries": [
-                "AI output is advisory until the operator reviews and approves it.",
-                "Assistant-created campaigns are paused and weekly outreach is disabled.",
-                "Email drafts require review; the app does not autonomously send messages.",
-                (
-                    "The assistant has no internet access and cannot inspect images with the "
-                    "current model."
-                ),
-            ],
-            "campaign_playbook": (
-                "Campaign Draft always applies the built-in versioned playbook and workspace "
-                "defaults. A user-generated or uploaded playbook is optional supporting context."
-            ),
         },
         "operations": operations.model_dump(mode="json"),
         "workspace_settings": workspace_settings.model_dump(mode="json"),
@@ -539,19 +655,21 @@ def build_app_context(
         ],
         "catalogue": {
             "active_product_count": len(products),
-            "category_counts": dict(sorted(category_counts.items())),
+            "last_imported_at": (
+                catalogue_imported_at.isoformat() if catalogue_imported_at else None
+            ),
+            "may_be_out_of_date": catalogue_stale,
+            "largest_categories": dict(category_counts.most_common(_CATEGORY_LIMIT)),
+            # `pricing_guidance` is deliberately absent. Pricing is quoted per job and must
+            # never reach a model or an email. See ADR-021.
             "products": [
-                {
-                    "name": product.name,
-                    "category": product.category,
-                    "target_segments": product.target_segments,
-                    "example_use_cases": product.example_use_cases,
-                    "pricing_guidance": product.pricing_guidance,
-                    "sample_eligible": product.sample_eligible,
-                }
-                for product in products[
-                    :(_PRODUCT_LIMIT if selection.kind == "workspace" else 8)
-                ]
+                _product_full(product)
+                for product in full_products
+                if selection.kind not in {"outreach_batch", "shortlist"}
+            ],
+            "more_products": [
+                _product_brief(product)
+                for product in brief_products
                 if selection.kind not in {"outreach_batch", "shortlist"}
             ],
             "product_families": [
@@ -568,7 +686,7 @@ def build_app_context(
             {
                 "topic": template.topic,
                 "subject": template.subject,
-                "body_excerpt": _excerpt(template.body),
+                "body_excerpt": _excerpt(template.body, 160),
                 "product_family_ids": template.product_family_ids,
             }
             for template in templates
@@ -582,9 +700,12 @@ def build_app_context(
                 str(status): int(count) for status, count in draft_status_rows
             },
         },
+        "product_knowledge": [_note_summary(note) for note in relevant_notes],
+        "proven_fits": [_fit_summary(fit) for fit in fits],
         "snapshot_limits": (
             "Named lists are bounded for the local model. Do not infer that an omitted record "
             "does not exist; use the operation counts and say when the supplied snapshot is "
             "insufficient."
         ),
-    }
+        }
+    )

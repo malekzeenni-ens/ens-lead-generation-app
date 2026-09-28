@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 from datetime import UTC, date, datetime, timedelta
+from difflib import SequenceMatcher
 
 from sqlalchemy.orm import Session
 
@@ -56,6 +57,18 @@ _TOKEN_PATTERN = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 
 def _aware(value: datetime) -> datetime:
     return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+# An email lists a few well-chosen products, not the whole catalogue.
+_TEMPLATE_PRODUCT_LIMIT = 3
+
+
+def _first_sentence(value: str | None) -> str:
+    """The first sentence of a product summary, for a one-line mention in an email."""
+    if not value:
+        return ""
+    parts = re.split(r"(?<=[.!?])\s+", value.strip(), maxsplit=1)
+    return parts[0].strip() if parts else value.strip()
 
 
 def _content_hash(subject: str, body: str) -> str:
@@ -183,11 +196,13 @@ class OutreachService:
 
     @staticmethod
     def _template_values(lead: Lead, products: list[Product]) -> dict[str, str]:
+        # One line per product, at most three, and never a price: pricing is quoted per job
+        # once the quantity is known. See ADR-021.
         product_lines = "\n".join(
-            f"{product.name} — {product.pricing_guidance}"
-            if product.pricing_guidance
-            else product.name
-            for product in products
+            f"- {product.name}: {_first_sentence(product.summary)}"
+            if product.summary
+            else f"- {product.name}"
+            for product in products[:_TEMPLATE_PRODUCT_LIMIT]
         )
         contact_full_name = " ".join(
             part for part in (lead.contact_first_name, lead.contact_last_name) if part
@@ -549,6 +564,7 @@ class OutreachService:
         draft.rejected_at = None
         draft.rejection_reason = None
         draft.blocked_reason = None
+        revision.edit_distance_ratio = self._edit_distance_ratio(draft, revision)
         record_audit_event(
             session,
             action="outreach.draft_approved",
@@ -561,6 +577,26 @@ class OutreachService:
                 "content_hash": revision.content_hash,
             },
         )
+
+    @staticmethod
+    def _edit_distance_ratio(
+        draft: OutreachDraft, approved: OutreachDraftRevision
+    ) -> float | None:
+        """How far the approved wording drifted from what was first generated.
+
+        0.0 means the generated draft was approved untouched; 1.0 means it was rewritten
+        entirely. Averaged on the Overview screen, this is the evidence for whether the local
+        model is good enough or a stronger one would pay for itself.
+        """
+        first = next((item for item in draft.revisions if item.version == 1), None)
+        if first is None or first.id == approved.id:
+            return 0.0 if first is not None else None
+        generated = f"{first.subject}\n{first.body}"
+        final = f"{approved.subject}\n{approved.body}"
+        if not generated:
+            return None
+        distance = 1.0 - SequenceMatcher(None, generated, final).ratio()
+        return round(max(0.0, min(1.0, distance)), 4)
 
     def approve_draft(
         self, session: Session, draft_id: str, correlation_id: str

@@ -32,7 +32,8 @@ def test_create_list_update_and_delete_template(client: TestClient) -> None:
 
     listed = client.get("/api/v1/templates")
     assert listed.status_code == 200
-    assert [item["id"] for item in listed.json()] == [created["id"]]
+    # Three B2B templates ship seeded (migration 0016), so assert presence rather than identity.
+    assert created["id"] in [item["id"] for item in listed.json()]
 
     updated = client.patch(
         f"/api/v1/templates/{created['id']}",
@@ -44,7 +45,8 @@ def test_create_list_update_and_delete_template(client: TestClient) -> None:
 
     deleted = client.delete(f"/api/v1/templates/{created['id']}")
     assert deleted.status_code == 204
-    assert client.get("/api/v1/templates").json() == []
+    remaining = [item["id"] for item in client.get("/api/v1/templates").json()]
+    assert created["id"] not in remaining
 
 
 def test_template_links_one_or_more_product_families(client: TestClient) -> None:

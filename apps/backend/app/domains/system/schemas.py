@@ -86,3 +86,8 @@ class OperationsSummary(BaseModel):
     scored_leads: int
     shortlisted_this_week: int
     pipeline: dict[str, int]
+    # Average drift between a generated draft and the wording actually approved, over approved
+    # drafts. None until something has been approved. Under about 0.25 means the local model is
+    # doing the job; consistently higher is the argument for a stronger one.
+    average_draft_edit_ratio: float | None = None
+    approved_drafts_measured: int = 0
