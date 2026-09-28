@@ -1,9 +1,9 @@
 # Local AI integration architecture
 
 - **Status:** Implemented
-- **Updated:** 27 September 2026
-- **Runtime:** Ollama 0.33.2 with `llama3.2:3b`
-- **Decision records:** [ADR-018](../adr/ADR-018-local-campaign-assistant.md), [ADR-019](../adr/ADR-019-general-local-assistant-and-files.md) and [ADR-020](../adr/ADR-020-brand-and-operator-identity.md)
+- **Updated:** 28 September 2026
+- **Runtime:** Ollama 0.33.2. `llama3.2:3b` by default; `qwen3:8b`, `llama3.1:8b` and `gemma3:12b` selectable from Settings (§24)
+- **Decision records:** [ADR-018](../adr/ADR-018-local-campaign-assistant.md), [ADR-019](../adr/ADR-019-general-local-assistant-and-files.md), [ADR-020](../adr/ADR-020-brand-and-operator-identity.md) and [ADR-021](../adr/ADR-021-product-sales-knowledge.md)
 - **Revision history:** 2026-08-29 — initial version covering ADR-018 and ADR-019.
   2026-08-29 — architecture review pass: closed the `assistant_files` backup gap (migration
   `0014_backup_manifest_assistant_files`), backfilled campaign/general-assistant test coverage
@@ -17,6 +17,9 @@
   assistant workspace.
   2026-09-27 — added the shared brand and operator identity (ADR-020) to every prompt builder,
   served at three token-budgeted tiers from `app/domains/brand/profile.py` (§22).
+  2026-09-28 — added product sales knowledge (ADR-021): CSV-derived sales fields, the
+  `product_enrichment.json` pack, knowledge notes and proven fits, per-request product ranking,
+  pricing removed from every model and email payload, and a selectable local model (§23, §24).
   Update this line whenever a change described in §20 lands, so drift between this document and
   the code is visible at a glance.
 
@@ -599,7 +602,7 @@ than added speculatively.
 - Campaign handoff currently retains only an approximately 2,000-character recent transcript.
 - Conversation rename/delete and attachment-retention controls are not yet exposed in the UI.
 - Backup/restore now covers `assistant_files` bytes as of migration
-  `0014_backup_manifest_assistant_files` (§7, §23). Remaining gap: the bundle is a single ZIP
+  `0014_backup_manifest_assistant_files` (§7, §25). Remaining gap: the bundle is a single ZIP
   archive with no incremental/delta strategy, so a workstation with a very large accumulated
   `assistant_files` directory will see backup time and size grow linearly with total attachment
   history, not just recent activity. Revisit if that becomes noticeable in practice.
@@ -768,7 +771,77 @@ Coverage lives in `apps/backend/tests/test_brand_identity.py`, which asserts the
 that every tier names the business, the operator, UK English and the banned phrases, and that
 each prompt builder receives the tier it is supposed to receive.
 
-## 23. Source map
+## 23. Product sales knowledge
+
+Decision record: [ADR-021](../adr/ADR-021-product-sales-knowledge.md).
+
+A Shopify export says what a product *is*. It does not say why a business would buy it. Three
+sources close that gap, all ranked through the same retrieval and all owned by this app:
+
+| Source | Where | Filled by |
+|---|---|---|
+| Product sales fields (`summary`, `materials`, `occasions`, `b2b_notes`, `custom_options`, `b2b_relevant`, `bulk_ready`) | `product` columns | CSV derivation, then the pack, then the local model, then the operator |
+| Knowledge notes — why a trade buys a group of products | `knowledge_note` | The pack; this app refreshes only what it generated itself |
+| Proven fits — jobs that actually happened | `proven_fit` | The pack, and automatically when a lead is won |
+
+`app/domains/catalogue/enrichment.py` holds the derivation rules and the shared vocabulary: the
+16-trade `SEGMENTS` list, `TAG_SEGMENT_MAP` from the store's real tags, the approved material
+names, and `strip_prices`. `SEGMENTS` must stay identical to `segments` in
+`product_enrichment.json`; a test asserts it.
+
+### Two rules that live in code, not in the prompt
+
+- **No pricing reaches a model or an email.** `pricing_guidance` stays in the database for the
+  operator and is absent from the snapshot and from `{{products}}`. Any price phrasing in a
+  summary or note is stripped on the way in.
+- **An unconfirmed job never carries its client's name.** `_fit_summary` substitutes the
+  anonymous label unless the fit is confirmed and name sharing was allowed.
+
+Both are asserted in `tests/test_product_knowledge.py`. Keep them there: a prompt instruction
+cannot be tested, and these two would be embarrassing to get wrong in front of a prospect.
+
+### Enrichment ownership
+
+`enrichment_source` is `""`, `seed`, `ai` or `manual`, in increasing precedence. A CSV import
+always refreshes CSV-owned fields but fills sales fields only where nothing has enriched them.
+Editing a sales field by hand sets `manual`, which nothing overwrites. `enriched_hash` records
+the listing fingerprint at the time enrichment was written, so `stale_enrichment` means "the
+listing changed afterwards" — and refreshing a stale product is opt-in, because the pack is
+better than what a 3B model produces. See the ADR for why following the pack's own overwrite rule
+literally would have destroyed its value on the first import.
+
+### Retrieval budget
+
+An enriched product costs about 170 tokens. Products are ranked per request, then five go in full
+and seven as a name plus a line, with at most two knowledge notes and two proven fits. Empty
+values are pruned before serialising. A typical request is around 4,800 prompt tokens: roughly
+2,100 fixed instruction and 2,700 snapshot. If that needs to come down, the honest lever is a
+larger model with a 16,384-token window, not a thinner knowledge layer.
+
+### Enrichment runs in the foreground
+
+Every local generation shares one non-blocking lock, so a background enrichment worker would make
+the operator's own assistant requests fail while it ran. It is a button with progress instead, and
+it refuses to start while LightBurn or xTool is open.
+
+## 24. Local model selection
+
+`ALLOWED_OLLAMA_MODELS` in `app/core/config.py` is the allowlist: `llama3.2:3b` (default),
+`qwen3:8b`, `llama3.1:8b`, `gemma3:12b`. Adding one means verifying it supports structured output
+through Ollama's `format` parameter, which every AI feature here depends on, then re-running the
+verification matrix in §21.
+
+The choice is a persisted `local_ai_model` workspace setting rather than an env var, because
+`Settings` is not writable from the UI. `CampaignAssistantManager.set_preferred_model` applies it
+at startup and whenever settings are saved, and unloads the previous model. `OllamaClient.model_for`
+returns `ollama_protected_model` under the protected profile and the preferred model otherwise, so
+engraving work always keeps the GPU. A non-3B model gets at least 16,384 tokens of context, and a
+`qwen3` model is sent `think: false` so it answers directly instead of reasoning out loud into the
+output budget.
+
+The frontend list in `SettingsWorkspace.tsx` mirrors the backend allowlist and must change with it.
+
+## 25. Source map
 
 | Concern | Source |
 |---|---|
@@ -795,6 +868,11 @@ each prompt builder receives the tier it is supposed to receive.
 | Lead filter, briefing, autofill and digest | `apps/backend/app/domains/lead_assistant/`, `apps/backend/app/api/routes/lead_assistant.py` |
 | Deterministic lead activity/staleness | `apps/backend/app/domains/leads/activity.py`, `apps/backend/app/domains/lead_assistant/staleness.py` |
 | Brand and operator identity | `apps/backend/app/domains/brand/profile.py` |
+| Sales-knowledge derivation and vocabulary | `apps/backend/app/domains/catalogue/enrichment.py` |
+| Enrichment pack shape | `apps/backend/app/domains/catalogue/pack.py` |
+| Product enrichment prompt | `apps/backend/app/domains/catalogue/enrichment_prompt.py` |
+| Knowledge notes and proven fits | `apps/backend/app/db/models.py`, `apps/backend/app/domains/catalogue/service.py` |
+| Catalogue knowledge UI | `apps/frontend/src/components/CatalogueWorkspace.tsx` |
 | Workspace settings | `apps/backend/app/domains/system/schemas.py` |
-| Backend tests | `apps/backend/tests/test_campaign_assistant.py`, `test_general_assistant.py`, `test_brand_identity.py`, `test_backup_restore.py` |
+| Backend tests | `apps/backend/tests/test_campaign_assistant.py`, `test_general_assistant.py`, `test_brand_identity.py`, `test_catalogue_enrichment.py`, `test_product_knowledge.py`, `test_backup_restore.py` |
 | Architecture decisions | `docs/adr/ADR-018-local-campaign-assistant.md`, `ADR-019-general-local-assistant-and-files.md`, `ADR-020-brand-and-operator-identity.md` |
