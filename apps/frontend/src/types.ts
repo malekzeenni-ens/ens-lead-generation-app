@@ -603,6 +603,7 @@ export interface ProvenFit {
   client_name: string | null;
   share_client_name: boolean;
   status: string;
+  lead_id: string | null;
   created_at: string;
 }
 

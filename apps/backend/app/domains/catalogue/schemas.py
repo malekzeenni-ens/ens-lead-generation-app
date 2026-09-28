@@ -189,6 +189,7 @@ class ProvenFitRead(BaseModel):
     client_name: str | None
     share_client_name: bool
     status: str
+    lead_id: str | None
     created_at: datetime
 
 

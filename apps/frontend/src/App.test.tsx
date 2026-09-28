@@ -677,6 +677,7 @@ const provenFit: ProvenFit = {
   client_name: "Example Grappling Club",
   share_client_name: false,
   status: "please_confirm",
+  lead_id: null,
   created_at: "2026-09-27T10:00:00+00:00",
 };
 
