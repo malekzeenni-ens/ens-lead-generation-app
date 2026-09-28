@@ -840,6 +840,36 @@ describe("local operating workbench", () => {
     });
   });
 
+  it("shows a failed cloud polish beside the button and keeps the editor text", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.outreachBatches).mockResolvedValue([outreachBatch]);
+    vi.mocked(api.outreachLeadOptions).mockResolvedValue([outreachLeadOption]);
+    vi.mocked(api.cloudPolishStatus).mockResolvedValue({
+      configured: true,
+      enabled: true,
+      model: "claude-sonnet-5",
+    });
+    vi.mocked(api.polishOutreachDraft).mockRejectedValue(
+      new ApiError({
+        code: "CLOUD_POLISH_AUTHENTICATION",
+        message: "The saved API key was rejected. Save a new one in Settings.",
+        details: {},
+        correlation_id: "test",
+      }),
+    );
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Email drafts/ }));
+    await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
+    await user.click(await screen.findByRole("button", { name: "Polish with cloud AI" }));
+    expect(
+      await screen.findByText("The saved API key was rejected. Save a new one in Settings."),
+    ).toHaveClass("form-error");
+    expect(screen.getByRole("textbox", { name: "Subject" })).toHaveValue(
+      outreachDraft.current_revision.subject,
+    );
+  });
+
   it("places the AI assistant in the sidebar instead of Campaigns", async () => {
     const user = userEvent.setup();
     render(<App />);

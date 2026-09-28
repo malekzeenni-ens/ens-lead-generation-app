@@ -71,8 +71,6 @@ import type {
   MetaConnection,
   OperationsSummary,
   OutreachBatch,
-  OutreachDraftRefineInput,
-  OutreachDraftRefineResult,
   OutreachLeadOption,
   Product,
   ProductFamily,
@@ -842,17 +840,6 @@ export default function App() {
     );
   }
 
-  async function polishOutreachDraft(
-    draftId: string,
-    data: OutreachDraftRefineInput,
-  ): Promise<OutreachDraftRefineResult | null> {
-    return perform(
-      () => api.polishOutreachDraft(draftId, data),
-      "Cloud polish is ready for review; the saved draft is unchanged.",
-      [],
-    );
-  }
-
   async function configureMeta(appId: string, appSecret: string): Promise<boolean> {
     return (
       (await perform(
@@ -960,7 +947,7 @@ export default function App() {
     return perform(
       () => api.importShopifyCsv(filename, content),
       "Shopify catalogue CSV imported and matched by product handle.",
-      ["products", "summary"],
+      ["products", "knowledge", "summary"],
     );
   }
 
@@ -1358,7 +1345,6 @@ export default function App() {
     deleteTemplate,
     createOutreachBatch,
     editOutreachDraft,
-    polishOutreachDraft,
     approveOutreachDraft,
     approveOutreachDrafts,
     rejectOutreachDraft,

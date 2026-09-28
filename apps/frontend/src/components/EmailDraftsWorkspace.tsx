@@ -97,7 +97,6 @@ function DraftEditor({ draft, cloudPolishStatus }: DraftEditorProps) {
     busy,
     manageLead,
     editOutreachDraft,
-    polishOutreachDraft: onPolishOutreachDraft,
     approveOutreachDraft,
     rejectOutreachDraft,
     reopenOutreachDraft,
@@ -157,12 +156,16 @@ function DraftEditor({ draft, cloudPolishStatus }: DraftEditorProps) {
     setPolishing(true);
     setPolishError(null);
     try {
-      const result = await onPolishOutreachDraft(draft.id, { subject: subject.trim(), body: body.trim() });
-      if (!result) return;
+      const result = await api.polishOutreachDraft(draft.id, {
+        subject: subject.trim(),
+        body: body.trim(),
+      });
       setSubject(result.subject);
       setBody(result.body);
     } catch (error) {
-      setPolishError(error instanceof ApiError ? error.details.message : "The draft could not be polished.");
+      setPolishError(
+        error instanceof ApiError ? error.details.message : "The draft could not be polished.",
+      );
     } finally {
       setPolishing(false);
     }
@@ -268,14 +271,19 @@ function DraftEditor({ draft, cloudPolishStatus }: DraftEditorProps) {
         <button
           className="secondary-action"
           type="button"
-          disabled={busy || refining || !subject.trim() || !body.trim()}
+          disabled={busy || refining || polishing || !subject.trim() || !body.trim()}
           onClick={() => void refineWithAI()}
         >
           <Sparkles size={17} aria-hidden="true" />
           {refining ? "Refining…" : "Refine with AI"}
         </button>
         {cloudPolishStatus?.configured && cloudPolishStatus.enabled ? (
-          <button className="secondary-action" type="button" disabled={busy || polishing || refining || !subject.trim() || !body.trim()} onClick={() => void polishWithCloud()}>
+          <button
+            className="secondary-action"
+            type="button"
+            disabled={busy || polishing || refining || !subject.trim() || !body.trim()}
+            onClick={() => void polishWithCloud()}
+          >
             <Sparkles size={17} aria-hidden="true" />
             {polishing ? "Polishing…" : "Polish with cloud AI"}
           </button>

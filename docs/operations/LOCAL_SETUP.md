@@ -132,8 +132,14 @@ Catalogue products can be added manually or loaded from a Shopify product export
 
 ## Product knowledge pack
 
-`product_enrichment.json` gives the assistant the sales knowledge the Shopify export cannot: what each product is for, which trades buy it, and jobs already won or quoted. Import it through **Catalogue → Import catalogue → Import knowledge**, after the Shopify CSV, since it matches on product handle.
+`product_enrichment.json` gives the assistant the sales knowledge the Shopify export cannot: what each product is for, which trades buy it, and jobs already won or quoted. The app loads it for you: put the file in one of these places and it is applied when the backend starts and again after every Shopify CSV import, since it matches on product handle.
 
-**It is deliberately not in this repository.** It carries client names, pipeline that has been quoted but not won, and the B2B sales playbook, and this repository is public — so `/product_enrichment*.json` is gitignored. Keep the file with the other private business assets, not in the working tree of a public repo, and re-import it after a fresh checkout or a machine change.
+1. The path in `ENS_KNOWLEDGE_PACK_PATH`, if you set it.
+2. Beside the database, in `%LOCALAPPDATA%\EtchNShine\LeadGeneration\product_enrichment.json`. Use this for the installed app.
+3. The repository root, for a development checkout.
 
-Nothing in the application reads it from disk. The backend only ever sees the bytes the browser uploads, exactly as with the Shopify CSV, and the test suite passes without it (one test that compares the trade list against the pack skips when it is absent).
+It is re-applied only when the file or the catalogue has changed, and it never overwrites wording you edited by hand or wording from a later AI enrichment run. A file that cannot be read is logged as a warning in the backend log and skipped; nothing else is affected. **Catalogue → Import catalogue → Import knowledge** still works for a one-off upload. Set `ENS_KNOWLEDGE_PACK_AUTO_IMPORT=false` to switch the automatic load off.
+
+**It is deliberately not in this repository.** It carries client names, pipeline that has been quoted but not won, and the B2B sales playbook, and this repository is public — so `/product_enrichment*.json` is gitignored. A copy at the repository root is safe from commits because of that rule, but keep the master copy with the other private business assets.
+
+The test suite passes without it (one test that compares the trade list against the pack skips when it is absent), and the tests switch the automatic load off so a real pack on your machine never reaches them.

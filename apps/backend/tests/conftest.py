@@ -21,6 +21,8 @@ def settings(tmp_path: Path) -> Settings:
         log_directory=tmp_path / "logs",
         google_places_api_key=None,
         campaign_run_inline=True,
+        # The real pack sits at the repository root on the operator's machine; keep it out.
+        knowledge_pack_auto_import=False,
     )
 
 

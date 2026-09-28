@@ -8,9 +8,17 @@
 
 `product_enrichment.json` carries client names, jobs quoted but not won, and the B2B sales
 playbook. This repository is public, so the pack is gitignored and lives only on the operator's
-machine; it is loaded through Catalogue -> Import knowledge at runtime. Nothing in the application
-reads it from disk, and the test suite passes without it - the one test that compares the trade
-list against the pack skips when it is absent. Keep it that way.
+machine. The test suite passes without it - the one test that compares the trade list against the
+pack skips when it is absent - and the suite's own app fixture switches the automatic load off, so
+a real pack on a development machine can never reach a test. Keep it that way.
+
+**Amended 28 September 2026:** the pack was first applied only by upload through Catalogue ->
+Import knowledge. The operator asked not to have to do that by hand, so the backend now reads it
+from disk (`app/domains/catalogue/pack_autoload.py`): from `ENS_KNOWLEDGE_PACK_PATH` if set,
+otherwise beside the database, otherwise at the repository root. It is applied at startup and after
+each Shopify import, only when the file or the catalogue changed, and never over wording that was
+written by hand or by a later AI enrichment run. A broken pack is logged and skipped. The upload
+path still works and still overwrites AI wording, as before.
 
 ## Two rules enforced in code, not in the prompt
 

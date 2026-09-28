@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import logging
+import re
+from types import SimpleNamespace
 from typing import Any
 
 import httpx
@@ -9,6 +13,7 @@ from fastapi.testclient import TestClient
 from app.core.errors import DomainError
 from app.db.models import AuditEvent
 from app.domains.outreach import cloud_client
+from app.domains.outreach.cloud_prompt import CLOUD_POLISH_SYSTEM_PROMPT
 from tests.test_outreach_drafts import _batch, _ready_lead, _template
 
 
@@ -248,3 +253,141 @@ def test_response_price_that_survives_stripping_is_rejected(
     )
     assert response.status_code == 502
     assert response.json()["code"] == "CLOUD_POLISH_PRICE_BLOCKED"
+
+
+# The keys `OutreachService._template_values` produces for one lead: the only lead data allowed out.
+_TEMPLATE_FIELDS = {
+    "business_name",
+    "location",
+    "segment",
+    "phone_number",
+    "public_email",
+    "website",
+    "products",
+    "greeting_name",
+    "contact_first_name",
+    "contact_last_name",
+    "contact_full_name",
+    "contact_role",
+    "personalisation_observation",
+    "relevance_opportunity",
+    "offer_angle",
+    "desired_next_step",
+}
+
+
+def _fake_anthropic(monkeypatch: Any, response: Any, captured: dict[str, Any]) -> None:
+    class FakeMessages:
+        @staticmethod
+        def create(**kwargs: Any) -> Any:
+            captured.update(kwargs)
+            return response
+
+    class FakeAnthropic:
+        messages = FakeMessages()
+
+        def __init__(self, **kwargs: Any) -> None:
+            captured["client_kwargs"] = kwargs
+
+    monkeypatch.setattr(cloud_client.anthropic, "Anthropic", FakeAnthropic)
+
+
+def _response(stop_reason: str = "end_turn", text: str | None = None) -> Any:
+    block = SimpleNamespace(
+        type="text", text=text or json.dumps({"subject": "Polished", "body": "Better."})
+    )
+    return SimpleNamespace(
+        stop_reason=stop_reason,
+        content=[block],
+        usage=SimpleNamespace(input_tokens=2400, output_tokens=300),
+        _request_id="req-real-path",
+    )
+
+
+def test_the_real_client_path_logs_usage_but_never_the_key_or_the_copy(
+    monkeypatch: Any, caplog: Any
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    captured: dict[str, Any] = {}
+    _fake_anthropic(monkeypatch, _response(), captured)
+    result = cloud_client.polish_with_anthropic(
+        api_key="sk-ant-test-secret", model="claude-haiku-4-5", user_message="Draft copy here"
+    )
+    assert result.value.subject == "Polished"
+    assert result.request_id == "req-real-path"
+    assert "req-real-path" in caplog.text
+    assert "sk-ant-test-secret" not in caplog.text
+    assert "Draft copy here" not in caplog.text
+    assert captured["model"] == "claude-haiku-4-5"
+    assert "thinking" not in captured
+
+
+def test_a_truncated_response_is_a_failed_polish(monkeypatch: Any) -> None:
+    _fake_anthropic(monkeypatch, _response(stop_reason="max_tokens"), {})
+    with pytest.raises(DomainError) as caught:
+        cloud_client.polish_with_anthropic(
+            api_key="sk-ant-test-secret", model="claude-sonnet-5", user_message="{}"
+        )
+    assert caught.value.code == "CLOUD_POLISH_TRUNCATED"
+
+
+def test_system_prompt_carries_no_price() -> None:
+    assert not re.search(r"£\s*\d", CLOUD_POLISH_SYSTEM_PROMPT)
+
+
+def test_request_carries_only_the_draft_and_its_own_lead_fields(
+    client: TestClient, campaign_payload: dict[str, object], monkeypatch: Any
+) -> None:
+    campaign, lead = _ready_lead(client, campaign_payload)
+    draft = _batch(client, campaign, lead, _template(client))["drafts"][0]
+    assert (
+        client.patch(
+            "/api/v1/system/settings",
+            json={"cloud_polish_enabled": True, "cloud_polish_model": "claude-haiku-4-5"},
+        ).status_code
+        == 200
+    )
+    _save_key(client)
+    captured: dict[str, Any] = {}
+    _fake_anthropic(monkeypatch, _response(), captured)
+    response = client.post(
+        f"/api/v1/outreach/drafts/{draft['id']}/polish",
+        # A bare pound sign is currency style, not a price, and must not block the request.
+        json={"subject": "Hello", "body": "Hi there.", "instruction": "Write £ not GBP."},
+    )
+    assert response.status_code == 200, response.text
+    assert captured["model"] == "claude-haiku-4-5"
+    assert captured["system"] == CLOUD_POLISH_SYSTEM_PROMPT
+    (message,) = captured["messages"]
+    payload = json.loads(message["content"].split("\n", 1)[1])
+    # The structure is the guarantee: nothing but the draft, the instruction and one lead's
+    # template fields can be in the request, so no snapshot, campaign or follow-up can leak.
+    assert set(payload) == {
+        "current_subject",
+        "current_body",
+        "lead_context",
+        "operator_instruction",
+    }
+    assert set(payload["lead_context"]) <= _TEMPLATE_FIELDS
+    assert "Luton Bakery Partnerships" not in message["content"]
+
+
+def test_a_refusal_through_the_endpoint_leaves_the_draft_untouched(
+    client: TestClient, campaign_payload: dict[str, object], monkeypatch: Any
+) -> None:
+    campaign, lead = _ready_lead(client, campaign_payload)
+    draft = _batch(client, campaign, lead, _template(client))["drafts"][0]
+    _enable(client)
+    _save_key(client)
+    refusal = _response(stop_reason="refusal")
+    refusal.stop_details = SimpleNamespace(category="general_harms")
+    _fake_anthropic(monkeypatch, refusal, {})
+    response = client.post(
+        f"/api/v1/outreach/drafts/{draft['id']}/polish",
+        json={"subject": "Hello", "body": "Hi there."},
+    )
+    assert response.status_code == 502
+    assert response.json()["code"] == "CLOUD_POLISH_REFUSED"
+    unchanged = client.get(f"/api/v1/outreach/batches/{draft['batch_id']}").json()["drafts"][0]
+    assert unchanged["current_revision"] == draft["current_revision"]
+    assert unchanged["revision_count"] == 1

@@ -74,6 +74,10 @@ class Settings(BaseSettings):
         "xtool creative space.exe",
     )
     campaign_run_inline: bool = False
+    # The private product knowledge pack (ADR-021). Unset, it is looked for beside the database
+    # and then at the repository root, and applied at startup and after each Shopify import.
+    knowledge_pack_path: Path | None = None
+    knowledge_pack_auto_import: bool = True
     cors_origins: tuple[str, ...] = (
         "http://127.0.0.1:1420",
         "http://localhost:1420",

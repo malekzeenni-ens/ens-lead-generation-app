@@ -128,14 +128,18 @@ export function SettingsWorkspace({
 
   async function configureCloudPolish(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    // React clears currentTarget once the handler yields, so hold the element across awaits.
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const key = formValue(form, "cloud-api-key");
     if (key && !(await onConfigureCloudPolish(key))) return;
-    await onSave({
+    const saved = await onSave({
       cloud_polish_enabled: form.has("cloud-polish-enabled"),
       cloud_polish_model: formValue(form, "cloud-polish-model"),
     });
-    event.currentTarget.reset();
+    const keyInput = formElement.elements.namedItem("cloud-api-key");
+    if (keyInput instanceof HTMLInputElement) keyInput.value = "";
+    if (saved) formElement.reset();
   }
 
   async function selectMetaAccount(event: FormEvent<HTMLFormElement>): Promise<void> {

@@ -75,6 +75,20 @@ CSV import was intentionally skipped by user direction. External providers, AI, 
 
 The browser review identified and corrected workspace scroll restoration. This increment changed source, migrations, tests and documentation only; no installer was rebuilt.
 
+## 28 September 2026 — Cloud polish review fixes and automatic knowledge pack
+
+### Delivered
+
+- Fixed the review findings in cloud draft polish: the Settings form no longer throws after saving, a failed polish reports beside its own button, price checks block only a `£` amount, and the Anthropic SDK floor matches the API in use. See the review revision in `CLOUD_DRAFT_POLISH_HANDOVER.md`.
+- The product knowledge pack now loads from disk (`app/domains/catalogue/pack_autoload.py`), so it no longer has to be uploaded by hand. It is found through `ENS_KNOWLEDGE_PACK_PATH`, beside the database, or at the repository root; applied at startup and after each Shopify import when the file or catalogue changed; and never applied over hand-written or AI-run product wording. A broken pack is logged and skipped. ADR-021 carries a dated amendment recording the reversal of "nothing reads it from disk".
+- The test fixture switches the automatic load off so the operator's real pack cannot reach the suite; the pack stays gitignored.
+
+### Verification
+
+- Backend: 185 pytest tests passed, including 5 new loader tests and 6 new cloud polish tests; Ruff and mypy passed.
+- Frontend: 112 Vitest tests passed; ESLint, `tsc -p tsconfig.app.json` and the production build passed.
+- The operator's local pack was validated read-only against the strict parser (110 products, 10 notes, 4 proven fits). It is applied on the next backend start. No installer was rebuilt.
+
 ## 28 September 2026 — Optional cloud draft polish
 
 ### Delivered

@@ -3,7 +3,9 @@ from typing import Annotated, cast
 from fastapi import APIRouter, Query, Request, status
 
 from app.api.dependencies import Authenticated, DatabaseSession
+from app.core.config import Settings
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
+from app.domains.catalogue.pack_autoload import apply_pack_if_changed
 from app.domains.catalogue.schemas import (
     EnrichmentImport,
     EnrichmentImportResult,
@@ -106,7 +108,12 @@ def import_shopify_csv(
     _: Authenticated,
     session: DatabaseSession,
 ) -> ShopifyImportResult:
-    return service.import_shopify(session, data, request.state.correlation_id)
+    result = service.import_shopify(session, data, request.state.correlation_id)
+    # The knowledge pack matches on handle, so re-apply it to the catalogue just imported.
+    apply_pack_if_changed(
+        session, cast(Settings, request.app.state.settings), request.state.correlation_id, service
+    )
+    return result
 
 
 @router.post("/import/enrichment", response_model=EnrichmentImportResult)

@@ -35,6 +35,7 @@ from app.db.session import Database
 from app.domains.automation.manager import CampaignRunManager
 from app.domains.automation.providers import MetaInstagramProvider
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
+from app.domains.catalogue.pack_autoload import apply_pack_if_changed
 from app.domains.system.cloud_polish import CloudPolishConfigurationService
 from app.domains.system.meta import MetaConnectionService
 from app.domains.system.service import SystemService
@@ -88,6 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 workspace_settings.protect_design_software_resources
             )
             campaign_assistant_manager.set_preferred_model(workspace_settings.local_ai_model)
+            apply_pack_if_changed(session, runtime_settings, "startup-knowledge-pack")
         campaign_assistant_manager.start()
         try:
             yield

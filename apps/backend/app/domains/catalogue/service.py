@@ -452,12 +452,16 @@ class CatalogueService:
         session: Session,
         data: EnrichmentImport,
         correlation_id: str,
+        *,
+        keep_ai_wording: bool = False,
     ) -> EnrichmentImportResult:
         """Apply the shipped sales-knowledge pack, matched on Shopify handle.
 
         Idempotent: re-importing the same pack updates in place rather than duplicating.
         Products the operator has edited by hand are left alone, and proven fits arrive
-        unconfirmed so nothing unverified can reach a prospect.
+        unconfirmed so nothing unverified can reach a prospect. `keep_ai_wording` also leaves
+        products enriched by a later AI run alone; the automatic load uses it so re-applying
+        the pack after a catalogue import cannot roll newer wording back to the pack's.
         """
         try:
             pack = EnrichmentPack.model_validate(json.loads(data.content))
@@ -500,6 +504,8 @@ class CatalogueService:
             matched += 1
             if product.enrichment_source == "manual":
                 # The operator's own wording always wins.
+                continue
+            if keep_ai_wording and product.enrichment_source == "ai":
                 continue
             product.summary = enrichment.strip_prices(item.summary)[:400] or product.summary
             product.materials = item.materials or product.materials

@@ -59,6 +59,8 @@ _ELIGIBLE_STAGES = {
     "follow_up_due",
 }
 _TOKEN_PATTERN = re.compile(r"\{\{\s*(\w+)\s*\}\}")
+# A bare "£" is currency style, not a price. ADR-021 blocks an amount, so match a number after it.
+_PRICE_PATTERN = re.compile(r"£\s*\d")
 
 
 def _aware(value: datetime) -> datetime:
@@ -579,17 +581,18 @@ class OutreachService:
             instruction=strip_prices(data.instruction or "") or None,
         )
         message = strip_prices(message)
-        if "£" in message:
+        if _PRICE_PATTERN.search(message):
             raise DomainError(
                 "CLOUD_POLISH_PRICE_BLOCKED",
-                "Price information was removed before sending.",
+                "The draft still contains a price after cleaning, so nothing was sent. "
+                "Remove the price and try again.",
                 status_code=409,
             )
         model = workspace_settings.cloud_polish_model or "claude-sonnet-5"
         result = polish_with_anthropic(api_key=api_key, model=model, user_message=message)
         subject = strip_prices(result.value.subject)
         body = strip_prices(result.value.body)
-        if "£" in f"{subject}\n{body}" and re.search(r"£\s*\d", f"{subject}\n{body}"):
+        if _PRICE_PATTERN.search(f"{subject}\n{body}"):
             raise DomainError(
                 "CLOUD_POLISH_PRICE_BLOCKED",
                 "The cloud response contained a price and was rejected.",

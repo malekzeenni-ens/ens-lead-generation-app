@@ -791,7 +791,8 @@ names, and `strip_prices`. `SEGMENTS` must stay identical to `segments` in
 
 **The pack is gitignored and not in this repository.** It carries client names, quoted-but-not-won
 pipeline and the sales playbook, and this repository is public. It lives on the operator's machine
-and is applied through Catalogue -> Import knowledge; no code path reads it from disk.
+and is applied automatically from disk by `catalogue/pack_autoload.py` at startup and after each
+Shopify import (see ADR-021, amended 28 September 2026). Catalogue -> Import knowledge still works.
 
 ### Two rules that live in code, not in the prompt
 

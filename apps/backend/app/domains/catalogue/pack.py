@@ -1,7 +1,8 @@
 """Shape of `product_enrichment.json`, the operator's sales-knowledge pack.
 
-The pack is a local file the operator chooses to import, not a network payload. It is gitignored and
-never committed, because it carries client names and the sales playbook. It is still parsed
+The pack is a local file, not a network payload: `pack_autoload` applies it from disk, and Catalogue
+-> Import knowledge still accepts an upload. It is gitignored and never committed, because it
+carries client names and the sales playbook. It is still parsed
 strictly: a typo in a hand-edited pack should fail loudly at import rather than quietly put empty
 strings in front of the assistant.
 

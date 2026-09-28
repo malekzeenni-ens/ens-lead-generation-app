@@ -9,7 +9,7 @@
 
 The app can optionally polish the subject and body in one outreach draft using Anthropic. The feature defaults off, requires a key saved in the existing protected `SecretStore`, and runs only after an operator clicks **Polish with cloud AI**. The result replaces editor contents only. The regular draft edit/save/approval path still owns persistence and approval.
 
-The backend sends the brand writing identity, the existing `_REFINE_TASK`, the current subject/body, optional instruction, and the selected lead's `_template_values` context. It does not build or send the workspace assistant snapshot. Prices are stripped before the request and from the response; an outgoing pound sign or a pound amount that survives response stripping is rejected. The Anthropic key is not part of settings, audit data, or API responses.
+The backend sends the brand writing identity, the existing `_REFINE_TASK`, the current subject/body, optional instruction, and the selected lead's `_template_values` context. It does not build or send the workspace assistant snapshot. Prices are stripped before the request and from the response; a pound amount (`£` followed by a digit) that survives stripping is rejected in either direction. A bare `£` is currency style and is allowed. The Anthropic key is not part of settings, audit data, or API responses.
 
 ## Code map
 
@@ -60,3 +60,15 @@ The Python SDK dependency is declared in `apps/backend/pyproject.toml` and locke
 4. Choose the provider model deliberately in Settings. Sonnet 5 is the default/recommended writing model; Haiku 4.5 is the lower-cost option. Verify provider availability and the operator's own account access before use.
 
 No real key was used and no live Anthropic call was made in the implementation or test runs. No installer was rebuilt.
+
+## Review revision — 28 September 2026
+
+A review of the first implementation against the specification found and fixed:
+
+- The Settings cloud-polish form read `event.currentTarget` after awaiting, which React has already cleared; saving threw and left the key in the input. It now holds the form element and always clears the key field.
+- Polish ran through `App.tsx`'s `perform()`, which swallows errors into the global banner, so the button's own error line (spec §7) never appeared. Polish now calls `api.polishOutreachDraft` directly, exactly as Refine does, and is no longer on `WorkspaceActions`: it mutates nothing.
+- The outbound check rejected any `£`, including currency style with no amount, with a message claiming the price had been removed. Both directions now block only `£` followed by a digit.
+- `anthropic>=0.52` allowed SDK versions without `output_config`. The floor is now `>=0.125`, the locked and tested version.
+- Test gaps closed: log non-disclosure on the real client path (the earlier check mocked out the only log call and ran below caplog's level), `max_tokens` truncation, the selected model reaching the call, the request carrying only the draft, instruction and one lead's template fields, refusal through the endpoint leaving the draft unchanged, a price-free system prompt, and the frontend error line.
+
+Verification after the revision: backend 185 pytest tests, Ruff and mypy passed; frontend 112 Vitest tests, ESLint, `tsc -p tsconfig.app.json` and the production build passed.
