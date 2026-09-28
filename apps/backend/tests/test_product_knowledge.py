@@ -2,6 +2,10 @@
 
 Pricing never reaches a model or an email, and an unconfirmed job never carries its client's
 name. Both are enforced in code rather than asked for in a prompt, so both are tested here.
+
+Every client name below is invented. This repository is public, and the real ones live only in
+the operator's gitignored knowledge pack - putting one in a test would defeat the rule the test
+exists to enforce.
 """
 
 from __future__ import annotations
