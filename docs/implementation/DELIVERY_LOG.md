@@ -75,6 +75,23 @@ CSV import was intentionally skipped by user direction. External providers, AI, 
 
 The browser review identified and corrected workspace scroll restoration. This increment changed source, migrations, tests and documentation only; no installer was rebuilt.
 
+## 28 September 2026 — Installer rebuilt
+
+### Delivered
+
+- The operator's Desktop and Start Menu shortcuts open the installed build in `%LOCALAPPDATA%\Etch N Shine Lead Generation`, which dated from 22 July. Its bundled backend exited at startup with `Can't locate revision identified by '0014_backup_manifest_assistant_files'`, because development runs had migrated the shared database past the migrations it knew. The desktop host closed without showing why. The launch fix below was not the cause for the installed app; the stale build was.
+- Rebuilt the NSIS installer from `f11f683` with `npm run desktop:build`: `artifacts/Etch N Shine Lead Generation_0.1.0_x64-setup.exe` (gitignored).
+- Placed a copy of the knowledge pack beside the database in `%LOCALAPPDATA%\EtchNShine\LeadGeneration`, where the installed backend looks for it; the repository-root copy is only visible to development runs.
+
+### Verification
+
+- The newly bundled backend, run against a copy of the operator's database with the pack beside it, listened after about 3 s, applied migrations 0015 and 0016, applied the pack (104 matched, 10 notes, 4 fits) and returned 200 on every startup endpoint. The bundle contains the Anthropic SDK, `pack_autoload` and `cloud_client`.
+- The real database is untouched until the operator installs and launches the new build.
+
+### Follow-up
+
+- Any future migration makes an older installed build crash the same way against a database a newer build has migrated. Rebuild and reinstall after a migration lands, or make the desktop host show the backend's startup error instead of exiting silently.
+
 ## 28 September 2026 — Desktop launch fix
 
 ### Delivered
