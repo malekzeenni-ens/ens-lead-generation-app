@@ -787,7 +787,11 @@ sources close that gap, all ranked through the same retrieval and all owned by t
 `app/domains/catalogue/enrichment.py` holds the derivation rules and the shared vocabulary: the
 16-trade `SEGMENTS` list, `TAG_SEGMENT_MAP` from the store's real tags, the approved material
 names, and `strip_prices`. `SEGMENTS` must stay identical to `segments` in
-`product_enrichment.json`; a test asserts it.
+`product_enrichment.json`; a test asserts it, and skips when the pack is absent.
+
+**The pack is gitignored and not in this repository.** It carries client names, quoted-but-not-won
+pipeline and the sales playbook, and this repository is public. It lives on the operator's machine
+and is applied through Catalogue -> Import knowledge; no code path reads it from disk.
 
 ### Two rules that live in code, not in the prompt
 

@@ -129,3 +129,11 @@ Open `http://127.0.0.1:1420`. The server refuses a non-loopback `ENS_HOST`, and 
 No automatic seed command is required. Create campaigns and manual leads through the application so the same validation, evidence, stage, and audit paths are exercised. Lead CSV loading remains intentionally outside the current increment.
 
 Catalogue products can be added manually or loaded from a Shopify product export through **Catalogue → Upload Shopify listing CSV**. A disposable example is available at `docs/testing/shopify-products-sample.csv`. The browser reads the selected file locally; the API stores only normalised editable products, not the raw CSV.
+
+## Product knowledge pack
+
+`product_enrichment.json` gives the assistant the sales knowledge the Shopify export cannot: what each product is for, which trades buy it, and jobs already won or quoted. Import it through **Catalogue → Import catalogue → Import knowledge**, after the Shopify CSV, since it matches on product handle.
+
+**It is deliberately not in this repository.** It carries client names, pipeline that has been quoted but not won, and the B2B sales playbook, and this repository is public — so `/product_enrichment*.json` is gitignored. Keep the file with the other private business assets, not in the working tree of a public repo, and re-import it after a fresh checkout or a machine change.
+
+Nothing in the application reads it from disk. The backend only ever sees the bytes the browser uploads, exactly as with the Shopify CSV, and the test suite passes without it (one test that compares the trade list against the pack skips when it is absent).

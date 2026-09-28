@@ -4,6 +4,14 @@
 - **Context:** After ADR-020 the assistant knew the brand voice but not the products, so it could not answer "which products suit a physio clinic?" with anything useful. Three measured causes. The Shopify export reaches the model almost empty: `Type` is filled on 22 of 840 rows, so `category` fell back to a taxonomy path, and no listing uses the `segment:` or `use-case:` tag prefixes the importer looked for, so `target_segments` and `example_use_cases` were empty for every product while `description` was imported but never sent. Pricing leaked into both the assistant snapshot and the `{{products}}` email token, though pricing is quoted per job. And products missing from a newer export stayed active forever.
 - **Decision:** Derive sales fields from the CSV, import the shipped `product_enrichment.json` pack on top, rank products per request, and add a knowledge layer of trade notes and past jobs. Retire products absent from a newer export. Allow a larger local model to be chosen from Settings.
 
+## The pack is not in this repository
+
+`product_enrichment.json` carries client names, jobs quoted but not won, and the B2B sales
+playbook. This repository is public, so the pack is gitignored and lives only on the operator's
+machine; it is loaded through Catalogue -> Import knowledge at runtime. Nothing in the application
+reads it from disk, and the test suite passes without it - the one test that compares the trade
+list against the pack skips when it is absent. Keep it that way.
+
 ## Two rules enforced in code, not in the prompt
 
 A rule the data cannot break is worth more than a rule the model is asked to follow, so both of these live in `assistant/context.py` rather than in prompt text:

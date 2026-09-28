@@ -36,5 +36,10 @@ apps/desktop/src-tauri/resources/ens-backend/*
 # Real Shopify exports contain cost/pricing data and must never be committed.
 /products_export*.csv
 
+# The product knowledge pack carries client names, quoted-but-not-won pipeline and the B2B
+# sales playbook. This repository is public, so the pack stays on the operator's machine and is
+# loaded through Catalogue -> Import knowledge at runtime. See docs/operations/LOCAL_SETUP.md.
+/product_enrichment*.json
+
 # Local MCP/tool caches, not project content.
 .serena/
