@@ -35,3 +35,6 @@ apps/desktop/src-tauri/resources/ens-backend/*
 
 # Real Shopify exports contain cost/pricing data and must never be committed.
 /products_export*.csv
+
+# Local MCP/tool caches, not project content.
+.serena/
