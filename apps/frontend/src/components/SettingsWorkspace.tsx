@@ -50,6 +50,16 @@ function formatBytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Mirrors ALLOWED_OLLAMA_MODELS in apps/backend/app/core/config.py. The backend rejects
+// anything else, so both lists have to change together.
+const LOCAL_AI_MODELS = [
+  { id: "llama3.2:3b", label: "llama3.2:3b - fastest, lightest" },
+  { id: "llama3.1:8b", label: "llama3.1:8b - better writing" },
+  { id: "qwen3:8b", label: "qwen3:8b - better instruction following" },
+  { id: "gemma3:12b", label: "gemma3:12b - strongest, slowest" },
+] as const;
+
+
 export function SettingsWorkspace({
   settings,
   diagnostics,
@@ -83,6 +93,7 @@ export function SettingsWorkspace({
       weekly_outreach_global_limit: Number(formValue(form, "weekly-outreach-limit")),
       local_campaign_assistant_enabled: form.has("local-campaign-assistant-enabled"),
       protect_design_software_resources: form.has("protect-design-software-resources"),
+      local_ai_model: formValue(form, "local-ai-model"),
     });
   }
 
@@ -399,6 +410,22 @@ export function SettingsWorkspace({
                     <strong>Protect LightBurn and xTool resources</strong>
                     <small>Uses reduced model limits only while either design application is running; normal local performance resumes afterward.</small>
                   </span>
+                </label>
+                <label>
+                  Local AI model
+                  <select name="local-ai-model" defaultValue={settings.local_ai_model}>
+                    <option value="">Use the configured default (llama3.2:3b)</option>
+                    {LOCAL_AI_MODELS.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.label}
+                      </option>
+                    ))}
+                  </select>
+                  <small className="form-hint">
+                    A larger model writes better outreach and follows the product knowledge more
+                    closely, but needs pulling with <code>ollama pull</code> first and answers more
+                    slowly. The small model is always used while LightBurn or xTool is running.
+                  </small>
                 </label>
                 <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save settings</button>
               </form>

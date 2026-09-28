@@ -343,6 +343,8 @@ export interface OperationsSummary {
   products: number;
   scored_leads: number;
   shortlisted_this_week: number;
+  average_draft_edit_ratio: number | null;
+  approved_drafts_measured: number;
   pipeline: Record<string, number>;
 }
 
@@ -354,6 +356,7 @@ export interface WorkspaceSettings {
   weekly_outreach_global_limit: number;
   local_campaign_assistant_enabled: boolean;
   protect_design_software_resources: boolean;
+  local_ai_model: string;
 }
 
 export interface Diagnostics {
@@ -416,6 +419,17 @@ export interface Product {
   sample_eligible: boolean;
   source: string;
   variant_count: number;
+  summary: string | null;
+  materials: string[];
+  occasions: string[];
+  product_url: string | null;
+  b2b_relevant: boolean;
+  bulk_ready: boolean;
+  b2b_notes: string | null;
+  custom_options: string | null;
+  enrichment_source: string;
+  stale_enrichment: boolean;
+  last_seen_import_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -518,13 +532,78 @@ export interface OutreachBatch {
   updated_at: string;
 }
 
+export interface ImportIssue {
+  handle: string | null;
+  message: string;
+}
+
 export interface ShopifyImportResult {
   filename: string;
   rows_read: number;
   products_created: number;
   products_updated: number;
   products_skipped: number;
-  issues: Array<{ handle: string | null; message: string }>;
+  products_deactivated: number;
+  issues: ImportIssue[];
+}
+
+export interface EnrichmentImportResult {
+  filename: string;
+  products_matched: number;
+  products_enriched: number;
+  products_unmatched: number;
+  notes_created: number;
+  notes_updated: number;
+  fits_created: number;
+  fits_skipped: number;
+  products_awaiting_enrichment: number;
+  fits_awaiting_confirmation: number;
+  issues: ImportIssue[];
+}
+
+export interface EnrichmentStatus {
+  catalogue_imported_at: string | null;
+  catalogue_stale: boolean;
+  products_total: number;
+  products_enriched: number;
+  products_awaiting_enrichment: number;
+  products_stale_enrichment: number;
+  knowledge_notes: number;
+  proven_fits: number;
+  fits_awaiting_confirmation: number;
+}
+
+export interface EnrichmentRunResult {
+  products_considered: number;
+  products_enriched: number;
+  products_failed: number;
+  notes_refreshed: number;
+  products_awaiting_enrichment: number;
+  issues: ImportIssue[];
+}
+
+export interface KnowledgeNote {
+  id: string;
+  title: string;
+  segments: string[];
+  product_handles: string[];
+  body: string;
+  source: string;
+  manual: boolean;
+  updated_at: string;
+}
+
+export interface ProvenFit {
+  id: string;
+  segment: string;
+  product_handles: string[];
+  use: string;
+  outcome: string;
+  client_label: string;
+  client_name: string | null;
+  share_client_name: boolean;
+  status: string;
+  created_at: string;
 }
 
 export interface ScoringWeights {

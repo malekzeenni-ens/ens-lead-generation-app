@@ -14,7 +14,9 @@ import type {
   CampaignDraft,
   CampaignRun,
   Diagnostics,
+  EnrichmentStatus,
   InstagramProfilePreview,
+  KnowledgeNote,
   Lead,
   MetaConnection,
   OperationsSummary,
@@ -23,6 +25,7 @@ import type {
   OutreachLeadOption,
   Product,
   ProductFamily,
+  ProvenFit,
   ScoreRun,
   ScoringProfile,
   ShopifyImportResult,
@@ -94,6 +97,13 @@ vi.mock("./api", () => {
       createProduct: vi.fn(),
       updateProduct: vi.fn(),
       importShopifyCsv: vi.fn(),
+  importEnrichment: vi.fn(),
+  enrichmentStatus: vi.fn(),
+  runEnrichment: vi.fn(),
+  knowledgeNotes: vi.fn(),
+  provenFits: vi.fn(),
+  updateKnowledgeNote: vi.fn(),
+  updateProvenFit: vi.fn(),
       updateScoringProfile: vi.fn(),
       calculateScore: vi.fn(),
       overrideScore: vi.fn(),
@@ -241,6 +251,8 @@ const summary: OperationsSummary = {
   products: 1,
   scored_leads: 1,
   shortlisted_this_week: 1,
+  average_draft_edit_ratio: null,
+  approved_drafts_measured: 0,
   pipeline: { new: 1 },
 };
 
@@ -252,6 +264,7 @@ const settings: WorkspaceSettings = {
   weekly_outreach_global_limit: 20,
   local_campaign_assistant_enabled: true,
   protect_design_software_resources: true,
+  local_ai_model: "",
 };
 
 const assistantDraft: CampaignDraft = {
@@ -352,6 +365,17 @@ const product: Product = {
   variant_count: 1,
   created_at: "2026-07-19T10:00:00Z",
   updated_at: "2026-07-19T10:00:00Z",
+  summary: null,
+  materials: [],
+  occasions: [],
+  product_url: null,
+  b2b_relevant: false,
+  bulk_ready: false,
+  b2b_notes: null,
+  custom_options: null,
+  enrichment_source: "",
+  stale_enrichment: false,
+  last_seen_import_at: null,
 };
 
 const template: Template = {
@@ -616,7 +640,44 @@ const importResult: ShopifyImportResult = {
   products_created: 1,
   products_updated: 0,
   products_skipped: 0,
+  products_deactivated: 0,
   issues: [],
+};
+
+const enrichmentStatus: EnrichmentStatus = {
+  catalogue_imported_at: "2026-09-27T10:00:00+00:00",
+  catalogue_stale: false,
+  products_total: 1,
+  products_enriched: 1,
+  products_awaiting_enrichment: 0,
+  products_stale_enrichment: 0,
+  knowledge_notes: 1,
+  proven_fits: 1,
+  fits_awaiting_confirmation: 1,
+};
+
+const knowledgeNote: KnowledgeNote = {
+  id: "premises-signage",
+  title: "Premises signage for gyms",
+  segments: ["Gyms, studios and sports clubs"],
+  product_handles: [],
+  body: "Who buys: owners fitting out a premises.",
+  source: "seed",
+  manual: false,
+  updated_at: "2026-09-27T10:00:00+00:00",
+};
+
+const provenFit: ProvenFit = {
+  id: "fit-1",
+  segment: "Gyms, studios and sports clubs",
+  product_handles: [],
+  use: "A full set of acrylic door signs.",
+  outcome: "Delivered.",
+  client_label: "a gym in Bedford",
+  client_name: "Example Grappling Club",
+  share_client_name: false,
+  status: "please_confirm",
+  created_at: "2026-09-27T10:00:00+00:00",
 };
 
 describe("local operating workbench", () => {
@@ -683,6 +744,9 @@ describe("local operating workbench", () => {
     vi.mocked(api.createProduct).mockResolvedValue(product);
     vi.mocked(api.updateProduct).mockResolvedValue(product);
     vi.mocked(api.importShopifyCsv).mockResolvedValue(importResult);
+    vi.mocked(api.enrichmentStatus).mockResolvedValue(enrichmentStatus);
+    vi.mocked(api.knowledgeNotes).mockResolvedValue([knowledgeNote]);
+    vi.mocked(api.provenFits).mockResolvedValue([provenFit]);
     vi.mocked(api.updateScoringProfile).mockResolvedValue(scoringProfile);
     vi.mocked(api.calculateScore).mockResolvedValue(scoreRun);
     vi.mocked(api.overrideScore).mockResolvedValue(scoreRun);
@@ -1979,6 +2043,122 @@ describe("local operating workbench", () => {
       ),
     );
     expect(await screen.findByText("Shopify CSV processed")).toBeInTheDocument();
+  });
+
+  it("imports the product knowledge pack from the catalogue screen", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.importEnrichment).mockResolvedValue({
+      filename: "product_enrichment.json",
+      products_matched: 1,
+      products_enriched: 1,
+      products_unmatched: 0,
+      notes_created: 2,
+      notes_updated: 0,
+      fits_created: 1,
+      fits_skipped: 0,
+      products_awaiting_enrichment: 0,
+      fits_awaiting_confirmation: 1,
+      issues: [],
+    });
+
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    await user.click(screen.getByRole("tab", { name: "Import catalogue" }));
+
+    const file = new File(['{"products":[]}'], "product_enrichment.json", {
+      type: "application/json",
+    });
+    await user.upload(screen.getByLabelText("Product knowledge file"), file);
+    const button = screen.getByRole("button", { name: "Import knowledge" });
+    const form = button.closest("form");
+    if (!form) throw new Error("Knowledge import form is missing.");
+    fireEvent.submit(form);
+
+    await waitFor(() =>
+      expect(api.importEnrichment).toHaveBeenCalledWith(
+        "product_enrichment.json",
+        expect.stringContaining("products"),
+      ),
+    );
+    expect(await screen.findByText("Product knowledge applied")).toBeInTheDocument();
+    // The operator has to be told that a past job is not usable in an email yet.
+    expect(
+      await screen.findByText(/need confirming in the Knowledge tab/),
+    ).toBeInTheDocument();
+  });
+
+  it("shows when the catalogue was last imported", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    await user.click(screen.getByRole("tab", { name: "Import catalogue" }));
+    expect(await screen.findByText(/Catalogue last imported/)).toBeInTheDocument();
+  });
+
+  it("confirms a past job before it can be used in outreach", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.updateProvenFit).mockResolvedValue({ ...provenFit, status: "confirmed" });
+
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    await user.click(screen.getByRole("tab", { name: /Knowledge/ }));
+
+    // Until it is confirmed the assistant may only use it as advice.
+    expect(await screen.findByText("Needs confirming — advice only")).toBeInTheDocument();
+    // The client name is recorded but withheld, and the screen says so.
+    expect(screen.getByText(/withheld/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Confirm this job" }));
+    await waitFor(() =>
+      expect(api.updateProvenFit).toHaveBeenCalledWith("fit-1", { status: "confirmed" }),
+    );
+  });
+
+  it("marks a knowledge note as the operator's own when edited", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.updateKnowledgeNote).mockResolvedValue({
+      ...knowledgeNote,
+      manual: true,
+      body: "My own note.",
+    });
+
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    await user.click(screen.getByRole("tab", { name: /Knowledge/ }));
+    await user.click(screen.getByText("Edit note"));
+
+    const body = screen.getByLabelText("Note");
+    await user.clear(body);
+    await user.type(body, "My own note.");
+    fireEvent.submit(screen.getByRole("button", { name: /Save note/ }).closest("form")!);
+
+    await waitFor(() =>
+      expect(api.updateKnowledgeNote).toHaveBeenCalledWith("premises-signage", {
+        title: "Premises signage for gyms",
+        body: "My own note.",
+      }),
+    );
+  });
+
+  it("lets the local AI model be chosen in Settings", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /Settings/ }));
+    await user.click(screen.getByRole("tab", { name: "Defaults" }));
+
+    await user.selectOptions(screen.getByLabelText(/Local AI model/), "llama3.1:8b");
+    fireEvent.submit(screen.getByRole("button", { name: /Save settings/ }).closest("form")!);
+
+    await waitFor(() =>
+      expect(api.updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ local_ai_model: "llama3.1:8b" }),
+      ),
+    );
   });
 
   it("paginates the catalogue and resets pagination when filtering", async () => {

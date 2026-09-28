@@ -7,6 +7,7 @@ import {
   MailCheck,
   Megaphone,
   PackageCheck,
+  PencilLine,
   Play,
   RefreshCw,
   ShieldCheck,
@@ -537,6 +538,21 @@ export function DashboardWorkspace({
         <MetricCard label="Leads" value={summary?.leads ?? leads.length} detail="Locally stored" icon={Users} onSelect={onOpenLeads} />
         <MetricCard label="Active products" value={summary?.products ?? 0} detail="Matching catalogue" icon={PackageCheck} onSelect={onOpenCatalogue} />
         <MetricCard label="Open follow-ups" value={summary?.open_follow_ups ?? 0} detail={`${summary?.due_this_week ?? 0} due soon`} icon={CirclePause} onSelect={onOpenLeads} />
+        <MetricCard
+          label="Draft edit rate"
+          value={
+            summary?.average_draft_edit_ratio === null ||
+            summary?.average_draft_edit_ratio === undefined
+              ? "No data"
+              : `${Math.round(summary.average_draft_edit_ratio * 100)}%`
+          }
+          detail={
+            summary?.approved_drafts_measured
+              ? `How much you rewrite before approving, over ${summary.approved_drafts_measured} drafts. Under 25% means the local model is doing the job.`
+              : "Approve an outreach draft to start measuring."
+          }
+          icon={PencilLine}
+        />
       </section>
     </>
   );

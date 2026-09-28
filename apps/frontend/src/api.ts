@@ -5,8 +5,8 @@ import type {
   AssistantAttachmentInput,
   AssistantContextSelection,
   AssistantConversation,
-  BackupResult,
   AutomationCapabilities,
+  BackupResult,
   Campaign,
   CampaignAssistantStatus,
   CampaignDeleteResult,
@@ -14,13 +14,17 @@ import type {
   CampaignDraftApprovalResult,
   CampaignDraftCampaign,
   CampaignRun,
-  DiscoveryCandidate,
   Diagnostics,
+  DiscoveryCandidate,
+  EnrichmentImportResult,
+  EnrichmentRunResult,
+  EnrichmentStatus,
+  InstagramProfilePreview,
+  KnowledgeNote,
   Lead,
   LeadAutofillResponse,
   LeadBriefing,
   LeadFilterTranslateResult,
-  InstagramProfilePreview,
   MetaAuthorizationStart,
   MetaConnection,
   OperationsSummary,
@@ -28,10 +32,11 @@ import type {
   OutreachDraft,
   OutreachDraftRefineInput,
   OutreachDraftRefineResult,
-  OutreachZohoHandoff,
   OutreachLeadOption,
+  OutreachZohoHandoff,
   Product,
   ProductFamily,
+  ProvenFit,
   ScoreRun,
   ScoringProfile,
   ScoringWeights,
@@ -241,6 +246,25 @@ export interface ProductInput {
   active: boolean;
   pricing_guidance?: string | null;
   sample_eligible: boolean;
+  summary?: string | null;
+  materials?: string[];
+  occasions?: string[];
+  b2b_relevant?: boolean;
+  bulk_ready?: boolean;
+  b2b_notes?: string | null;
+  custom_options?: string | null;
+}
+
+export interface KnowledgeNoteUpdate {
+  title?: string;
+  body?: string;
+  segments?: string[];
+}
+
+export interface ProvenFitUpdate {
+  status?: string;
+  share_client_name?: boolean;
+  client_label?: string;
 }
 
 export type ProductUpdate = Partial<ProductInput>;
@@ -467,6 +491,23 @@ export const api = {
       "/catalogue/import/shopify",
       jsonBody("POST", { filename, content }),
     ),
+  importEnrichment: (filename: string, content: string) =>
+    request<EnrichmentImportResult>(
+      "/catalogue/import/enrichment",
+      jsonBody("POST", { filename, content }),
+    ),
+  enrichmentStatus: () => request<EnrichmentStatus>("/catalogue/enrichment/status"),
+  runEnrichment: (includeStale: boolean) =>
+    request<EnrichmentRunResult>(
+      "/catalogue/enrichment/run",
+      jsonBody("POST", { include_stale: includeStale }),
+    ),
+  knowledgeNotes: () => request<KnowledgeNote[]>("/catalogue/knowledge-notes"),
+  updateKnowledgeNote: (noteId: string, data: KnowledgeNoteUpdate) =>
+    request<KnowledgeNote>(`/catalogue/knowledge-notes/${noteId}`, jsonBody("PATCH", data)),
+  provenFits: () => request<ProvenFit[]>("/catalogue/proven-fits"),
+  updateProvenFit: (fitId: string, data: ProvenFitUpdate) =>
+    request<ProvenFit>(`/catalogue/proven-fits/${fitId}`, jsonBody("PATCH", data)),
   productFamilies: () => request<ProductFamily[]>("/catalogue/product-families"),
   createProductFamily: (data: ProductFamilyInput) =>
     request<ProductFamily>("/catalogue/product-families", jsonBody("POST", data)),

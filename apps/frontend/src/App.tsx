@@ -34,6 +34,8 @@ import {
   type ProductFamilyUpdate,
   type ProductInput,
   type ProductUpdate,
+  type KnowledgeNoteUpdate,
+  type ProvenFitUpdate,
   type SocialCandidateInput,
   type TemplateInput,
   type TemplateUpdate,
@@ -53,13 +55,17 @@ import { BAKERY_SEGMENT, type WorkspaceSection } from "./domain";
 import { mailtoUrl } from "./contact";
 import { WorkspaceActionsContext, type WorkspaceActions } from "./WorkspaceActionsContext";
 import type {
-  AutomationCapabilities,
   AssistantContextSelection,
+  AutomationCapabilities,
   BackupResult,
   Campaign,
   CampaignRun,
   Diagnostics,
+  EnrichmentImportResult,
+  EnrichmentRunResult,
+  EnrichmentStatus,
   InstagramProfilePreview,
+  KnowledgeNote,
   Lead,
   MetaConnection,
   OperationsSummary,
@@ -67,6 +73,7 @@ import type {
   OutreachLeadOption,
   Product,
   ProductFamily,
+  ProvenFit,
   ScoreRun,
   ScoringProfile,
   ScoringWeights,
@@ -149,6 +156,7 @@ type RefreshDomain =
   | "summary"
   | "templates"
   | "productFamilies"
+  | "knowledge"
   | "outreachLeadOptions"
   | "outreachBatches";
 
@@ -209,6 +217,9 @@ export default function App() {
   const [productFamilies, setProductFamilies] = useState<ProductFamily[]>([]);
   const [outreachLeadOptions, setOutreachLeadOptions] = useState<OutreachLeadOption[]>([]);
   const [outreachBatches, setOutreachBatches] = useState<OutreachBatch[]>([]);
+  const [enrichmentStatus, setEnrichmentStatus] = useState<EnrichmentStatus | null>(null);
+  const [knowledgeNotes, setKnowledgeNotes] = useState<KnowledgeNote[]>([]);
+  const [provenFits, setProvenFits] = useState<ProvenFit[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -285,6 +296,14 @@ export default function App() {
       setSelectedLeadId((current) =>
         current && leadResult.some((lead) => lead.id === current) ? current : (leadResult[0]?.id ?? null),
       );
+      const [enrichmentResult, noteResult, fitResult] = await Promise.all([
+        api.enrichmentStatus(),
+        api.knowledgeNotes(),
+        api.provenFits(),
+      ]);
+      setEnrichmentStatus(enrichmentResult);
+      setKnowledgeNotes(noteResult);
+      setProvenFits(fitResult);
       setError(null);
     } catch (caught) {
       setHealth("unavailable");
@@ -317,6 +336,16 @@ export default function App() {
     productFamilies: async () => setProductFamilies(await api.productFamilies()),
     outreachLeadOptions: async () => setOutreachLeadOptions(await api.outreachLeadOptions()),
     outreachBatches: async () => setOutreachBatches(await api.outreachBatches()),
+    knowledge: async () => {
+      const [status, notes, fits] = await Promise.all([
+        api.enrichmentStatus(),
+        api.knowledgeNotes(),
+        api.provenFits(),
+      ]);
+      setEnrichmentStatus(status);
+      setKnowledgeNotes(notes);
+      setProvenFits(fits);
+    },
   };
 
   async function refreshDomains(domains: RefreshDomain[]): Promise<void> {
@@ -906,6 +935,46 @@ export default function App() {
     );
   }
 
+  async function importEnrichment(
+    filename: string,
+    content: string,
+  ): Promise<EnrichmentImportResult | null> {
+    return perform(
+      () => api.importEnrichment(filename, content),
+      "Product knowledge imported and matched by product handle.",
+      ["products", "knowledge", "summary"],
+    );
+  }
+
+  async function runEnrichment(includeStale: boolean): Promise<EnrichmentRunResult | null> {
+    return perform(
+      () => api.runEnrichment(includeStale),
+      "Pending products enriched with the local model.",
+      ["products", "knowledge"],
+    );
+  }
+
+  async function updateKnowledgeNote(
+    noteId: string,
+    data: KnowledgeNoteUpdate,
+  ): Promise<boolean> {
+    return (
+      (await perform(
+        () => api.updateKnowledgeNote(noteId, data),
+        "Knowledge note saved.",
+        ["knowledge"],
+      )) !== null
+    );
+  }
+
+  async function updateProvenFit(fitId: string, data: ProvenFitUpdate): Promise<boolean> {
+    return (
+      (await perform(() => api.updateProvenFit(fitId, data), "Proven fit updated.", [
+        "knowledge",
+      ])) !== null
+    );
+  }
+
   async function createProduct(data: ProductInput): Promise<boolean> {
     return (
       (await perform(() => api.createProduct(data), "Catalogue product added.", [
@@ -1238,6 +1307,10 @@ export default function App() {
     createProduct,
     updateProduct,
     importShopifyCsv,
+    importEnrichment,
+    runEnrichment,
+    updateKnowledgeNote,
+    updateProvenFit,
     updateScoringProfile,
     generateShortlist,
     shortlistAction,
@@ -1317,6 +1390,9 @@ export default function App() {
         products={products}
         scoringProfile={scoringProfile}
         productFamilies={productFamilies}
+        enrichmentStatus={enrichmentStatus}
+        knowledgeNotes={knowledgeNotes}
+        provenFits={provenFits}
       />
     ),
     templates: (

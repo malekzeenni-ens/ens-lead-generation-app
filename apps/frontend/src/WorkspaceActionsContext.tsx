@@ -4,6 +4,7 @@ import type {
   CampaignInput,
   CampaignRunProvider,
   CampaignUpdate,
+  KnowledgeNoteUpdate,
   LeadBulkUpdateInput,
   LeadInput,
   LeadUpdate,
@@ -13,6 +14,7 @@ import type {
   ProductFamilyUpdate,
   ProductInput,
   ProductUpdate,
+  ProvenFitUpdate,
   SocialCandidateInput,
   TemplateInput,
   TemplateUpdate,
@@ -21,6 +23,8 @@ import type {
   AssistantContextSelection,
   BackupResult,
   CampaignDraftApprovalResult,
+  EnrichmentImportResult,
+  EnrichmentRunResult,
   InstagramProfilePreview,
   ScoringWeights,
   ShopifyImportResult,
@@ -86,6 +90,13 @@ export interface WorkspaceActions {
   createProduct: (data: ProductInput) => Promise<boolean>;
   updateProduct: (productId: string, data: ProductUpdate) => Promise<boolean>;
   importShopifyCsv: (filename: string, content: string) => Promise<ShopifyImportResult | null>;
+  importEnrichment: (
+    filename: string,
+    content: string,
+  ) => Promise<EnrichmentImportResult | null>;
+  runEnrichment: (includeStale: boolean) => Promise<EnrichmentRunResult | null>;
+  updateKnowledgeNote: (noteId: string, data: KnowledgeNoteUpdate) => Promise<boolean>;
+  updateProvenFit: (fitId: string, data: ProvenFitUpdate) => Promise<boolean>;
   updateScoringProfile: (name: string, weights: ScoringWeights) => Promise<boolean>;
   generateShortlist: (campaignId: string, weekStart: string, size: number) => Promise<boolean>;
   shortlistAction: (

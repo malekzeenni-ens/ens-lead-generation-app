@@ -1,20 +1,27 @@
 import {
+  BookOpen,
   FileSpreadsheet,
   Layers,
   PackagePlus,
   Save,
   Search,
   SlidersHorizontal,
+  Sparkles,
   Upload,
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ProductInput } from "../api";
-import { humanize } from "../domain";
+import { formatDate, humanize } from "../domain";
 import { usePagination } from "../pagination";
 import type {
+  EnrichmentImportResult,
+  EnrichmentRunResult,
+  EnrichmentStatus,
+  KnowledgeNote,
   Product,
   ProductFamily,
+  ProvenFit,
   ScoringProfile,
   ScoringWeights,
   ShopifyImportResult,
@@ -35,6 +42,9 @@ interface CatalogueWorkspaceProps {
   products: Product[];
   scoringProfile: ScoringProfile | null;
   productFamilies: ProductFamily[];
+  enrichmentStatus: EnrichmentStatus | null;
+  knowledgeNotes: KnowledgeNote[];
+  provenFits: ProvenFit[];
 }
 
 interface ProductPickerFieldsProps {
@@ -120,6 +130,13 @@ function productFromForm(form: FormData): ProductInput {
     pricing_guidance: value(form, "pricing-guidance") || null,
     active: form.get("active") === "on",
     sample_eligible: form.get("sample-eligible") === "on",
+    summary: value(form, "summary") || null,
+    materials: list(value(form, "materials")),
+    occasions: list(value(form, "occasions")),
+    b2b_relevant: form.get("b2b-relevant") === "on",
+    bulk_ready: form.get("bulk-ready") === "on",
+    b2b_notes: value(form, "b2b-notes") || null,
+    custom_options: value(form, "custom-options") || null,
   };
 }
 
@@ -151,11 +168,18 @@ export function CatalogueWorkspace({
   products,
   scoringProfile,
   productFamilies,
+  enrichmentStatus,
+  knowledgeNotes,
+  provenFits,
 }: CatalogueWorkspaceProps) {
   const {
     loading,
     busy,
     importShopifyCsv: onImport,
+    importEnrichment: onImportEnrichment,
+    runEnrichment: onRunEnrichment,
+    updateKnowledgeNote: onUpdateNote,
+    updateProvenFit: onUpdateFit,
     createProduct: onCreate,
     updateProduct: onUpdate,
     updateScoringProfile: onUpdateProfile,
@@ -168,6 +192,11 @@ export function CatalogueWorkspace({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ShopifyImportResult | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [knowledgeFile, setKnowledgeFile] = useState<File | null>(null);
+  const [knowledgeResult, setKnowledgeResult] = useState<EnrichmentImportResult | null>(null);
+  const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
+  const [enrichResult, setEnrichResult] = useState<EnrichmentRunResult | null>(null);
+  const [includeStale, setIncludeStale] = useState(false);
   const weightFormRef = useRef<HTMLFormElement>(null);
   const [weightTotal, setWeightTotal] = useState(0);
 
@@ -216,6 +245,39 @@ export function CatalogueWorkspace({
     }
   }
 
+  async function submitKnowledgeImport(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!knowledgeFile) return;
+    if (knowledgeFile.size > 5_000_000) {
+      setKnowledgeError("Choose a knowledge file smaller than 5 MB.");
+      return;
+    }
+    setKnowledgeError(null);
+    try {
+      const result = await onImportEnrichment(
+        knowledgeFile.name,
+        await readFileText(knowledgeFile),
+      );
+      if (result) setKnowledgeResult(result);
+    } catch (error) {
+      setKnowledgeError(
+        error instanceof Error ? error.message : "The selected file could not be read.",
+      );
+    }
+  }
+
+  async function startEnrichment(): Promise<void> {
+    const result = await onRunEnrichment(includeStale);
+    if (result) setEnrichResult(result);
+  }
+
+  async function saveNote(noteId: string, form: FormData): Promise<void> {
+    await onUpdateNote(noteId, {
+      title: value(form, "note-title"),
+      body: value(form, "note-body"),
+    });
+  }
+
   async function submitProduct(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -259,6 +321,7 @@ export function CatalogueWorkspace({
           { id: "products", label: "Products", count: products.length },
           { id: "create", label: "Add product" },
           { id: "import", label: "Import catalogue" },
+          { id: "knowledge", label: "Knowledge", count: knowledgeNotes.length },
           { id: "scoring", label: "Scoring model", count: scoringProfile?.version },
           { id: "families", label: "Product families", count: productFamilies.length },
         ]}
@@ -291,8 +354,26 @@ export function CatalogueWorkspace({
                 <label>Image reference <span className="optional-label">Optional</span><input name="image-reference" /></label>
                 <label>Pricing guidance <span className="optional-label">Optional</span><input name="pricing-guidance" /></label>
               </div>
+              <label>
+                Summary <span className="optional-label">Optional</span>
+                <input name="summary" placeholder="One price-free line the assistant can quote" />
+              </label>
+              <div className="field-pair">
+                <label>Materials <span className="optional-label">Optional</span><input name="materials" placeholder="Comma separated" /></label>
+                <label>Occasions <span className="optional-label">Optional</span><input name="occasions" placeholder="Comma separated" /></label>
+              </div>
+              <label>
+                Business notes <span className="optional-label">Optional</span>
+                <textarea name="b2b-notes" rows={3} placeholder="Why a business buys this, and what can be engraved. No prices." />
+              </label>
+              <label>
+                Personalisation options <span className="optional-label">Optional</span>
+                <input name="custom-options" placeholder="logo, names, numbering" />
+              </label>
               <label className="checkbox-row"><input name="active" type="checkbox" defaultChecked /> Active</label>
               <label className="checkbox-row"><input name="sample-eligible" type="checkbox" /> Sample eligible</label>
+              <label className="checkbox-row"><input name="b2b-relevant" type="checkbox" /> Suits business buyers</label>
+              <label className="checkbox-row"><input name="bulk-ready" type="checkbox" /> Works as a bulk run</label>
               <button className="primary-action" type="submit" disabled={busy}>
                 <PackagePlus size={17} aria-hidden="true" /> Add product
               </button>
@@ -311,6 +392,16 @@ export function CatalogueWorkspace({
             description="Products are grouped by Handle and upserted into the editable local catalogue."
             icon={FileSpreadsheet}
           />
+          {enrichmentStatus?.catalogue_imported_at ? (
+            <p className="form-hint" role="status">
+              Catalogue last imported: {formatDate(enrichmentStatus.catalogue_imported_at)}
+              {enrichmentStatus.catalogue_stale
+                ? " — over 30 days ago, so the assistant will say product details may be out of date."
+                : ""}
+            </p>
+          ) : (
+            <p className="form-hint">No catalogue imported yet.</p>
+          )}
           <form className="stacked-form" onSubmit={(event) => void submitImport(event)}>
             <label>
               Shopify product export
@@ -363,6 +454,275 @@ export function CatalogueWorkspace({
               />
             </div>
           ) : null}
+        </section>
+
+        <section className="workspace-section" aria-labelledby="knowledge-import-heading">
+          <SectionHeading
+            id="knowledge-import-heading"
+            eyebrow="Sales knowledge"
+            title="Import product knowledge"
+            description="Applies the shipped knowledge pack: what each product is for, which trades buy it, and past jobs. Matched on product handle, so import the Shopify CSV first."
+            icon={BookOpen}
+          />
+          <form className="stacked-form" onSubmit={(event) => void submitKnowledgeImport(event)}>
+            <label>
+              Product knowledge file
+              <input
+                type="file"
+                accept=".json,application/json"
+                required
+                onChange={(event) => {
+                  setKnowledgeFile(event.target.files?.[0] ?? null);
+                  setKnowledgeError(null);
+                  setKnowledgeResult(null);
+                }}
+              />
+            </label>
+            {knowledgeFile ? (
+              <p className="form-hint" role="status">
+                Ready: {knowledgeFile.name} (
+                {Math.max(1, Math.round(knowledgeFile.size / 1024))} KB)
+              </p>
+            ) : null}
+            <p className="form-hint">
+              Re-importing is safe: products, notes and past jobs are updated in place, and
+              anything you have edited yourself is left alone.
+            </p>
+            {knowledgeError ? (
+              <p className="field-error" role="alert">
+                {knowledgeError}
+              </p>
+            ) : null}
+            <button className="primary-action" type="submit" disabled={busy || !knowledgeFile}>
+              <BookOpen size={17} aria-hidden="true" />
+              {busy ? "Importing knowledge…" : "Import knowledge"}
+            </button>
+          </form>
+          {knowledgeResult ? (
+            <div className="import-summary" role="status">
+              <strong>Product knowledge applied</strong>
+              <p>
+                {knowledgeResult.products_enriched} products enriched ·{" "}
+                {knowledgeResult.notes_created + knowledgeResult.notes_updated} notes ·{" "}
+                {knowledgeResult.fits_created} past jobs added ·{" "}
+                {knowledgeResult.products_unmatched} not found in the catalogue
+              </p>
+              {knowledgeResult.fits_awaiting_confirmation > 0 ? (
+                <small>
+                  {knowledgeResult.fits_awaiting_confirmation} past jobs need confirming in the
+                  Knowledge tab before they can be used in an email.
+                </small>
+              ) : null}
+              {knowledgeResult.issues.slice(0, 5).map((issue) => (
+                <small key={`${issue.handle}-${issue.message}`}>
+                  {issue.handle ?? "Pack"}: {issue.message}
+                </small>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="workspace-section" aria-labelledby="enrichment-run-heading">
+          <SectionHeading
+            id="enrichment-run-heading"
+            eyebrow="Local AI"
+            title="Enrich pending products"
+            description="Asks the local model why a business would buy each product the knowledge pack does not cover. Runs while you watch, roughly 15 seconds per product, and is paused while LightBurn or xTool is open."
+            icon={Sparkles}
+          />
+          <p className="form-hint" role="status">
+            {enrichmentStatus
+              ? `${enrichmentStatus.products_enriched} of ${enrichmentStatus.products_total} products have sales knowledge · ${enrichmentStatus.products_awaiting_enrichment} pending${
+                  enrichmentStatus.products_stale_enrichment > 0
+                    ? ` · ${enrichmentStatus.products_stale_enrichment} changed since they were enriched`
+                    : ""
+                }`
+              : "Enrichment status unavailable."}
+          </p>
+          {enrichmentStatus && enrichmentStatus.products_stale_enrichment > 0 ? (
+            <label className="choice-row">
+              <input
+                name="include-stale"
+                type="checkbox"
+                checked={includeStale}
+                onChange={(event) => setIncludeStale(event.target.checked)}
+              />
+              <span>
+                <strong>Also refresh changed listings</strong>
+                <small>
+                  Replaces knowledge for products whose listing changed after it was written. Your
+                  own edits are never replaced.
+                </small>
+              </span>
+            </label>
+          ) : null}
+          <button
+            className="primary-action"
+            type="button"
+            disabled={busy || !enrichmentStatus?.products_awaiting_enrichment}
+            onClick={() => void startEnrichment()}
+          >
+            <Sparkles size={17} aria-hidden="true" />
+            {busy ? "Enriching products…" : "Enrich pending products"}
+          </button>
+          {enrichResult ? (
+            <div className="import-summary" role="status">
+              <strong>Enrichment finished</strong>
+              <p>
+                {enrichResult.products_enriched} of {enrichResult.products_considered} enriched ·{" "}
+                {enrichResult.products_failed} failed ·{" "}
+                {enrichResult.products_awaiting_enrichment} still pending
+              </p>
+              {enrichResult.issues.slice(0, 5).map((issue) => (
+                <small key={`${issue.handle}-${issue.message}`}>
+                  {issue.handle ?? "Product"}: {issue.message}
+                </small>
+              ))}
+            </div>
+          ) : null}
+        </section>
+        </TaskPanel>
+      ) : null}
+
+      {activeTask === "knowledge" ? (
+        <TaskPanel id="catalogue-tasks" tabId="knowledge">
+        <section className="workspace-section" aria-labelledby="knowledge-notes-heading">
+          <SectionHeading
+            id="knowledge-notes-heading"
+            eyebrow="What a trade buys"
+            title="Knowledge notes"
+            description="The assistant cites these when recommending products. Editing one marks it yours, so no import or refresh will overwrite it."
+            icon={BookOpen}
+          />
+          {knowledgeNotes.length === 0 ? (
+            <EmptyState
+              title="No knowledge notes yet"
+              description="Import the product knowledge file from the Import catalogue tab."
+            />
+          ) : (
+            <div className="records-list">
+              {knowledgeNotes.map((note) => (
+                <article key={note.id} className="catalogue-card">
+                  <h3 className="records-heading">{note.title}</h3>
+                  <dl className="record-details">
+                    <div>
+                      <dt>Trades</dt>
+                      <dd>{note.segments.join(", ") || "Not set"}</dd>
+                    </div>
+                    <div>
+                      <dt>Source</dt>
+                      <dd>{note.manual ? "Yours" : humanize(note.source)}</dd>
+                    </div>
+                  </dl>
+                  <details>
+                    <summary>Edit note</summary>
+                    <form
+                      className="stacked-form compact-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void saveNote(note.id, new FormData(event.currentTarget));
+                      }}
+                    >
+                      <label>
+                        Title
+                        <input name="note-title" defaultValue={note.title} required />
+                      </label>
+                      <label>
+                        Note
+                        <textarea name="note-body" defaultValue={note.body} rows={8} required />
+                      </label>
+                      <button className="primary-action" type="submit" disabled={busy}>
+                        <Save size={17} aria-hidden="true" />
+                        Save note
+                      </button>
+                    </form>
+                  </details>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="workspace-section" aria-labelledby="proven-fits-heading">
+          <SectionHeading
+            id="proven-fits-heading"
+            eyebrow="Work already done"
+            title="Past jobs"
+            description="Confirm a job before the assistant may use it in an email. A client is named only when you allow it."
+            icon={Layers}
+          />
+          {provenFits.length === 0 ? (
+            <EmptyState
+              title="No past jobs recorded"
+              description="These arrive with the knowledge file, and one is added automatically whenever you mark a lead as won."
+            />
+          ) : (
+            <div className="records-list">
+              {provenFits.map((fit) => (
+                <article key={fit.id} className="catalogue-card">
+                  <h3 className="records-heading">{fit.client_label || fit.segment}</h3>
+                  <dl className="record-details">
+                    <div>
+                      <dt>Trade</dt>
+                      <dd>{fit.segment}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>
+                        {fit.status === "confirmed"
+                          ? "Confirmed — usable in outreach"
+                          : "Needs confirming — advice only"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Client name</dt>
+                      <dd>
+                        {fit.client_name
+                          ? fit.share_client_name
+                            ? fit.client_name
+                            : `${fit.client_name} (withheld)`
+                          : "Not recorded"}
+                      </dd>
+                    </div>
+                  </dl>
+                  <p>{fit.use}</p>
+                  <div className="record-actions">
+                    {fit.status === "confirmed" ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          void onUpdateFit(fit.id, { status: "please_confirm" })
+                        }
+                      >
+                        Withdraw confirmation
+                      </button>
+                    ) : (
+                      <button
+                        className="primary-action"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void onUpdateFit(fit.id, { status: "confirmed" })}
+                      >
+                        Confirm this job
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        void onUpdateFit(fit.id, {
+                          share_client_name: !fit.share_client_name,
+                        })
+                      }
+                    >
+                      {fit.share_client_name ? "Withhold client name" : "Allow client name"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
         </TaskPanel>
       ) : null}
@@ -558,6 +918,22 @@ export function CatalogueWorkspace({
                   <div><dt>Variants</dt><dd>{product.variant_count}</dd></div>
                   <div><dt>Segments</dt><dd>{product.target_segments.join(", ") || "Not set"}</dd></div>
                   <div><dt>Sample</dt><dd>{product.sample_eligible ? "Eligible" : "Not eligible"}</dd></div>
+                  <div>
+                    <dt>Sales knowledge</dt>
+                    <dd>
+                      {product.enrichment_source === "manual"
+                        ? "Yours"
+                        : product.enrichment_source === "seed"
+                          ? "From the knowledge pack"
+                          : product.enrichment_source === "ai"
+                            ? "Written locally by AI"
+                            : "None yet"}
+                      {product.stale_enrichment ? " · listing changed since" : ""}
+                    </dd>
+                  </div>
+                  {product.b2b_relevant ? (
+                    <div><dt>Business buyers</dt><dd>{product.bulk_ready ? "Suits bulk runs" : "Suits business orders"}</dd></div>
+                  ) : null}
                 </dl>
                 <details>
                   <summary>Edit product</summary>
@@ -575,8 +951,15 @@ export function CatalogueWorkspace({
                     <label>Use cases<input name="use-cases" defaultValue={product.example_use_cases.join(", ")} /></label>
                     <label>Image reference<input name="image-reference" defaultValue={product.image_reference ?? ""} /></label>
                     <label>Pricing guidance<input name="pricing-guidance" defaultValue={product.pricing_guidance ?? ""} /></label>
+                    <label>Summary<input name="summary" defaultValue={product.summary ?? ""} /></label>
+                    <label>Materials<input name="materials" defaultValue={product.materials.join(", ")} /></label>
+                    <label>Occasions<input name="occasions" defaultValue={product.occasions.join(", ")} /></label>
+                    <label>Business notes<textarea name="b2b-notes" rows={3} defaultValue={product.b2b_notes ?? ""} /></label>
+                    <label>Personalisation options<input name="custom-options" defaultValue={product.custom_options ?? ""} /></label>
                     <label className="checkbox-row"><input name="active" type="checkbox" defaultChecked={product.active} /> Active</label>
                     <label className="checkbox-row"><input name="sample-eligible" type="checkbox" defaultChecked={product.sample_eligible} /> Sample eligible</label>
+                    <label className="checkbox-row"><input name="b2b-relevant" type="checkbox" defaultChecked={product.b2b_relevant} /> Suits business buyers</label>
+                    <label className="checkbox-row"><input name="bulk-ready" type="checkbox" defaultChecked={product.bulk_ready} /> Works as a bulk run</label>
                     <button className="secondary-action" type="submit" disabled={busy}>
                       <Save size={16} aria-hidden="true" /> Save product
                     </button>
