@@ -48,6 +48,15 @@ On the real export: 0 empty categories and no taxonomy paths (previously every f
 
 Fine-tuning a local model on the catalogue, rejected because the catalogue changes often and retrieval keeps answers current for far less work; deriving everything from the CSV without the pack, which cannot produce "why a trade buys this"; a background enrichment worker, which fights the generation lock; trusting the prompt to withhold prices and client names, which a test cannot enforce.
 
+## If the local model is not good enough
+
+The Overview "Draft edit rate" is the evidence. If it settles above about 0.25 once a reasonable
+number of drafts have been approved, the first lever is a larger local model from the Settings
+dropdown. Only if that is already in use and still falls short is a cloud model worth considering,
+and that is specified separately in
+[Cloud_Draft_Polish_Specification.md](../specifications/Cloud_Draft_Polish_Specification.md) —
+deliberately not built, because the measurement has to justify it first.
+
 ## Rollback
 
 Set `local_ai_model` back to empty to return to the 3B. The enrichment columns can be left unused: the CSV import path works without the pack, and dropping the pack import leaves products with CSV-derived fields only. Migration `0015` is reversible.
