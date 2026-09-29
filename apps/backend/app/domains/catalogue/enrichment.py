@@ -37,6 +37,67 @@ SEGMENTS: tuple[str, ...] = (
 
 SEGMENT_SET = frozenset(SEGMENTS)
 
+# Product types, for answering "what do we sell?" by group. The Shopify taxonomy is too fine for
+# that: most of its categories hold a single product. The pack's `group` field sets a product's
+# group; `derive_group` covers anything the pack does not.
+PRODUCT_GROUPS: tuple[str, ...] = (
+    "Cake toppers and charms",
+    "Drinkware",
+    "Keyrings and tags",
+    "Signage and plaques",
+    "Stationery and office",
+    "Home and kitchen",
+    "Jewellery and accessories",
+    "Gifts and occasions",
+)
+OTHER_GROUP = "Other"
+
+# First match wins, so the more specific words come first. Whole words only, matched against the
+# name and category; a plural "s" is allowed.
+_GROUP_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("Home and kitchen", ("bottle opener",)),
+    ("Stationery and office", ("badge",)),
+    ("Cake toppers and charms", ("cake", "cupcake", "fondant")),
+    ("Keyrings and tags", ("keyring", "keychain", "key ring", "tag")),
+    ("Signage and plaques", ("sign", "plaque", "name plate")),
+    ("Drinkware", ("bottle", "tumbler", "mug", "flask", "drinkware")),
+    (
+        "Stationery and office",
+        ("notebook", "journal", "notepad", "pen", "pencil", "bookmark", "business card"),
+    ),
+    ("Jewellery and accessories", ("wallet", "card case", "jewellery", "pendant", "watch")),
+    (
+        "Home and kitchen",
+        (
+            "coaster", "board", "kitchen", "tray", "placemat", "frame", "ornament", "decor",
+            "knife", "utensil", "cutlery", "fork", "spoon",
+        ),
+    ),
+    ("Gifts and occasions", ("gift", "party", "wedding", "favour", "baby", "place card", "box")),
+)
+_GROUP_PATTERNS = tuple(
+    (group, re.compile(r"\b(?:" + "|".join(map(re.escape, words)) + r")(?:s|es)?\b"))
+    for group, words in _GROUP_KEYWORDS
+)
+
+# Shopify options sold as their own listings. They are not products anyone would choose, so they
+# stay out of catalogue overviews and the assistant's product choice.
+_ADD_ON_NAMES = frozenset({"engraved", "back engraving", "personalisation options"})
+_ADD_ON_PREFIXES = ("rush order",)
+
+
+def is_add_on(name: str) -> bool:
+    folded = name.strip().casefold()
+    return folded in _ADD_ON_NAMES or folded.startswith(_ADD_ON_PREFIXES)
+
+
+def derive_group(name: str, category: str) -> str:
+    haystack = f"{name} {category}".casefold()
+    for group, pattern in _GROUP_PATTERNS:
+        if pattern.search(haystack):
+            return group
+    return OTHER_GROUP
+
 # The store's real tags mapped onto trades. No listing uses the `segment:` prefix the importer
 # originally expected, so without this every product arrived with no target segments at all.
 TAG_SEGMENT_MAP: dict[str, tuple[str, ...]] = {

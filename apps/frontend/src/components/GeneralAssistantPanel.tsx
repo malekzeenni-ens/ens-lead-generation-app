@@ -25,6 +25,9 @@ import type {
   Shortlist,
 } from "../types";
 
+// Catalogue overviews and lists are answered by the app from the database, not by the model.
+const CATALOGUE_REPLY_MODEL = "app:catalogue";
+
 interface GeneralAssistantPanelProps {
   ready: boolean;
   working: boolean;
@@ -335,7 +338,13 @@ export function GeneralAssistantPanel({
               className={`assistant-message assistant-message--${message.role === "user" ? "user" : "model"}`}
               key={message.id}
             >
-              <span>{message.role === "user" ? "You" : "Local assistant"}</span>
+              <span>
+                {message.role === "user"
+                  ? "You"
+                  : message.model_name === CATALOGUE_REPLY_MODEL
+                    ? "From your catalogue"
+                    : "Local assistant"}
+              </span>
               <p className="assistant-message-content">{message.content}</p>
               {message.attachments.length ? (
                 <div className="assistant-attachments">

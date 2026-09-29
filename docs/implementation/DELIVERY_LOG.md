@@ -75,7 +75,19 @@ CSV import was intentionally skipped by user direction. External providers, AI, 
 
 The browser review identified and corrected workspace scroll restoration. This increment changed source, migrations, tests and documentation only; no installer was rebuilt.
 
-## 28 September 2026 — Installer rebuilt
+## 29 September 2026 — Smarter catalogue answers
+
+### Delivered
+
+- Asked "what are the products", the assistant listed 12 products as if they were the range. It had been given the 12 ranked most relevant, and the 3B model ignored the product count beside them.
+- `app/domains/assistant/catalogue_answers.py` answers whole-catalogue questions from the database: an overview by product group that asks what to show, then exact lists for "all", a group or a trade. These replies are stored as `app:catalogue`, shown as "From your catalogue", and make no model call. Anything needing judgement still goes to the model.
+- The model snapshot leaves out Shopify add-on listings, replaces the Shopify category counts with `product_groups`, and adds `products_shown`; prompt `ens-assistant-v6` forbids presenting the sample as the full range.
+- Eight product groups (`enrichment.PRODUCT_GROUPS`) with keyword derivation, and an optional `group` field in the knowledge pack. All 110 products in the operator's local pack were given a group; both local copies were updated, and neither is committed.
+
+### Verification
+
+- New `tests/test_catalogue_answers.py`: overview content and add-on exclusion, follow-up lists, model routing for questions needing judgement, no price in any catalogue answer, the model's sample fields and prompt rule, keyword grouping, and a pack `group` overriding the derived one.
+- Tried against a copy of the operator's database: 103 products in 8 groups; café, gym and wedding trade lists; advice questions routed to the model.
 
 ### Delivered
 

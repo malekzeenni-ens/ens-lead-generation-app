@@ -44,6 +44,9 @@ class PackProduct(BaseModel):
     listing_status: Text = Field(default="", max_length=40)
     url: Text = Field(default="", max_length=2048)
     category: Text = Field(default="", max_length=200)
+    # The product type used to answer "what do we sell?" by group. Optional: a product without
+    # one is grouped by `enrichment.derive_group`.
+    group: Text = Field(default="", max_length=60)
     summary: Text = Field(default="", max_length=400)
     materials: StringList = Field(default_factory=list, max_length=20)
     sizes_and_packs: Text = Field(default="", max_length=400)

@@ -823,6 +823,29 @@ values are pruned before serialising. A typical request is around 4,800 prompt t
 2,100 fixed instruction and 2,700 snapshot. If that needs to come down, the honest lever is a
 larger model with a 16,384-token window, not a thinner knowledge layer.
 
+### Whole-catalogue questions are answered without the model
+
+Given twelve ranked products, the 3B model answered "what are the products" by listing them as the
+whole range, even with the product count in the snapshot. `assistant/catalogue_answers.py` now
+answers these from the database, only for whole-workspace questions without attachments or a file
+request:
+
+- A broad question ("what do we sell", "how many products") gets an overview: the count, each
+  product group with its size and two examples, the three best-covered trades, and a question
+  asking which to show.
+- A reply to that overview gets an exact list: "all" or "yes" lists every product by group; a group
+  or trade name lists that group with one line each. A question naming only a group or trade
+  ("what drinkware do we sell") gets the same list directly.
+- Anything with other words in it ("which suits a gym?", "which is best for a wedding?") goes to
+  the model as before.
+
+The reply is stored with `model_name = "app:catalogue"`, which is how a follow-up is recognised and
+how the UI labels it "From your catalogue". Groups come from the pack's `group` field, else
+`enrichment.derive_group`; Shopify add-on listings (`enrichment.is_add_on`) are left out here and
+in the model snapshot. For questions the model does answer, the snapshot carries
+`products_shown` and `product_groups`, and the prompt (`ens-assistant-v6`) says the products are a
+sample, never the full range.
+
 ### Enrichment runs in the foreground
 
 Every local generation shares one non-blocking lock, so a background enrichment worker would make
@@ -857,6 +880,7 @@ The frontend list in `SettingsWorkspace.tsx` mirrors the backend allowlist and m
 | General API | `apps/backend/app/api/routes/assistant.py` |
 | Campaign API | `apps/backend/app/api/routes/campaign_assistant.py` |
 | General orchestration | `apps/backend/app/domains/assistant/service.py` |
+| Catalogue answers without the model | `apps/backend/app/domains/assistant/catalogue_answers.py` |
 | File validation/generation | `apps/backend/app/domains/assistant/files.py` |
 | General prompt | `apps/backend/app/domains/assistant/prompt.py` |
 | Campaign orchestration | `apps/backend/app/domains/campaign_assistant/service.py` |

@@ -528,6 +528,7 @@ class CatalogueService:
                     "colour_options": item.colour_options,
                     "collections": item.collections,
                     "shopify_updated_at": item.shopify_updated_at,
+                    "group": item.group.strip(),
                 }.items()
                 if value
             }

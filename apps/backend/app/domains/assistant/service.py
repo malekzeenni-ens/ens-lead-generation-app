@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.errors import DomainError
 from app.db.models import AssistantAttachment, AssistantConversation, AssistantMessage
+from app.domains.assistant import catalogue_answers
 from app.domains.assistant.context import build_app_context
 from app.domains.assistant.files import AssistantFileStore
 from app.domains.assistant.prompt import build_general_messages
@@ -62,12 +63,18 @@ class AssistantService:
         correlation_id: str,
     ) -> AssistantConversationRead:
         conversation = self._require_conversation(session, conversation_id)
-        app_context = build_app_context(
-            session,
-            user_request=data.content,
-            runtime_settings=self.settings,
-            instagram_connected=instagram_connected,
-            selection=data.context,
+        catalogue_reply = self._catalogue_reply(session, conversation, data)
+        # The app's own catalogue answer needs no snapshot, so skip building one.
+        app_context = (
+            {}
+            if catalogue_reply is not None
+            else build_app_context(
+                session,
+                user_request=data.content,
+                runtime_settings=self.settings,
+                instagram_connected=instagram_connected,
+                selection=data.context,
+            )
         )
         user_message = AssistantMessage(
             conversation_id=conversation.id,
@@ -88,6 +95,10 @@ class AssistantService:
         conversation.updated_at = datetime.now(UTC)
         session.commit()
 
+        if catalogue_reply is not None:
+            return self._record_catalogue_reply(
+                session, conversation_id, catalogue_reply, correlation_id
+            )
         conversation = self._require_conversation(session, conversation_id)
         artifact_format = self._artifact_format(data.content)
         messages = build_general_messages(
@@ -136,6 +147,52 @@ class AssistantService:
                 "artifact_format": artifact_format,
                 "brand_profile": BRAND_PROFILE_VERSION,
             },
+        )
+        session.commit()
+        return self.get(session, conversation.id)
+
+    @staticmethod
+    def _catalogue_reply(
+        session: Session, conversation: AssistantConversation, data: AssistantMessageCreate
+    ) -> str | None:
+        """An exact catalogue answer from the database, for whole-workspace questions only.
+
+        A question asked about a selected lead or campaign, with an attachment, or for a file
+        is left to the model, which has that context.
+        """
+        if (
+            data.attachments
+            or data.context.kind != "workspace"
+            or AssistantService._artifact_format(data.content) is not None
+        ):
+            return None
+        ordered = sorted(conversation.messages, key=lambda item: item.created_at)
+        previous = ordered[-1] if ordered and ordered[-1].role == "assistant" else None
+        return catalogue_answers.answer(session, data.content, previous)
+
+    def _record_catalogue_reply(
+        self, session: Session, conversation_id: str, content: str, correlation_id: str
+    ) -> AssistantConversationRead:
+        conversation = self._require_conversation(session, conversation_id)
+        self.repository.add_message(
+            session,
+            AssistantMessage(
+                conversation_id=conversation.id,
+                role="assistant",
+                content=content,
+                model_name=catalogue_answers.CATALOGUE_MODEL_NAME,
+                generation_duration_ms=0,
+                campaign_draft_suggested=False,
+            ),
+        )
+        conversation.updated_at = datetime.now(UTC)
+        record_audit_event(
+            session,
+            action="assistant.message.generated",
+            entity_type="assistant_conversation",
+            entity_id=conversation.id,
+            correlation_id=correlation_id,
+            summary={"model": catalogue_answers.CATALOGUE_MODEL_NAME, "attachments_received": 0},
         )
         session.commit()
         return self.get(session, conversation.id)

@@ -24,6 +24,7 @@ from app.db.models import (
     Shortlist,
     ShortlistItem,
 )
+from app.domains.assistant.catalogue_answers import listable, product_group
 from app.domains.assistant.schemas import AssistantContextSelection
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.catalogue.repository import CatalogueRepository
@@ -45,7 +46,6 @@ _SELECTED_ITEM_LIMIT = 10
 _FULL_PRODUCT_LIMIT = 5
 _BRIEF_PRODUCT_LIMIT = 7
 _KNOWLEDGE_NOTE_LIMIT = 2
-_CATEGORY_LIMIT = 12
 # A knowledge note runs to 1,500 characters in the pack. The opening covers who buys and why,
 # which is the part that changes an answer.
 _NOTE_EXCERPT = 700
@@ -154,6 +154,7 @@ def _product_score(
 def _product_full(product: Product) -> dict[str, Any]:
     return {
         "name": product.name,
+        "group": product_group(product),
         "category": product.category,
         "summary": product.summary,
         "materials": product.materials,
@@ -521,7 +522,8 @@ def build_app_context(
     selected_context, selected_leads = _selected_context(session, selection)
     search_terms = _search_terms(f"{user_request} {selected_context['label']}")
     campaigns = CampaignRepository().list(session)
-    products = CatalogueRepository().list(session, active=True)
+    # Shopify add-on listings ("Engraved", "Rush order") are options, not products to recommend.
+    products = listable(CatalogueRepository().list(session, active=True))
     families = CatalogueRepository().list_families(session)
     templates = TemplateRepository().list(session)
     campaigns.sort(
@@ -548,7 +550,7 @@ def build_app_context(
     families = families[:_FAMILY_LIMIT]
     templates = templates[:_TEMPLATE_LIMIT]
     leads = selected_leads or _lead_candidates(session, user_request)
-    category_counts = Counter(product.category for product in products)
+    group_counts = Counter(product_group(product) for product in products)
 
     # Rank products for this request rather than sending the first N by name. A lead, campaign or
     # draft batch means a business is the buyer, so business-ready products come first.
@@ -655,11 +657,18 @@ def build_app_context(
         ],
         "catalogue": {
             "active_product_count": len(products),
+            # The model sees only the products ranked most relevant to this question. Saying
+            # how many stops it presenting a sample as the whole range.
+            "products_shown": (
+                0
+                if selection.kind in {"outreach_batch", "shortlist"}
+                else len(full_products) + len(brief_products)
+            ),
             "last_imported_at": (
                 catalogue_imported_at.isoformat() if catalogue_imported_at else None
             ),
             "may_be_out_of_date": catalogue_stale,
-            "largest_categories": dict(category_counts.most_common(_CATEGORY_LIMIT)),
+            "product_groups": dict(group_counts.most_common()),
             # `pricing_guidance` is deliberately absent. Pricing is quoted per job and must
             # never reach a model or an email. See ADR-021.
             "products": [

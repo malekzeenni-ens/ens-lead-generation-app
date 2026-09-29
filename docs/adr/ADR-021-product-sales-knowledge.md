@@ -20,6 +20,12 @@ each Shopify import, only when the file or the catalogue changed, and never over
 written by hand or by a later AI enrichment run. A broken pack is logged and skipped. The upload
 path still works and still overwrites AI wording, as before.
 
+**Amended 29 September 2026:** each pack product may carry a `group`, one of the product types in
+`enrichment.PRODUCT_GROUPS`, stored in `product.attributes`. It lets the app answer "what do we
+sell?" by group, because the Shopify taxonomy spreads the catalogue over about fifty categories,
+most holding one product. A product without a group is grouped by keyword from its name and
+category.
+
 ## Two rules enforced in code, not in the prompt
 
 A rule the data cannot break is worth more than a rule the model is asked to follow, so both of these live in `assistant/context.py` rather than in prompt text:
