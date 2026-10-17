@@ -42,9 +42,7 @@ def find_stalled_leads(
             if last_activity
             else stale_after_days
         )
-        hold_triggered = (
-            lead.outreach_hold_until is not None and lead.outreach_hold_until <= today
-        )
+        hold_triggered = lead.outreach_hold_until is not None and lead.outreach_hold_until <= today
         retention_triggered = (
             lead.retention_review_date is not None and lead.retention_review_date <= today
         )

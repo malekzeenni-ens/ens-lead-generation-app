@@ -348,9 +348,7 @@ class OllamaClient:
     ) -> OllamaResult:
         schema = deepcopy(OLLAMA_CAMPAIGN_PROPOSAL_SCHEMA)
         campaign_schema = schema["oneOf"][0]["properties"]["campaign"]
-        campaign_schema["properties"]["keywords"]["maxItems"] = (
-            self.settings.discovery_max_queries
-        )
+        campaign_schema["properties"]["keywords"]["maxItems"] = self.settings.discovery_max_queries
         result = self.generate_structured(
             messages,
             profile,

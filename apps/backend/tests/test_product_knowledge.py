@@ -187,9 +187,7 @@ def test_an_edited_knowledge_note_is_never_overwritten_by_a_reimport(
     assert edited.json()["manual"] is True
 
     _import_pack(client, pack)
-    notes = {
-        item["id"]: item for item in client.get("/api/v1/catalogue/knowledge-notes").json()
-    }
+    notes = {item["id"]: item for item in client.get("/api/v1/catalogue/knowledge-notes").json()}
     assert notes["premises-signage"]["body"] == "My own note about gyms."
 
 

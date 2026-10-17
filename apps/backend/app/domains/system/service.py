@@ -114,9 +114,7 @@ class SystemService:
             select(func.avg(OutreachDraftRevision.edit_distance_ratio)).where(measured)
         )
         measured_drafts = (
-            session.scalar(
-                select(func.count()).select_from(OutreachDraftRevision).where(measured)
-            )
+            session.scalar(select(func.count()).select_from(OutreachDraftRevision).where(measured))
             or 0
         )
         return OperationsSummary(

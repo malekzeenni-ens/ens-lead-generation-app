@@ -293,9 +293,7 @@ class SafeWebsiteEnricher:
 
         title = " ".join(" ".join(home.title_parts).split())[:500] or None
         descriptions = [parser.description for parser in parsers if parser.description]
-        visible_text = " ".join(
-            part for parser in parsers for part in parser._visible_text_parts
-        )
+        visible_text = " ".join(part for parser in parsers for part in parser._visible_text_parts)
         visible_text = " ".join(visible_text.split())[:3_000]
         return WebsiteEvidence(
             final_url=final_url,

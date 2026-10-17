@@ -570,9 +570,7 @@ class CatalogueService:
 
         fits_created = 0
         fits_skipped = 0
-        known_fits = {
-            (fit.segment, fit.client_label) for fit in self.repository.list_fits(session)
-        }
+        known_fits = {(fit.segment, fit.client_label) for fit in self.repository.list_fits(session)}
         for fit in pack.proven_fits:
             if (fit.segment, fit.client_label) in known_fits:
                 fits_skipped += 1
@@ -642,9 +640,7 @@ class CatalogueService:
             catalogue_stale=stale_catalogue,
             products_total=len(products),
             products_enriched=sum(1 for item in products if item.enrichment_source),
-            products_awaiting_enrichment=sum(
-                1 for item in products if not item.enrichment_source
-            ),
+            products_awaiting_enrichment=sum(1 for item in products if not item.enrichment_source),
             products_stale_enrichment=sum(1 for item in products if item.stale_enrichment),
             knowledge_notes=len(self.repository.list_notes(session)),
             proven_fits=len(fits),
@@ -708,13 +704,10 @@ class CatalogueService:
 
     def list_notes(self, session: Session) -> list[KnowledgeNoteRead]:
         return [
-            KnowledgeNoteRead.model_validate(note)
-            for note in self.repository.list_notes(session)
+            KnowledgeNoteRead.model_validate(note) for note in self.repository.list_notes(session)
         ]
 
-    def list_fits(
-        self, session: Session, *, segment: str | None = None
-    ) -> list[ProvenFitRead]:
+    def list_fits(self, session: Session, *, segment: str | None = None) -> list[ProvenFitRead]:
         return [
             ProvenFitRead.model_validate(fit)
             for fit in self.repository.list_fits(session, segment=segment)
@@ -742,9 +735,10 @@ class CatalogueService:
                 "The local AI assistant is disabled in Settings.",
                 status_code=409,
             )
-        if manager.resource_profile(
-            workspace_settings.protect_design_software_resources
-        ) == ResourceProfile.DESIGN_SOFTWARE:
+        if (
+            manager.resource_profile(workspace_settings.protect_design_software_resources)
+            == ResourceProfile.DESIGN_SOFTWARE
+        ):
             raise DomainError(
                 "ENRICHMENT_PROTECTED_PROFILE",
                 "Enrichment is paused while the engraving software is running.",
@@ -764,22 +758,16 @@ class CatalogueService:
                     schema=enrichment_schema(),
                     model_cls=ProductEnrichmentProposal,
                     error_prefix="PRODUCT_ENRICHMENT",
-                    protect_resources=(
-                        workspace_settings.protect_design_software_resources
-                    ),
+                    protect_resources=(workspace_settings.protect_design_software_resources),
                 )
             except DomainError as exc:
                 failed += 1
                 if len(issues) < 50:
-                    issues.append(
-                        ImportIssue(handle=product.shopify_handle, message=exc.message)
-                    )
+                    issues.append(ImportIssue(handle=product.shopify_handle, message=exc.message))
                 continue
             proposal = result.value
             segments = [
-                segment
-                for segment in proposal.target_segments
-                if segment in enrichment.SEGMENT_SET
+                segment for segment in proposal.target_segments if segment in enrichment.SEGMENT_SET
             ]
             if segments:
                 product.target_segments = segments
@@ -838,8 +826,7 @@ class CatalogueService:
             handles = sorted(
                 str(product.shopify_handle)
                 for product in products
-                if product.shopify_handle
-                and set(product.target_segments) & set(note.segments)
+                if product.shopify_handle and set(product.target_segments) & set(note.segments)
             )
             if handles != list(note.product_handles):
                 note.product_handles = handles

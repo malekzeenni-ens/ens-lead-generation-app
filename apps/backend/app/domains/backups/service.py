@@ -98,8 +98,8 @@ class BackupService:
                 )
             os.replace(temporary_path, backup_path)
             checksum = _checksum(backup_path)
-            assistant_archive, assistant_checksum, assistant_count = (
-                self._archive_assistant_files(target, backup_path.name)
+            assistant_archive, assistant_checksum, assistant_count = self._archive_assistant_files(
+                target, backup_path.name
             )
             manifest = {
                 "backup_filename": backup_path.name,
@@ -179,9 +179,7 @@ class BackupService:
 
         return VerificationResult(
             valid=(
-                checksum_matches
-                and integrity == "ok"
-                and assistant_checksum_matches is not False
+                checksum_matches and integrity == "ok" and assistant_checksum_matches is not False
             ),
             checksum_matches=checksum_matches,
             integrity_result=integrity,

@@ -44,8 +44,6 @@ def lead_activity_rows(lead: Lead | LeadRead) -> list[LeadActivity]:
 
 def latest_activity_at(lead: Lead | LeadRead) -> datetime | None:
     values = [
-        row.occurred_at
-        for row in lead_activity_rows(lead)
-        if isinstance(row.occurred_at, datetime)
+        row.occurred_at for row in lead_activity_rows(lead) if isinstance(row.occurred_at, datetime)
     ]
     return max(values) if values else None

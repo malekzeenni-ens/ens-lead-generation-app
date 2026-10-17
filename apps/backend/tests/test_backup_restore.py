@@ -102,9 +102,7 @@ def test_backup_bundles_and_restores_assistant_file_bytes(
     assert upload.status_code == 200
 
     backup_directory = tmp_path / "backups"
-    backup = client.post(
-        "/api/v1/backups", json={"target_directory": str(backup_directory)}
-    ).json()
+    backup = client.post("/api/v1/backups", json={"target_directory": str(backup_directory)}).json()
     assert backup["assistant_files_count"] == 1
     archive_path = Path(backup["assistant_files_archive"])
     assert archive_path.is_file()

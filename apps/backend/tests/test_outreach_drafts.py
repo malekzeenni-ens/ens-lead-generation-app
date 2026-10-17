@@ -427,9 +427,10 @@ def test_ai_refine_never_persists_and_remains_available_after_external_handoff(
     )
     assert refined_after_sent.status_code == 200
     assert refined_after_sent.json()["subject"] == "A final suggestion"
-    assert client.get(f"/api/v1/outreach/batches/{batch['id']}").json()["drafts"][0][
-        "revision_count"
-    ] == 1
+    assert (
+        client.get(f"/api/v1/outreach/batches/{batch['id']}").json()["drafts"][0]["revision_count"]
+        == 1
+    )
 
 
 def test_ai_refine_validates_instruction_and_propagates_busy(

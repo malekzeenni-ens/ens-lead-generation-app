@@ -642,9 +642,7 @@ class LeadService:
         ]
         handles: list[str] = []
         for draft in approved:
-            template = (
-                session.get(Template, draft.template_id) if draft.template_id else None
-            )
+            template = session.get(Template, draft.template_id) if draft.template_id else None
             if template is None:
                 continue
             for family_id in template.product_family_ids:
@@ -661,9 +659,7 @@ class LeadService:
             ProvenFit(
                 segment=lead.segment,
                 product_handles=handles,
-                use=(
-                    "Won through this app. Confirm what was made before using this in an email."
-                ),
+                use=("Won through this app. Confirm what was made before using this in an email."),
                 outcome="Won.",
                 client_label=label,
                 client_name=lead.business_name,

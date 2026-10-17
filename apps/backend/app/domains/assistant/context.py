@@ -228,10 +228,7 @@ def _lead_candidates(session: Session, user_request: str) -> list[Lead]:
         )
     recent = list(
         session.scalars(
-            select(Lead)
-            .options(*options)
-            .order_by(Lead.updated_at.desc())
-            .limit(_LEAD_LIMIT)
+            select(Lead).options(*options).order_by(Lead.updated_at.desc()).limit(_LEAD_LIMIT)
         )
     )
     combined: list[Lead] = []
@@ -358,9 +355,9 @@ def _selected_context(
                             "response_status": item.response_status,
                             "created_at": item.created_at.isoformat(),
                         }
-                        for item in sorted(
-                            lead.communications, key=lambda item: item.created_at
-                        )[-5:]
+                        for item in sorted(lead.communications, key=lambda item: item.created_at)[
+                            -5:
+                        ]
                     ],
                     "source_evidence": [
                         {
@@ -468,9 +465,7 @@ def _selected_context(
                         "capacity": shortlist.capacity,
                         "status": shortlist.status,
                         "item_count": len(shortlist.items),
-                        "decision_counts": dict(
-                            Counter(item.decision for item in shortlist.items)
-                        ),
+                        "decision_counts": dict(Counter(item.decision for item in shortlist.items)),
                         "items": [
                             {
                                 "business_name": item.lead.business_name,
@@ -527,24 +522,20 @@ def build_app_context(
     families = CatalogueRepository().list_families(session)
     templates = TemplateRepository().list(session)
     campaigns.sort(
-        key=lambda item: -_relevance(
-            " ".join((item.name, item.segment, item.primary_location)), search_terms
+        key=lambda item: (
+            -_relevance(" ".join((item.name, item.segment, item.primary_location)), search_terms)
         )
     )
     products.sort(
-        key=lambda item: -_relevance(
-            " ".join((item.name, item.category, item.description)), search_terms
+        key=lambda item: (
+            -_relevance(" ".join((item.name, item.category, item.description)), search_terms)
         )
     )
     families.sort(
-        key=lambda item: -_relevance(
-            " ".join((item.name, item.description or "")), search_terms
-        )
+        key=lambda item: -_relevance(" ".join((item.name, item.description or "")), search_terms)
     )
     templates.sort(
-        key=lambda item: -_relevance(
-            " ".join((item.topic, item.subject, item.body)), search_terms
-        )
+        key=lambda item: -_relevance(" ".join((item.topic, item.subject, item.body)), search_terms)
     )
     campaigns = campaigns[:_CAMPAIGN_LIMIT]
     families = families[:_FAMILY_LIMIT]
@@ -561,8 +552,10 @@ def build_app_context(
         if isinstance(record, dict) and record.get("segment"):
             lead_segments.add(str(record["segment"]).casefold())
     products.sort(
-        key=lambda item: -_product_score(
-            item, search_terms, lead_segments=lead_segments, prefer_business=prefer_business
+        key=lambda item: (
+            -_product_score(
+                item, search_terms, lead_segments=lead_segments, prefer_business=prefer_business
+            )
         )
     )
     full_products = products[:_FULL_PRODUCT_LIMIT]
@@ -570,9 +563,11 @@ def build_app_context(
 
     notes = CatalogueRepository().list_notes(session)
     notes.sort(
-        key=lambda item: -(
-            4 * len(lead_segments & {segment.casefold() for segment in item.segments})
-            + _relevance(f"{item.title} {item.body}", search_terms)
+        key=lambda item: (
+            -(
+                4 * len(lead_segments & {segment.casefold() for segment in item.segments})
+                + _relevance(f"{item.title} {item.body}", search_terms)
+            )
         )
     )
     relevant_notes = [
@@ -610,111 +605,108 @@ def build_app_context(
 
     return _prune_snapshot(
         {
-        "snapshot_at": datetime.now(UTC).isoformat(),
-        "selected_context": selected_context,
-        "application": {
-            "name": "Etch 'N' Shine Lead Generation",
-            "purpose": (
-                "A local-first operator workbench for finding, qualifying and managing "
-                "business leads for Etch 'N' Shine products."
-            ),
-            "workspaces": [
-                "Overview",
-                "AI assistant",
-                "Campaigns",
-                "All leads",
-                "Weekly shortlist",
-                "Pipeline",
-                "Email drafts",
-                "Catalogue",
-                "Templates",
-                "Settings",
-            ],
-        },
-        "operations": operations.model_dump(mode="json"),
-        "workspace_settings": workspace_settings.model_dump(mode="json"),
-        "provider_capabilities": {
-            "manual": True,
-            "public_registries": True,
-            "google_places": runtime_settings.google_places_enabled,
-            "instagram": instagram_connected,
-            "maximum_discovery_queries": runtime_settings.discovery_max_queries,
-            "maximum_discovery_results": runtime_settings.discovery_max_results,
-        },
-        "campaigns": [
-            _campaign_summary(campaign)
-            for campaign in campaigns
-        ],
-        "relevant_or_recent_leads": [_lead_summary(lead) for lead in leads],
-        "next_open_follow_ups": [
-            {
-                "business_name": business_name,
-                "type": follow_up.follow_up_type,
-                "due_date": follow_up.due_date.isoformat(),
-                "notes": _excerpt(follow_up.notes),
-            }
-            for follow_up, business_name in follow_up_rows
-        ],
-        "catalogue": {
-            "active_product_count": len(products),
-            # The model sees only the products ranked most relevant to this question. Saying
-            # how many stops it presenting a sample as the whole range.
-            "products_shown": (
-                0
-                if selection.kind in {"outreach_batch", "shortlist"}
-                else len(full_products) + len(brief_products)
-            ),
-            "last_imported_at": (
-                catalogue_imported_at.isoformat() if catalogue_imported_at else None
-            ),
-            "may_be_out_of_date": catalogue_stale,
-            "product_groups": dict(group_counts.most_common()),
-            # `pricing_guidance` is deliberately absent. Pricing is quoted per job and must
-            # never reach a model or an email. See ADR-021.
-            "products": [
-                _product_full(product)
-                for product in full_products
-                if selection.kind not in {"outreach_batch", "shortlist"}
-            ],
-            "more_products": [
-                _product_brief(product)
-                for product in brief_products
-                if selection.kind not in {"outreach_batch", "shortlist"}
-            ],
-            "product_families": [
+            "snapshot_at": datetime.now(UTC).isoformat(),
+            "selected_context": selected_context,
+            "application": {
+                "name": "Etch 'N' Shine Lead Generation",
+                "purpose": (
+                    "A local-first operator workbench for finding, qualifying and managing "
+                    "business leads for Etch 'N' Shine products."
+                ),
+                "workspaces": [
+                    "Overview",
+                    "AI assistant",
+                    "Campaigns",
+                    "All leads",
+                    "Weekly shortlist",
+                    "Pipeline",
+                    "Email drafts",
+                    "Catalogue",
+                    "Templates",
+                    "Settings",
+                ],
+            },
+            "operations": operations.model_dump(mode="json"),
+            "workspace_settings": workspace_settings.model_dump(mode="json"),
+            "provider_capabilities": {
+                "manual": True,
+                "public_registries": True,
+                "google_places": runtime_settings.google_places_enabled,
+                "instagram": instagram_connected,
+                "maximum_discovery_queries": runtime_settings.discovery_max_queries,
+                "maximum_discovery_results": runtime_settings.discovery_max_results,
+            },
+            "campaigns": [_campaign_summary(campaign) for campaign in campaigns],
+            "relevant_or_recent_leads": [_lead_summary(lead) for lead in leads],
+            "next_open_follow_ups": [
                 {
-                    "name": family.name,
-                    "description": _excerpt(family.description),
-                    "product_count": len(family.product_ids),
+                    "business_name": business_name,
+                    "type": follow_up.follow_up_type,
+                    "due_date": follow_up.due_date.isoformat(),
+                    "notes": _excerpt(follow_up.notes),
                 }
-                for family in families
+                for follow_up, business_name in follow_up_rows
+            ],
+            "catalogue": {
+                "active_product_count": len(products),
+                # The model sees only the products ranked most relevant to this question. Saying
+                # how many stops it presenting a sample as the whole range.
+                "products_shown": (
+                    0
+                    if selection.kind in {"outreach_batch", "shortlist"}
+                    else len(full_products) + len(brief_products)
+                ),
+                "last_imported_at": (
+                    catalogue_imported_at.isoformat() if catalogue_imported_at else None
+                ),
+                "may_be_out_of_date": catalogue_stale,
+                "product_groups": dict(group_counts.most_common()),
+                # `pricing_guidance` is deliberately absent. Pricing is quoted per job and must
+                # never reach a model or an email. See ADR-021.
+                "products": [
+                    _product_full(product)
+                    for product in full_products
+                    if selection.kind not in {"outreach_batch", "shortlist"}
+                ],
+                "more_products": [
+                    _product_brief(product)
+                    for product in brief_products
+                    if selection.kind not in {"outreach_batch", "shortlist"}
+                ],
+                "product_families": [
+                    {
+                        "name": family.name,
+                        "description": _excerpt(family.description),
+                        "product_count": len(family.product_ids),
+                    }
+                    for family in families
+                    if selection.kind not in {"outreach_batch", "shortlist"}
+                ],
+            },
+            "templates": [
+                {
+                    "topic": template.topic,
+                    "subject": template.subject,
+                    "body_excerpt": _excerpt(template.body, 160),
+                    "product_family_ids": template.product_family_ids,
+                }
+                for template in templates
                 if selection.kind not in {"outreach_batch", "shortlist"}
             ],
-        },
-        "templates": [
-            {
-                "topic": template.topic,
-                "subject": template.subject,
-                "body_excerpt": _excerpt(template.body, 160),
-                "product_family_ids": template.product_family_ids,
-            }
-            for template in templates
-            if selection.kind not in {"outreach_batch", "shortlist"}
-        ],
-        "outreach": {
-            "batch_status_counts": {
-                str(status): int(count) for status, count in batch_status_rows
+            "outreach": {
+                "batch_status_counts": {
+                    str(status): int(count) for status, count in batch_status_rows
+                },
+                "draft_review_status_counts": {
+                    str(status): int(count) for status, count in draft_status_rows
+                },
             },
-            "draft_review_status_counts": {
-                str(status): int(count) for status, count in draft_status_rows
-            },
-        },
-        "product_knowledge": [_note_summary(note) for note in relevant_notes],
-        "proven_fits": [_fit_summary(fit) for fit in fits],
-        "snapshot_limits": (
-            "Named lists are bounded for the local model. Do not infer that an omitted record "
-            "does not exist; use the operation counts and say when the supplied snapshot is "
-            "insufficient."
-        ),
+            "product_knowledge": [_note_summary(note) for note in relevant_notes],
+            "proven_fits": [_fit_summary(fit) for fit in fits],
+            "snapshot_limits": (
+                "Named lists are bounded for the local model. Do not infer that an omitted record "
+                "does not exist; use the operation counts and say when the supplied snapshot is "
+                "insufficient."
+            ),
         }
     )

@@ -72,9 +72,7 @@ class CatalogueRepository:
         return session.get(ProvenFit, fit_id)
 
     def fit_exists_for_lead(self, session: Session, lead_id: str) -> bool:
-        return (
-            session.scalar(select(ProvenFit.id).where(ProvenFit.lead_id == lead_id)) is not None
-        )
+        return session.scalar(select(ProvenFit.id).where(ProvenFit.lead_id == lead_id)) is not None
 
     # `list`/`list_families` are defined last: a method literally named `list`
     # shadows the builtin for any annotation appearing later in this class

@@ -8,6 +8,7 @@ prices inside `SEO Description`, and store tags that never use the `segment:` pr
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -30,7 +31,7 @@ def _import(client: TestClient, content: str, filename: str = "export.csv") -> d
     return dict(response.json())
 
 
-def _products(client: TestClient) -> list[dict[str, object]]:
+def _products(client: TestClient) -> list[dict[str, Any]]:
     response = client.get("/api/v1/catalogue/products")
     assert response.status_code == 200, response.text
     return list(response.json())
@@ -182,9 +183,7 @@ def test_reimporting_the_same_export_creates_no_duplicates(client: TestClient) -
         ("Engraved into solid oak", "Engraved into solid oak"),
     ],
 )
-def test_price_phrasing_is_stripped_without_mangling_ordinary_copy(
-    raw: str, expected: str
-) -> None:
+def test_price_phrasing_is_stripped_without_mangling_ordinary_copy(raw: str, expected: str) -> None:
     assert enrichment.strip_prices(raw) == expected
 
 

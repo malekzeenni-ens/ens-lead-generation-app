@@ -28,9 +28,7 @@ _OLLAMA_BRIEFING_SCHEMA: dict[str, Any] = {
 _OLLAMA_AUTOFILL_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
-        "personalisation_observation": {
-            "anyOf": [{"type": "string"}, {"type": "null"}]
-        },
+        "personalisation_observation": {"anyOf": [{"type": "string"}, {"type": "null"}]},
         "relevance_opportunity": {"anyOf": [{"type": "string"}, {"type": "null"}]},
         "offer_angle": {"anyOf": [{"type": "string"}, {"type": "null"}]},
         "desired_next_step": {"anyOf": [{"type": "string"}, {"type": "null"}]},
@@ -141,13 +139,13 @@ def build_autofill_messages(
         "Suggest missing lead personalisation context using only the supplied website evidence "
         "and notes. Never invent specifics. Return null for a field rather than guessing.\n"
         "- personalisation_observation: one complete sentence addressed to the business, based "
-        "only on the supplied evidence, for example \"Your new treatment rooms on the Instagram "
-        "page look very well put together.\" Null if there is no real evidence.\n"
+        'only on the supplied evidence, for example "Your new treatment rooms on the Instagram '
+        'page look very well put together." Null if there is no real evidence.\n'
         "- relevance_opportunity: one sentence naming a concrete use inside their business.\n"
         "- offer_angle: one sentence starting with what Etch 'N' Shine would make for them. "
         "Never a price.\n"
-        "- desired_next_step: one sentence containing one ask, for example \"Would a free "
-        "mock-up with your logo be useful?\"\n\n" + identity_block(identity_tier)
+        '- desired_next_step: one sentence containing one ask, for example "Would a free '
+        'mock-up with your logo be useful?"\n\n' + identity_block(identity_tier)
     )
     return [
         {"role": "system", "content": system},

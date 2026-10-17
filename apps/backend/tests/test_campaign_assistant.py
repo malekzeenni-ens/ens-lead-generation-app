@@ -391,9 +391,7 @@ def test_partial_override_confirmation_applies_only_confirmed_items(
     draft = response.json()
     pending_override = draft["overrides"][0]
     radius_item_id = next(
-        item["item_id"]
-        for item in pending_override["items"]
-        if item["rule_id"] == "local-radius"
+        item["item_id"] for item in pending_override["items"] if item["rule_id"] == "local-radius"
     )
 
     decision = client.post(
@@ -463,9 +461,7 @@ def test_rejected_override_keeps_the_playbook_recommendation(
     assert rejected["overrides"][0]["status"] == "rejected"
 
 
-def test_stale_draft_version_is_rejected_with_conflict(
-    client: TestClient, app: FastAPI
-) -> None:
+def test_stale_draft_version_is_rejected_with_conflict(client: TestClient, app: FastAPI) -> None:
     install_fake_manager(app, [ready_proposal(), ready_proposal(radius_miles=10)])
 
     draft = client.post(

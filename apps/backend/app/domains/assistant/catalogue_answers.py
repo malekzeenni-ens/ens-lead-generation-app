@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections import Counter, defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
 from sqlalchemy.orm import Session
 
@@ -193,11 +193,13 @@ def _named_listing(subject: list[str], products: list[Product], *, require_all: 
     subject word belongs to that name."""
     stems = {_stem(word) for word in subject}
     groups = sorted({product_group(product) for product in products})
-    for names, render in (
+    listings: list[tuple[list[str], Callable[[str], str]]] = [
         (groups, lambda name: _group_list(name, products)),
         (list(enrichment.SEGMENTS), lambda name: _trade_list(name, products)),
-    ):
-        best, best_score = None, 0
+    ]
+    for names, render in listings:
+        best: str | None = None
+        best_score = 0
         for name in names:
             score = len(stems & _name_stems(name))
             if score > best_score:

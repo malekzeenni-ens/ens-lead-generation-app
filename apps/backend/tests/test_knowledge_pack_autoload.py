@@ -54,7 +54,9 @@ def _import_csv(client: TestClient) -> None:
 
 def _applications(client: TestClient) -> int:
     with client.app.state.database.session_factory() as session:  # type: ignore[attr-defined]
-        return session.query(AuditEvent).filter_by(action="catalogue.enrichment_imported").count()
+        return int(
+            session.query(AuditEvent).filter_by(action="catalogue.enrichment_imported").count()
+        )
 
 
 def _seeded(client: TestClient) -> list[dict[str, Any]]:

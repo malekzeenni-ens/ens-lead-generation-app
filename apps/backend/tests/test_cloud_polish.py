@@ -18,6 +18,7 @@ from app.core.errors import DomainError
 from app.db.models import AuditEvent
 from app.domains.outreach import cloud_client
 from app.domains.outreach.cloud_prompt import CLOUD_POLISH_SYSTEM_PROMPT
+from app.domains.outreach.schemas import OutreachDraftRefineResult
 from tests.test_outreach_drafts import _batch, _ready_lead, _template
 
 
@@ -162,7 +163,7 @@ def test_polish_sends_only_one_lead_context_and_does_not_mutate_draft(
     ) -> cloud_client.CloudPolishResult:
         captured.update(api_key=api_key, model=model, user_message=user_message)
         return cloud_client.CloudPolishResult(
-            value=cloud_client.OutreachDraftRefineResult(subject="Polished", body="A better note."),
+            value=OutreachDraftRefineResult(subject="Polished", body="A better note."),
             input_tokens=500,
             output_tokens=80,
             request_id="req-test",
@@ -215,9 +216,7 @@ def test_prices_are_stripped_from_cloud_response(
         *, api_key: str, model: str, user_message: str
     ) -> cloud_client.CloudPolishResult:
         return cloud_client.CloudPolishResult(
-            value=cloud_client.OutreachDraftRefineResult(
-                subject="A sign for £25", body="This costs £25."
-            ),
+            value=OutreachDraftRefineResult(subject="A sign for £25", body="This costs £25."),
             input_tokens=20,
             output_tokens=10,
             request_id="req-price",
@@ -243,7 +242,7 @@ def test_response_price_that_survives_stripping_is_rejected(
     monkeypatch.setattr(
         "app.domains.outreach.service.polish_with_anthropic",
         lambda **_: cloud_client.CloudPolishResult(
-            value=cloud_client.OutreachDraftRefineResult(
+            value=OutreachDraftRefineResult(
                 subject="A sign for £25", body="Discuss this £25 offer."
             ),
             input_tokens=20,

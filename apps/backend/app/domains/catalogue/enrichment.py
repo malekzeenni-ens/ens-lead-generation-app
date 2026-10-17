@@ -69,8 +69,19 @@ _GROUP_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "Home and kitchen",
         (
-            "coaster", "board", "kitchen", "tray", "placemat", "frame", "ornament", "decor",
-            "knife", "utensil", "cutlery", "fork", "spoon",
+            "coaster",
+            "board",
+            "kitchen",
+            "tray",
+            "placemat",
+            "frame",
+            "ornament",
+            "decor",
+            "knife",
+            "utensil",
+            "cutlery",
+            "fork",
+            "spoon",
         ),
     ),
     ("Gifts and occasions", ("gift", "party", "wedding", "favour", "baby", "place card", "box")),
@@ -97,6 +108,7 @@ def derive_group(name: str, category: str) -> str:
         if pattern.search(haystack):
             return group
     return OTHER_GROUP
+
 
 # The store's real tags mapped onto trades. No listing uses the `segment:` prefix the importer
 # originally expected, so without this every product arrived with no target segments at all.

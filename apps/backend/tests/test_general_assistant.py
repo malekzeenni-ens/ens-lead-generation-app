@@ -236,9 +236,9 @@ def test_missing_selected_context_is_rejected_before_the_message_is_saved(
     assert response.status_code == 404
     assert response.json()["code"] == "ASSISTANT_CONTEXT_NOT_FOUND"
     assert manager.messages == []
-    assert client.get(f"/api/v1/assistant/conversations/{conversation['id']}").json()[
-        "messages"
-    ] == []
+    assert (
+        client.get(f"/api/v1/assistant/conversations/{conversation['id']}").json()["messages"] == []
+    )
 
 
 def test_conversation_handoff_without_custom_playbook_creates_only_a_reviewable_campaign_draft(
