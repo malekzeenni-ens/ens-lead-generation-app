@@ -524,6 +524,35 @@ class SuppressionRecord(Base):
     lifted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     lead: Mapped[Lead | None] = relationship(back_populates="suppression_records")
+    identifiers: Mapped[list[SuppressionIdentifier]] = relationship(
+        back_populates="suppression", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class SuppressionIdentifier(Base):
+    """A minimised hash of one identifier that could bring a suppressed business back (ADR-023).
+
+    It survives privacy deletion of the lead, so the same business is still recognised when a
+    provider finds it again under a different address format.
+    """
+
+    __tablename__ = "suppression_identifier"
+    __table_args__ = (
+        UniqueConstraint(
+            "suppression_id", "kind", "value_hash", name="uq_suppression_identifier_value"
+        ),
+        Index("ix_suppression_identifier_lookup", "kind", "value_hash"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    suppression_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("suppression_record.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(30), nullable=False)
+    value_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    suppression: Mapped[SuppressionRecord] = relationship(back_populates="identifiers")
 
 
 class AuditEvent(Base):
@@ -810,6 +839,7 @@ class DiscoveryCandidate(Base):
         String(36), ForeignKey("lead.id", ondelete="SET NULL")
     )
     duplicate_confidence: Mapped[float | None] = mapped_column(Float)
+    review_reason: Mapped[str | None] = mapped_column(Text)
     rejection_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(

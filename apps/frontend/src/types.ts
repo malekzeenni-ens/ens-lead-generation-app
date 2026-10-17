@@ -703,6 +703,7 @@ export interface DiscoveryCandidate {
   status: string;
   matched_lead_id: string | null;
   duplicate_confidence: number | null;
+  review_reason: string | null;
   rejection_reason: string | null;
   created_at: string;
   updated_at: string;

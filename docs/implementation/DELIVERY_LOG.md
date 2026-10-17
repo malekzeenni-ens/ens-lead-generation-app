@@ -438,3 +438,23 @@ No user database, real Google/Meta request, AI inference, outbound message or in
 - Real local Ollama run passed for a general answer, generated Word playbook, authenticated DOCX download and playbook-to-campaign handoff; no campaign existed before approval.
 - Focused backend assistant/campaign suites: 12 passed. Frontend local-assistant interaction suite: 50 passed.
 - Full regression: 91 backend tests and 102 frontend tests passed. Ruff, formatting, strict mypy, ESLint, strict TypeScript, production frontend build, Cargo tests/clippy, lock verification, dependency audit and `git diff --check` pass.
+
+## 18 October 2026 - Architecture review refinements
+
+Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, one commit per item. Decisions: D1 (name-only duplicates go to review) and D2 (audit records hold no personal data, with a historic scrub) approved by the operator; D3-D5 taken as recommended.
+
+### R0.1 - Quality gate restored
+
+- `main` failed the gate on strict mypy (an untyped lambda pair in `catalogue_answers.py` and five test typing errors) and on `ruff format` (nineteen files). All fixed; formatting changes are style only.
+
+### R0.2 - Faster backend suite
+
+- A session-scoped database at head is copied per test instead of running all migrations each time (1.6 s per test). Backend suite: 308 s to 124 s.
+- Found while measuring: every test app's shutdown sends a real unload request to a local Ollama if one is running. Harmless, but it is recorded here for follow-up.
+
+### R1 - Suppression covers every identifier (ADR-023)
+
+- Added `suppression_identifier` and `discovery_candidate.review_reason` (migration `0017`, with a backfill from existing suppressions whose lead still exists).
+- Lead create, edit and discovery promotion now check website host, phone, email and Instagram/Facebook handle as well as name/location. A name-only match holds a discovery candidate for review with its reason shown in the review queue.
+- Structured log events record the suppression ID and matched identifier kind only.
+- Verification: 6 new tests in `test_suppression_identifiers.py`; full backend suite 199 passed; Ruff, strict mypy, ESLint and TypeScript pass. Two schema-version assertions now read the head revision instead of naming it.

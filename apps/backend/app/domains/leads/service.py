@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import builtins
 import csv
-import hashlib
 import io
-import re
+import logging
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from enum import Enum
@@ -34,7 +33,11 @@ from app.domains.audit.service import record_audit_event
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.catalogue.repository import CatalogueRepository
 from app.domains.leads.activity import lead_activity_rows
-from app.domains.leads.identity import social_identity
+from app.domains.leads.identity import (
+    lead_identifier_hash,
+    normalize_business_name,
+    social_identity,
+)
 from app.domains.leads.repository import LeadRepository
 from app.domains.leads.schemas import (
     CommunicationCreate,
@@ -60,17 +63,17 @@ from app.domains.leads.schemas import (
     SuppressionCreate,
     SuppressionRead,
 )
+from app.domains.leads.suppression import (
+    IdentifierHash,
+    find_active_suppression,
+    identifier_hashes,
+    lead_identifier_hashes,
+    record_identifiers,
+    social_keys_from_urls,
+)
 from app.domains.outreach.state import invalidate_approved_drafts
 
-
-def normalize_business_name(value: str) -> str:
-    words = re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip().split()
-    return " ".join(words)
-
-
-def lead_identifier_hash(business_name: str, location: str) -> str:
-    canonical = f"{normalize_business_name(business_name)}|{location.casefold().strip()}"
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+logger = logging.getLogger(__name__)
 
 
 def _audit_value(value: Any) -> Any:
@@ -187,6 +190,20 @@ def lead_to_read(lead: Lead, outreach_events: Sequence[AuditEvent] = ()) -> Lead
     )
 
 
+# Lead fields a suppression identifies a business by; changing any of them re-checks suppressions.
+_IDENTIFIER_FIELDS = frozenset(
+    {
+        "business_name",
+        "location",
+        "website",
+        "phone_number",
+        "public_email",
+        "contact_email",
+        "social_profile",
+    }
+)
+
+
 class LeadService:
     def __init__(
         self,
@@ -266,31 +283,52 @@ class LeadService:
                     lead.social_profile = None
                 session.delete(identity)
 
-    def _assert_identifier_allowed(
-        self,
+    @staticmethod
+    def _assert_identifiers_allowed(
         session: Session,
-        business_name: str,
-        location: str,
+        hashes: set[IdentifierHash],
         *,
         current_lead_id: str | None = None,
     ) -> None:
-        identifier_hash = lead_identifier_hash(business_name, location)
-        suppressed = self.repository.active_suppression_by_hash(session, identifier_hash)
-        if suppressed is not None and (
-            current_lead_id is None or suppressed.lead_id != current_lead_id
-        ):
-            raise DomainError(
-                "LEAD_IDENTIFIER_SUPPRESSED",
-                "This business and location match an active suppression record.",
-                status_code=409,
-            )
+        match = find_active_suppression(session, hashes, exclude_lead_id=current_lead_id)
+        if match is None:
+            return
+        logger.info(
+            "Lead change blocked by an active suppression",
+            extra={
+                "lead_id": current_lead_id,
+                "suppression_id": match.record.id,
+                "matched_identifier": match.kind.value,
+            },
+        )
+        raise DomainError(
+            "LEAD_IDENTIFIER_SUPPRESSED",
+            f"This business matches an active suppression record by its {match.label}.",
+            status_code=409,
+            details={"matched_identifier": match.kind.value},
+        )
 
     def create(self, session: Session, data: LeadCreate, correlation_id: str) -> LeadRead:
         campaign = self.campaign_repository.get(session, data.campaign_id)
         if campaign is None:
             raise DomainError("CAMPAIGN_NOT_FOUND", "Campaign not found.", status_code=404)
 
-        self._assert_identifier_allowed(session, data.business_name, data.location)
+        self._assert_identifiers_allowed(
+            session,
+            identifier_hashes(
+                business_name=data.business_name,
+                location=data.location,
+                website=str(data.website) if data.website else None,
+                phones=[data.phone_number],
+                emails=[data.public_email, data.contact_email],
+                social_keys=social_keys_from_urls(
+                    [
+                        str(url) if url else None
+                        for url in (data.social_profile, data.instagram_url, data.facebook_url)
+                    ]
+                ),
+            ),
+        )
         normalized_name = normalize_business_name(data.business_name)
         duplicate = self.repository.find_exact(session, normalized_name, data.location)
         if duplicate is not None:
@@ -449,12 +487,6 @@ class LeadService:
         next_name = str(changes.get("business_name", lead.business_name))
         next_location = str(changes.get("location", lead.location))
         if "business_name" in changes or "location" in changes:
-            self._assert_identifier_allowed(
-                session,
-                next_name,
-                next_location,
-                current_lead_id=lead.id,
-            )
             duplicate = self.repository.find_exact(
                 session, normalize_business_name(next_name), next_location
             )
@@ -501,6 +533,12 @@ class LeadService:
                 after[field] = identity.profile_url
         if "business_name" in changes:
             lead.normalized_name = normalize_business_name(lead.business_name)
+        if _IDENTIFIER_FIELDS.intersection(changes) or social_changes:
+            # Checked against the lead as it will be saved, social identities included.
+            session.flush()
+            self._assert_identifiers_allowed(
+                session, lead_identifier_hashes(session, lead), current_lead_id=lead.id
+            )
 
         approval_sensitive_fields = {
             "public_email",
@@ -854,6 +892,8 @@ class LeadService:
             effective_at=now,
         )
         session.add(record)
+        session.flush()
+        record_identifiers(record, lead_identifier_hashes(session, lead))
         lead.suppressed = True
         invalidated_drafts = invalidate_approved_drafts(
             session,
@@ -934,8 +974,14 @@ class LeadService:
 
     def delete(self, session: Session, lead_id: str, correlation_id: str) -> LeadDeleteResult:
         lead = self._get_model(session, lead_id)
-        retained = any(record.active for record in lead.suppression_records)
+        active_records = [record for record in lead.suppression_records if record.active]
+        retained = bool(active_records)
         identifier_hash = lead_identifier_hash(lead.business_name, lead.location)
+        if active_records:
+            # Capture identifiers learned since the suppression, before the lead is gone.
+            current = lead_identifier_hashes(session, lead)
+            for record in active_records:
+                record_identifiers(record, current)
         session.delete(lead)
         record_audit_event(
             session,

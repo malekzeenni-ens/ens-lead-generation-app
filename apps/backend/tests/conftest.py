@@ -5,14 +5,25 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
-from app.db.migrations import run_migrations
+from app.db.migrations import backend_directory, run_migrations
 from app.main import create_app
 
 SESSION_TOKEN = "test-session-token-with-at-least-thirty-two-characters"  # noqa: S105 -- test fixture
+
+
+def head_revision() -> str:
+    """The latest migration, so schema-version assertions need no edit per migration."""
+    config = Config(str(backend_directory() / "alembic.ini"))
+    config.set_main_option("script_location", str(backend_directory() / "migrations"))
+    head = ScriptDirectory.from_config(config).get_current_head()
+    assert head is not None
+    return head
 
 
 @pytest.fixture(scope="session")

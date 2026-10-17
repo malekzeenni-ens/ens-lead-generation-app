@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from urllib.parse import parse_qs, urlparse
 
@@ -8,6 +9,23 @@ _SOCIAL_HOSTS = {
     "instagram": {"instagram.com", "www.instagram.com"},
     "facebook": {"facebook.com", "www.facebook.com", "m.facebook.com", "fb.com", "www.fb.com"},
 }
+
+
+def normalize_business_name(value: str) -> str:
+    words = re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip().split()
+    return " ".join(words)
+
+
+def lead_identifier_hash(business_name: str, location: str) -> str:
+    canonical = f"{normalize_business_name(business_name)}|{location.casefold().strip()}"
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def website_host(value: str | None) -> str | None:
+    if not value:
+        return None
+    host = (urlparse(value).hostname or "").casefold()
+    return host.removeprefix("www.") or None
 
 
 def valid_public_email(value: str | None) -> bool:

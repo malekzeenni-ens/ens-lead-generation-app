@@ -4,7 +4,6 @@ import logging
 from contextlib import suppress
 from datetime import UTC, date, datetime
 from difflib import SequenceMatcher
-from urllib.parse import urlparse
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -49,9 +48,14 @@ from app.domains.automation.schemas import (
     SocialCandidateCapture,
 )
 from app.domains.campaigns.repository import CampaignRepository
-from app.domains.leads.identity import phone_match_key, social_identity
+from app.domains.leads.identity import (
+    normalize_business_name,
+    phone_match_key,
+    social_identity,
+    website_host,
+)
 from app.domains.leads.repository import LeadRepository
-from app.domains.leads.service import lead_identifier_hash, normalize_business_name
+from app.domains.leads.suppression import find_active_suppression, identifier_hashes
 from app.domains.qualification.service import QualificationService
 
 logger = logging.getLogger(__name__)
@@ -111,13 +115,6 @@ def _run_to_read(run: CampaignRun) -> CampaignRunRead:
             for attempt in sorted(run.attempts, key=lambda item: item.started_at)
         ],
     )
-
-
-def _website_host(value: str | None) -> str | None:
-    if not value:
-        return None
-    host = (urlparse(value).hostname or "").casefold()
-    return host.removeprefix("www.") or None
 
 
 def _candidate_website_evidence(candidate: DiscoveryCandidate) -> dict[str, object]:
@@ -523,7 +520,7 @@ class CampaignAutomationService:
                 return lead
 
         candidates = self.repository.candidate_leads(session)
-        candidate_host = _website_host(candidate.website)
+        candidate_host = website_host(candidate.website)
         candidate_phone_key = phone_match_key(_candidate_phone(candidate))
         candidate_email = _candidate_public_email(candidate)
         candidate_social_keys = {
@@ -532,7 +529,7 @@ class CampaignAutomationService:
         exact: Lead | None = None
         fuzzy: tuple[Lead, float] | None = None
         for lead in candidates:
-            same_host = candidate_host and candidate_host == _website_host(lead.website)
+            same_host = candidate_host and candidate_host == website_host(lead.website)
             same_name = lead.normalized_name == candidate.normalized_name
             same_phone = bool(
                 candidate_phone_key and candidate_phone_key == phone_match_key(lead.phone_number)
@@ -566,12 +563,42 @@ class CampaignAutomationService:
 
         lead_name = candidate.business_name[:200]
         lead_location = candidate.location[:200]
-        suppression = self.lead_repository.active_suppression_by_hash(
-            session, lead_identifier_hash(lead_name, lead_location)
+        suppression = find_active_suppression(
+            session,
+            identifier_hashes(
+                business_name=lead_name,
+                location=lead_location,
+                website=candidate.website,
+                phones=[_candidate_phone(candidate)],
+                emails=[_candidate_public_email(candidate)],
+                social_keys=[
+                    (platform, handle)
+                    for platform, handle, _ in _candidate_social_profiles(candidate)
+                ],
+            ),
+            include_name_only=not force,
         )
         if suppression is not None:
-            candidate.status = CandidateStatus.REJECTED.value
-            candidate.rejection_reason = "Matched an active suppression identifier."
+            log_context = {
+                "discovery_candidate_id": candidate.id,
+                "campaign_run_id": candidate.run_id,
+                "suppression_id": suppression.record.id,
+                "matched_identifier": suppression.kind.value,
+            }
+            if suppression.strong:
+                candidate.status = CandidateStatus.REJECTED.value
+                candidate.rejection_reason = (
+                    f"Matched an active suppression by its {suppression.label}."
+                )
+                logger.info("Discovery candidate rejected by a suppression", extra=log_context)
+            else:
+                candidate.status = CandidateStatus.REVIEW_REQUIRED.value
+                candidate.matched_lead_id = suppression.record.lead_id
+                candidate.review_reason = (
+                    "The name matches a suppressed business. Promote it only if this is a "
+                    "different business."
+                )
+                logger.info("Discovery candidate held for suppression review", extra=log_context)
             return None
         lead = Lead(
             business_name=lead_name,

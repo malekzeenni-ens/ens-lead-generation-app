@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from app.core.errors import DomainError
 from app.domains.backups.service import BackupService
-from tests.conftest import lead_payload
+from tests.conftest import head_revision, lead_payload
 
 
 def test_consistent_backup_verification_and_isolated_restore(
@@ -41,7 +41,7 @@ def test_consistent_backup_verification_and_isolated_restore(
         "valid": True,
         "checksum_matches": True,
         "integrity_result": "ok",
-        "schema_version": "0016_seed_outreach_templates",
+        "schema_version": head_revision(),
         "assistant_files_present": False,
         "assistant_files_checksum_matches": None,
         "assistant_files_count": 0,

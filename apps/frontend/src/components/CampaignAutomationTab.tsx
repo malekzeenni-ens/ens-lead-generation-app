@@ -238,6 +238,7 @@ export function CampaignAutomationTab({
                   {candidate.duplicate_confidence ? (
                     <small>{Math.round(candidate.duplicate_confidence * 100)}% name similarity</small>
                   ) : null}
+                  {candidate.review_reason ? <small>{candidate.review_reason}</small> : null}
                 </div>
                 <div className="record-actions">
                   {candidate.matched_lead_id ? (

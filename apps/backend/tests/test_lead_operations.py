@@ -6,7 +6,7 @@ from typing import cast
 from fastapi.testclient import TestClient
 
 from app.domains.leads.schemas import PipelineStage
-from tests.conftest import lead_payload
+from tests.conftest import head_revision, lead_payload
 
 
 def _create_lead(
@@ -257,7 +257,7 @@ def test_export_settings_diagnostics_and_formula_protection(
     diagnostics = client.get("/api/v1/system/diagnostics")
     assert diagnostics.status_code == 200
     body = diagnostics.json()
-    assert body["schema_version"] == "0016_seed_outreach_templates"
+    assert body["schema_version"] == head_revision()
     assert body["journal_mode"] == "wal"
     assert body["foreign_keys_enabled"] is True
     assert body["provider_mode"] == "disabled"

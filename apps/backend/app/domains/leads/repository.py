@@ -13,7 +13,6 @@ from app.db.models import (
     ScoreRun,
     SourceObservation,
     SourceSystem,
-    SuppressionRecord,
 )
 
 _LEAD_OPTIONS = (
@@ -88,16 +87,6 @@ class LeadRepository:
 
     def link_campaign(self, session: Session, lead_id: str, campaign_id: str) -> None:
         session.add(LeadCampaign(lead_id=lead_id, campaign_id=campaign_id))
-
-    def active_suppression_by_hash(
-        self, session: Session, identifier_hash: str
-    ) -> SuppressionRecord | None:
-        return session.scalar(
-            select(SuppressionRecord).where(
-                SuppressionRecord.identifier_hash == identifier_hash,
-                SuppressionRecord.active.is_(True),
-            )
-        )
 
     def get_follow_up(self, session: Session, lead_id: str, follow_up_id: str) -> FollowUp | None:
         return session.scalar(

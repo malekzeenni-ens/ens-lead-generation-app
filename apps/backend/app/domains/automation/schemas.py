@@ -65,6 +65,7 @@ class DiscoveryCandidateRead(BaseModel):
     status: str
     matched_lead_id: str | None
     duplicate_confidence: float | None
+    review_reason: str | None
     rejection_reason: str | None
     created_at: datetime
     updated_at: datetime
