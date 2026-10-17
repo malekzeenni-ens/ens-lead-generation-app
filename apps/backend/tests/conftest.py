@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -8,16 +9,32 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
+from app.db.migrations import run_migrations
 from app.main import create_app
 
 SESSION_TOKEN = "test-session-token-with-at-least-thirty-two-characters"  # noqa: S105 -- test fixture
 
 
+@pytest.fixture(scope="session")
+def migrated_database_template(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A database at the head revision, built once per test session.
+
+    Running every migration costs about 1.6 s; upgrading a database already at head costs under
+    0.1 s. Each test copies this file, and `create_app` still runs its upgrade as in production.
+    """
+    template = tmp_path_factory.mktemp("migrated-template") / "ens-leads.db"
+    run_migrations(template)
+    return template
+
+
 @pytest.fixture
-def settings(tmp_path: Path) -> Settings:
+def settings(tmp_path: Path, migrated_database_template: Path) -> Settings:
+    database_path = tmp_path / "data" / "ens-leads.db"
+    database_path.parent.mkdir(parents=True)
+    shutil.copyfile(migrated_database_template, database_path)
     return Settings(
         session_token=SESSION_TOKEN,
-        database_path=tmp_path / "data" / "ens-leads.db",
+        database_path=database_path,
         log_directory=tmp_path / "logs",
         google_places_api_key=None,
         campaign_run_inline=True,
