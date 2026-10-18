@@ -1647,7 +1647,9 @@ function Workbench() {
             </div>
           ) : null}
           <WorkspaceActionsContext.Provider value={actions}>
-            <div id={activeSection}>{page[activeSection]}</div>
+            <div id={activeSection} key={activeSection} className="page-enter">
+              {page[activeSection]}
+            </div>
           </WorkspaceActionsContext.Provider>
         </main>
       </div>

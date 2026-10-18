@@ -593,6 +593,7 @@ h3 {
 
 .task-panel {
   min-width: 0;
+  animation: ens-page-enter var(--ens-motion-base) var(--ens-ease-out);
 }
 
 .task-panel:focus-visible {
@@ -825,6 +826,7 @@ h3 {
   box-shadow: var(--ens-shadow-raised);
   color: var(--ens-text-primary);
   font-size: var(--ens-text-md);
+  animation: ens-toast-in var(--ens-motion-base) var(--ens-ease-out);
 }
 
 .toast > svg {
@@ -4664,6 +4666,55 @@ td small {
 
   to {
     background-position: -100% 0;
+  }
+}
+
+/* ------------------------------------------------------------------------
+ * Motion (UX redesign A3): explain change, never decorate.
+ * ---------------------------------------------------------------------- */
+
+.page-enter {
+  animation: ens-page-enter var(--ens-motion-base) var(--ens-ease-out);
+}
+
+.alert {
+  animation: ens-reveal var(--ens-motion-base) var(--ens-ease-out);
+}
+
+/* A row or card an action just changed, briefly highlighted. */
+.row-flash {
+  animation: ens-row-flash 800ms var(--ens-ease-out);
+}
+
+.metric-card--interactive,
+.navigation-item {
+  transition:
+    background var(--ens-motion-fast) var(--ens-ease-out),
+    border-color var(--ens-motion-fast) var(--ens-ease-out),
+    transform var(--ens-motion-fast) var(--ens-ease-out);
+}
+
+.metric-card--interactive:hover {
+  transform: translateY(-1px);
+}
+
+@keyframes ens-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes ens-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes ens-row-flash {
+  from {
+    background-color: rgb(221 191 147 / 22%);
   }
 }
 
