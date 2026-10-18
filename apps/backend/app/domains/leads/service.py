@@ -15,13 +15,13 @@ from sqlalchemy.orm import Session
 from app.core.csv_safety import safe_csv_cell
 from app.core.errors import DomainError
 from app.db.models import (
-    AuditEvent,
     Communication,
     FollowUp,
     Lead,
     LeadNote,
     LeadSocialIdentity,
     LeadStageEvent,
+    OutreachActivity,
     ProvenFit,
     ShortlistItem,
     SourceObservation,
@@ -29,7 +29,6 @@ from app.db.models import (
     SuppressionRecord,
     Template,
 )
-from app.domains.audit.repository import AuditRepository
 from app.domains.audit.service import record_audit_event
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.catalogue.repository import CatalogueRepository
@@ -72,6 +71,7 @@ from app.domains.leads.suppression import (
     record_identifiers,
     social_keys_from_urls,
 )
+from app.domains.outreach.activity import activities_by_lead
 from app.domains.outreach.state import invalidate_approved_drafts
 
 logger = logging.getLogger(__name__)
@@ -87,24 +87,19 @@ def _audit_value(value: Any) -> Any:
     return str(value)
 
 
-def _outreach_activity_to_read(event: AuditEvent) -> OutreachActivityRead:
-    version = event.summary.get("version")
-    reason = event.summary.get("reason")
-    recipient_email = event.summary.get("recipient_email")
+def _outreach_activity_to_read(activity: OutreachActivity) -> OutreachActivityRead:
     return OutreachActivityRead(
-        id=event.id,
-        draft_id=event.entity_id,
-        action=event.action,
-        version=version if isinstance(version, int) else None,
-        reason=reason if isinstance(reason, str) and reason else None,
-        recipient_email=(
-            recipient_email if isinstance(recipient_email, str) and recipient_email else None
-        ),
-        created_at=event.created_at,
+        id=activity.id,
+        draft_id=activity.draft_id,
+        action=activity.action,
+        version=activity.version,
+        reason=activity.reason or None,
+        recipient_email=activity.recipient_email or None,
+        created_at=activity.created_at,
     )
 
 
-def lead_to_read(lead: Lead, outreach_events: Sequence[AuditEvent] = ()) -> LeadRead:
+def lead_to_read(lead: Lead, outreach_events: Sequence[OutreachActivity] = ()) -> LeadRead:
     sources = [
         SourceObservationRead(
             id=observation.id,
@@ -205,26 +200,40 @@ _IDENTIFIER_FIELDS = frozenset(
 )
 
 
+# Structured, non-personal lead fields whose before/after values the audit event records. Any other
+# changed field is recorded by name only (ADR-024).
+_AUDITED_VALUE_FIELDS = frozenset(
+    {
+        "contact_classification",
+        "estimated_order_value",
+        "lost_reason",
+        "mock_up_status",
+        "outreach_hold_until",
+        "potential_recurrence",
+        "quote_status",
+        "quote_value",
+        "retention_review_date",
+        "sample_status",
+        "segment",
+        "won_value",
+    }
+)
+
+
 class LeadService:
     def __init__(
         self,
         repository: LeadRepository | None = None,
         campaign_repository: CampaignRepository | None = None,
-        audit_repository: AuditRepository | None = None,
     ) -> None:
         self.repository = repository or LeadRepository()
         self.campaign_repository = campaign_repository or CampaignRepository()
-        self.audit_repository = audit_repository or AuditRepository()
 
+    @staticmethod
     def _outreach_events(
-        self, session: Session, lead_ids: Sequence[str]
-    ) -> dict[str, list[AuditEvent]]:
-        by_lead: dict[str, list[AuditEvent]] = {lead_id: [] for lead_id in lead_ids}
-        for event in self.audit_repository.outreach_activity_events(session, lead_ids):
-            lead_id = event.summary.get("lead_id")
-            if isinstance(lead_id, str) and lead_id in by_lead:
-                by_lead[lead_id].append(event)
-        return by_lead
+        session: Session, lead_ids: Sequence[str]
+    ) -> dict[str, list[OutreachActivity]]:
+        return activities_by_lead(session, lead_ids)
 
     def _get_model(self, session: Session, lead_id: str) -> Lead:
         lead = self.repository.get(session, lead_id)
@@ -437,7 +446,6 @@ class LeadService:
             entity_id=lead.id,
             correlation_id=correlation_id,
             summary={
-                "business_name": lead.business_name,
                 "campaign_id": data.campaign_id,
                 "source_type": data.source.source_type.value,
             },
@@ -572,8 +580,12 @@ class LeadService:
             entity_id=lead.id,
             correlation_id=correlation_id,
             summary={
-                "before": before,
-                "after": after,
+                "changed_fields": sorted(after),
+                "values": {
+                    field: {"before": before[field], "after": after[field]}
+                    for field in sorted(after)
+                    if field in _AUDITED_VALUE_FIELDS
+                },
                 "invalidated_outreach_drafts": invalidated_drafts,
             },
         )
@@ -655,7 +667,7 @@ class LeadService:
             summary={
                 "previous_stage": previous_stage,
                 "new_stage": data.stage.value,
-                "reason": data.reason,
+                "reason_provided": bool(data.reason),
                 "invalidated_outreach_drafts": invalidated_drafts,
                 "proven_fit_recorded": recorded_fit,
             },

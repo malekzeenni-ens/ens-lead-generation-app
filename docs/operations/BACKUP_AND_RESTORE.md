@@ -4,6 +4,10 @@
 
 Never copy the live `.db`, `.db-wal`, and `.db-shm` files as an application backup. The backup service uses SQLite’s online backup API, then runs `PRAGMA integrity_check`, atomically publishes the snapshot, calculates SHA-256, and writes a JSON manifest containing the schema and application versions.
 
+## Automatic copy before an upgrade
+
+When the app starts with migrations pending on an existing database, it first copies the database beside itself as `ens-leads.pre-upgrade-<revision>-<UTC time>.sqlite3` and logs the path in `application.jsonl`. Some upgrades cannot be reversed (0018 removes personal data from audit events, ADR-024), so this copy is the way back: stop the app and restore it in place of `ens-leads.db`. It holds everything the database held, including data an upgrade deliberately removed, so delete it once the upgraded app has been checked. It is not a substitute for the verified backups below.
+
 ## Create and verify a backup
 
 From `apps/backend`, using the default local AppData database:

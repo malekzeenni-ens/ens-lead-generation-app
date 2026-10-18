@@ -1495,7 +1495,7 @@ class CampaignAutomationService:
             summary={
                 "campaign_id": candidate.campaign_id,
                 "matched_lead_id": candidate.matched_lead_id,
-                "reason": data.reason,
+                "reason_provided": bool(data.reason),
             },
         )
         session.commit()

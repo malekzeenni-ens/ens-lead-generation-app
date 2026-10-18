@@ -18,7 +18,6 @@ from app.db.models import (
     Product,
     Template,
 )
-from app.domains.audit.repository import AuditRepository
 from app.domains.audit.service import record_audit_event
 from app.domains.campaign_assistant.gate import require_local_ai_enabled
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
@@ -27,6 +26,7 @@ from app.domains.catalogue.enrichment import strip_prices
 from app.domains.catalogue.repository import CatalogueRepository
 from app.domains.leads.identity import valid_public_email
 from app.domains.leads.repository import LeadRepository
+from app.domains.outreach.activity import record_outreach_activity
 from app.domains.outreach.cloud_client import polish_with_anthropic
 from app.domains.outreach.cloud_prompt import (
     CLOUD_POLISH_PROMPT_VERSION,
@@ -91,14 +91,12 @@ class OutreachService:
         template_repository: TemplateRepository | None = None,
         catalogue_repository: CatalogueRepository | None = None,
         campaign_repository: CampaignRepository | None = None,
-        audit_repository: AuditRepository | None = None,
     ) -> None:
         self.repository = repository or OutreachRepository()
         self.lead_repository = lead_repository or LeadRepository()
         self.template_repository = template_repository or TemplateRepository()
         self.catalogue_repository = catalogue_repository or CatalogueRepository()
         self.campaign_repository = campaign_repository or CampaignRepository()
-        self.audit_repository = audit_repository or AuditRepository()
 
     @staticmethod
     def _hold_active(lead: Lead, today: date) -> bool:
@@ -357,13 +355,13 @@ class OutreachService:
                 editor="template",
             )
             session.add(revision)
-            record_audit_event(
+            record_outreach_activity(
                 session,
+                draft=draft,
                 action="outreach.draft_generated",
-                entity_type="outreach_draft",
-                entity_id=draft.id,
                 correlation_id=correlation_id,
-                summary={"lead_id": lead.id, "batch_id": batch.id, "version": 1},
+                version=1,
+                audit_details={"batch_id": batch.id},
             )
         record_audit_event(
             session,
@@ -493,13 +491,12 @@ class OutreachService:
         draft.rejection_reason = None
         draft.blocked_reason = None
         refresh_batch_status(session, draft.batch_id)
-        record_audit_event(
+        record_outreach_activity(
             session,
+            draft=draft,
             action="outreach.draft_edited",
-            entity_type="outreach_draft",
-            entity_id=draft.id,
             correlation_id=correlation_id,
-            summary={"lead_id": draft.lead_id, "version": version},
+            version=version,
         )
         session.commit()
         return self.get_draft(session, draft.id)
@@ -645,17 +642,13 @@ class OutreachService:
         draft.rejection_reason = None
         draft.blocked_reason = None
         revision.edit_distance_ratio = self._edit_distance_ratio(draft, revision)
-        record_audit_event(
+        record_outreach_activity(
             session,
+            draft=draft,
             action="outreach.draft_approved",
-            entity_type="outreach_draft",
-            entity_id=draft.id,
             correlation_id=correlation_id,
-            summary={
-                "lead_id": draft.lead_id,
-                "version": revision.version,
-                "content_hash": revision.content_hash,
-            },
+            version=revision.version,
+            audit_details={"content_hash": revision.content_hash},
         )
 
     @staticmethod
@@ -730,13 +723,12 @@ class OutreachService:
         draft.rejection_reason = data.reason
         draft.blocked_reason = None
         refresh_batch_status(session, draft.batch_id)
-        record_audit_event(
+        record_outreach_activity(
             session,
+            draft=draft,
             action="outreach.draft_rejected",
-            entity_type="outreach_draft",
-            entity_id=draft.id,
             correlation_id=correlation_id,
-            summary={"lead_id": draft.lead_id, "reason": data.reason},
+            reason=data.reason,
         )
         session.commit()
         return self.get_draft(session, draft.id)
@@ -782,18 +774,15 @@ class OutreachService:
             raise RuntimeError("An eligible outreach lead is missing a recipient email")
         draft.recipient_email = recipient_email
         draft.sync_status = "opened_in_zoho"
-        record_audit_event(
+        draft.zoho_opened_at = draft.zoho_opened_at or opened_at
+        record_outreach_activity(
             session,
+            draft=draft,
             action="outreach.zoho_open_clicked",
-            entity_type="outreach_draft",
-            entity_id=draft.id,
             correlation_id=correlation_id,
-            summary={
-                "lead_id": draft.lead_id,
-                "version": revision.version,
-                "recipient_email": draft.recipient_email,
-                "sending_confirmed": False,
-            },
+            version=revision.version,
+            recipient_email=draft.recipient_email,
+            audit_details={"sending_confirmed": False},
         )
         session.commit()
         return OutreachZohoHandoffRead(
@@ -824,19 +813,15 @@ class OutreachService:
             )
         revision = self._current_revision(draft)
         draft.sync_status = "local_only"
-        record_audit_event(
+        record_outreach_activity(
             session,
+            draft=draft,
             action="outreach.zoho_open_failed",
-            entity_type="outreach_draft",
-            entity_id=draft.id,
             correlation_id=correlation_id,
-            summary={
-                "lead_id": draft.lead_id,
-                "version": revision.version,
-                "recipient_email": draft.recipient_email,
-                "reason": data.reason,
-                "sending_confirmed": False,
-            },
+            version=revision.version,
+            reason=data.reason,
+            recipient_email=draft.recipient_email,
+            audit_details={"sending_confirmed": False},
         )
         session.commit()
         return self.get_draft(session, draft.id)
@@ -853,12 +838,7 @@ class OutreachService:
                 "Only an approved draft currently opened in Zoho can be marked sent.",
                 status_code=409,
             )
-        if not self.audit_repository.has_event(
-            session,
-            entity_type="outreach_draft",
-            entity_id=draft.id,
-            action="outreach.zoho_open_clicked",
-        ):
+        if draft.zoho_opened_at is None:
             raise DomainError(
                 "OUTREACH_ZOHO_NOT_OPENED",
                 "Open the approved draft in Zoho before marking it as sent.",
@@ -925,13 +905,11 @@ class OutreachService:
         draft.rejection_reason = None
         draft.blocked_reason = None
         refresh_batch_status(session, draft.batch_id)
-        record_audit_event(
+        record_outreach_activity(
             session,
+            draft=draft,
             action="outreach.draft_reopened",
-            entity_type="outreach_draft",
-            entity_id=draft.id,
             correlation_id=correlation_id,
-            summary={"lead_id": draft.lead_id},
         )
         session.commit()
         return self.get_draft(session, draft.id)

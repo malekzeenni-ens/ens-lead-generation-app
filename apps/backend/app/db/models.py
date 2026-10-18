@@ -1021,6 +1021,8 @@ class OutreachDraft(Base):
     rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     rejection_reason: Mapped[str | None] = mapped_column(Text)
     blocked_reason: Mapped[str | None] = mapped_column(Text)
+    # Set the first time the approved draft is opened in Zoho; required before "sent".
+    zoho_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
@@ -1031,6 +1033,30 @@ class OutreachDraft(Base):
     revisions: Mapped[list[OutreachDraftRevision]] = relationship(
         back_populates="draft", cascade="all, delete-orphan", passive_deletes=True
     )
+
+
+class OutreachActivity(Base):
+    """One step in a lead's outreach history, shown on the lead (ADR-024).
+
+    This is working data, not the audit log: it holds the recipient address and the operator's
+    reason, and it is deleted with the lead or draft. The matching audit event records only IDs.
+    """
+
+    __tablename__ = "outreach_activity"
+    __table_args__ = (Index("ix_outreach_activity_lead_created", "lead_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    lead_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("lead.id", ondelete="CASCADE"), nullable=False
+    )
+    draft_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("outreach_draft.id", ondelete="CASCADE"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(String(60), nullable=False)
+    version: Mapped[int | None] = mapped_column(Integer)
+    reason: Mapped[str | None] = mapped_column(Text)
+    recipient_email: Mapped[str | None] = mapped_column(String(320))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class OutreachDraftRevision(Base):

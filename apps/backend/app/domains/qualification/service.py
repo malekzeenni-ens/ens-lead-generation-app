@@ -848,7 +848,7 @@ class QualificationService:
             summary={
                 "calculated_score": run.calculated_score,
                 "final_score": data.final_score,
-                "reason": data.reason,
+                "reason_provided": bool(data.reason),
             },
         )
         session.commit()

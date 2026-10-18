@@ -110,8 +110,11 @@ def test_scheduler_and_endpoint_racing_create_one_run_per_campaign(
     assert len(_weekly_runs(app)) == 1
 
 
-def test_the_database_allows_one_weekly_run_per_campaign_per_week(app: FastAPI) -> None:
-    """Added by migration 0011; the model declares it too so the two cannot drift apart."""
+def test_the_database_allows_one_weekly_run_per_campaign_per_week(
+    client: TestClient, app: FastAPI
+) -> None:
+    """Added by migration 0011; the model declares it too so the two cannot drift apart. The
+    client keeps the app running, so its shutdown disposes the engine afterwards."""
     with app.state.database.session_factory() as session:
         indexes = session.execute(text("PRAGMA index_list('campaign_run')")).all()
         unique_columns = [

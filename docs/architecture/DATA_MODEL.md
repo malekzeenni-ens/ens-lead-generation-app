@@ -19,7 +19,9 @@
 | `communication` | Channel, content snapshot, draft/sent/received state, sent confirmation, external ID and reply outcome |
 | `suppression_record` | Objection/unsubscribe/do-not-contact evidence; active records can survive lead deletion via a minimised identity hash |
 | `app_setting` | Validated local operating defaults stored as key/value records |
-| `audit_event` | Append-only application audit summary with action, entity, actor, correlation ID, time |
+| `audit_event` | Append-only application audit summary with action, entity, actor, correlation ID, time. Holds IDs, versions, counts, enums, hashes and field names only, never personal data (ADR-024) |
+| `outreach_activity` | A lead's outreach history: draft, action, version, reason and recipient address; deleted with the lead or draft (ADR-024) |
+| `suppression_identifier` | One minimised hash per identifier of a suppressed business; survives privacy deletion (ADR-023) |
 | `backup_manifest` | Backup filename, SHA-256 checksum, integrity result, schema/app version, time |
 | `product` | Editable catalogue item; optional unique Shopify handle, category, descriptions, segment/use-case lists, price/image guidance, active/sample flags and import provenance |
 | `scoring_profile` | Immutable version of a named segment scoring profile; seven validated weights total 100 and exactly one active version per segment |

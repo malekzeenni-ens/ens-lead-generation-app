@@ -509,3 +509,11 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - H4: changed from the plan. The opener also handles `target="_blank"` links to lead websites, which can be any domain and sometimes plain http, so the http(s) wildcards stay. The redundant per-domain entries were removed and the capability description now states that only web pages and `mailto:` can be opened, never `file:` or custom protocols.
 - H6: cloud polish defaults to `claude-sonnet-5-5`, offers `claude-haiku-5-5` as the lower-cost option, and keeps the older IDs valid. It sends `effort: "low"` only to models that accept it, raises `max_tokens` to 4000, and maps a retired model to `CLOUD_POLISH_MODEL_UNAVAILABLE`. The SDK is still imported only when a polish runs.
 - Verification: backend suite, frontend 118 tests, Ruff, mypy, ESLint, TypeScript pass.
+
+### R8 - The audit log holds no personal data (ADR-024, D2)
+
+- New `outreach_activity` table and `outreach_draft.zoho_opened_at` (migration `0018`, backfilled from existing audit events with their IDs and times). Lead outreach history and the sent-confirmation check no longer read the audit log; `AuditRepository` was removed.
+- `record_audit_event` refuses personal-data keys at any depth. `lead.updated` records changed field names plus before/after values for structured fields only; reasons become `reason_provided`; `lead.created` drops the business name. The migration rewrote historic audit summaries under the same rules.
+- Safety copy before upgrades: `run_migrations` copies an existing database before applying pending revisions. This replaced a copy inside migration 0018 that hung, because SQLite's backup call spins while the same connection holds an open write transaction. The new migration test found it; a stack dump confirmed it.
+- Found while tracing a stray warning: an R4 test opened the app's database without starting the app, so its engine was never disposed. Fixed.
+- Verification: 4 new tests in `test_audit_minimisation.py` (runtime guard, call-site scan, history kept with and deleted with the lead, migration backfill, scrub and safety copy); full backend suite 258 passed with resource warnings as errors.
