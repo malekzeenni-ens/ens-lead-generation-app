@@ -1,6 +1,9 @@
 import builtins
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import date
 
-from sqlalchemy import or_, select
+from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import (
@@ -26,6 +29,21 @@ _LEAD_OPTIONS = (
     selectinload(Lead.suppression_records),
     selectinload(Lead.score_runs).selectinload(ScoreRun.campaign),
 )
+
+
+@dataclass(frozen=True)
+class LeadFilters:
+    query: str | None = None
+    stage: str | None = None
+    suppressed: bool | None = None
+    campaign_id: str | None = None
+    # As the register shows it: lower-case, never "website"; "unknown" means no other source.
+    source_type: str | None = None
+    needs_review: bool | None = None
+
+
+def _normalised_source_type() -> ColumnElement[str]:
+    return func.lower(func.trim(SourceSystem.source_type))
 
 
 class LeadRepository:
@@ -101,6 +119,102 @@ class LeadRepository:
 
     def add_communication(self, session: Session, communication: Communication) -> None:
         session.add(communication)
+
+    @staticmethod
+    def _page_conditions(filters: LeadFilters) -> builtins.list[ColumnElement[bool]]:
+        conditions: builtins.list[ColumnElement[bool]] = []
+        if filters.query:
+            pattern = f"%{filters.query}%"
+            conditions.append(
+                or_(
+                    Lead.business_name.ilike(pattern),
+                    Lead.segment.ilike(pattern),
+                    Lead.location.ilike(pattern),
+                    Lead.phone_number.ilike(pattern),
+                    Lead.public_email.ilike(pattern),
+                    Lead.contact_first_name.ilike(pattern),
+                    Lead.contact_last_name.ilike(pattern),
+                    Lead.contact_email.ilike(pattern),
+                )
+            )
+        if filters.stage:
+            conditions.append(Lead.pipeline_stage == filters.stage)
+        if filters.suppressed is not None:
+            conditions.append(Lead.suppressed.is_(filters.suppressed))
+        if filters.campaign_id:
+            conditions.append(Lead.campaigns.any(LeadCampaign.campaign_id == filters.campaign_id))
+        if filters.needs_review is not None:
+            unknown = Lead.contact_classification == "unknown"
+            conditions.append(unknown if filters.needs_review else ~unknown)
+        if filters.source_type:
+            named_sources = (
+                select(SourceObservation.lead_id)
+                .join(SourceSystem)
+                .where(_normalised_source_type() != "website")
+            )
+            if filters.source_type == "unknown":
+                conditions.append(Lead.id.not_in(named_sources))
+            else:
+                conditions.append(
+                    Lead.id.in_(
+                        named_sources.where(_normalised_source_type() == filters.source_type)
+                    )
+                )
+        return conditions
+
+    def page(
+        self, session: Session, filters: LeadFilters, *, limit: int, offset: int
+    ) -> tuple[builtins.list[Lead], int]:
+        """Newest first. Loads only the lead rows; list details come from the helpers below."""
+        statement = select(Lead).where(*self._page_conditions(filters))
+        total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
+        leads = builtins.list(
+            session.scalars(
+                statement.order_by(Lead.created_at.desc(), Lead.id).limit(limit).offset(offset)
+            )
+        )
+        return leads, total
+
+    def campaign_ids_for(
+        self, session: Session, lead_ids: builtins.list[str]
+    ) -> dict[str, builtins.list[str]]:
+        found: dict[str, builtins.list[str]] = defaultdict(builtins.list)
+        for lead_id, campaign_id in session.execute(
+            select(LeadCampaign.lead_id, LeadCampaign.campaign_id).where(
+                LeadCampaign.lead_id.in_(lead_ids)
+            )
+        ):
+            found[lead_id].append(campaign_id)
+        return found
+
+    def source_types_for(
+        self, session: Session, lead_ids: builtins.list[str]
+    ) -> dict[str, builtins.list[str]]:
+        found: dict[str, builtins.list[str]] = defaultdict(builtins.list)
+        rows = session.execute(
+            select(SourceObservation.lead_id, _normalised_source_type())
+            .join(SourceSystem)
+            .where(
+                SourceObservation.lead_id.in_(lead_ids),
+                _normalised_source_type() != "website",
+                _normalised_source_type() != "",
+            )
+            .distinct()
+            .order_by(SourceObservation.lead_id, _normalised_source_type())
+        )
+        for lead_id, source_type in rows:
+            found[lead_id].append(source_type)
+        return found
+
+    def next_follow_ups_for(
+        self, session: Session, lead_ids: builtins.list[str]
+    ) -> dict[str, date]:
+        rows = session.execute(
+            select(FollowUp.lead_id, func.min(FollowUp.due_date))
+            .where(FollowUp.lead_id.in_(lead_ids), FollowUp.status == "open")
+            .group_by(FollowUp.lead_id)
+        )
+        return {lead_id: due for lead_id, due in rows if due is not None}
 
     def distinct_source_types(self, session: Session) -> builtins.list[str]:
         return builtins.list(

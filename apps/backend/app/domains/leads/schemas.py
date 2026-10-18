@@ -284,6 +284,39 @@ class SuppressionRead(BaseModel):
     lifted_at: datetime | None
 
 
+class LeadListItem(BaseModel):
+    """One row of the paged lead register: what the list shows and filters on, nothing more.
+
+    The full `LeadRead` (history, evidence, scores, activity) is fetched per lead.
+    """
+
+    id: str
+    business_name: str
+    segment: str
+    location: str
+    pipeline_stage: str
+    suppressed: bool
+    contact_classification: str
+    current_score: int | None
+    contact_first_name: str | None
+    contact_last_name: str | None
+    phone_number: str | None
+    public_email: str | None
+    contact_email: str | None
+    campaign_ids: list[str]
+    source_types: list[str]
+    next_follow_up_due: date | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class LeadPage(BaseModel):
+    items: list[LeadListItem]
+    total: int
+    limit: int
+    offset: int
+
+
 class LeadRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

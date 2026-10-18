@@ -20,7 +20,9 @@ const TEMPLATE_TOKENS: Record<string, (lead: Lead) => string> = {
 };
 
 /** Prefer a named contact's direct address, falling back to the public business address. */
-export function emailAddressFor(lead: Lead): string | null {
+export function emailAddressFor(
+  lead: Pick<Lead, "contact_email" | "public_email">,
+): string | null {
   return lead.contact_email || lead.public_email;
 }
 

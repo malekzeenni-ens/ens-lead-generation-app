@@ -25,8 +25,10 @@ from app.domains.leads.identity import (
 from app.domains.leads.lead_read import (
     lead_to_read,
 )
-from app.domains.leads.repository import LeadRepository
+from app.domains.leads.repository import LeadFilters, LeadRepository
 from app.domains.leads.schemas import (
+    LeadListItem,
+    LeadPage,
     LeadRead,
 )
 from app.domains.leads.suppression import (
@@ -154,6 +156,45 @@ class LeadServiceBase:
         )
         events = self._outreach_events(session, [lead.id for lead in leads])
         return [lead_to_read(lead, events[lead.id]) for lead in leads]
+
+    def page(self, session: Session, filters: LeadFilters, *, limit: int, offset: int) -> LeadPage:
+        """One page of the lead register, with the totals the pager needs (R10)."""
+        leads, total = self.repository.page(session, filters, limit=limit, offset=offset)
+        lead_ids = [lead.id for lead in leads]
+        campaign_ids = self.repository.campaign_ids_for(session, lead_ids)
+        source_types = self.repository.source_types_for(session, lead_ids)
+        follow_ups = self.repository.next_follow_ups_for(session, lead_ids)
+        return LeadPage(
+            items=[
+                LeadListItem(
+                    id=lead.id,
+                    business_name=lead.business_name,
+                    segment=lead.segment,
+                    location=lead.location,
+                    pipeline_stage=lead.pipeline_stage,
+                    suppressed=lead.suppressed,
+                    contact_classification=lead.contact_classification,
+                    current_score=lead.current_score,
+                    contact_first_name=lead.contact_first_name,
+                    contact_last_name=lead.contact_last_name,
+                    phone_number=lead.phone_number,
+                    public_email=lead.public_email,
+                    contact_email=lead.contact_email,
+                    campaign_ids=campaign_ids.get(lead.id, []),
+                    source_types=source_types.get(lead.id) or ["unknown"],
+                    next_follow_up_due=follow_ups.get(lead.id),
+                    created_at=lead.created_at,
+                    updated_at=lead.updated_at,
+                )
+                for lead in leads
+            ],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+
+    def source_types(self, session: Session) -> builtins.list[str]:
+        return self.repository.distinct_source_types(session)
 
     def get(self, session: Session, lead_id: str) -> LeadRead:
         lead = self._get_model(session, lead_id)

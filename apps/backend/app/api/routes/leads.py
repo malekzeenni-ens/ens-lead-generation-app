@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from app.api.dependencies import Authenticated, DatabaseSession
+from app.domains.leads.repository import LeadFilters
 from app.domains.leads.schemas import (
     CommunicationCreate,
     FollowUpComplete,
@@ -12,6 +13,7 @@ from app.domains.leads.schemas import (
     LeadBulkUpdateRequest,
     LeadCreate,
     LeadDeleteResult,
+    LeadPage,
     LeadRead,
     LeadUpdate,
     NoteCreate,
@@ -69,6 +71,40 @@ def export_leads(
         content=service.export_json(session),
         headers={"Content-Disposition": f'attachment; filename="etch-n-shine-leads-{stamp}.json"'},
     )
+
+
+@router.get("/page", response_model=LeadPage)
+def page_leads(
+    _: Authenticated,
+    session: DatabaseSession,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    query: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
+    stage: PipelineStage | None = None,
+    suppressed: bool | None = None,
+    campaign_id: Annotated[str | None, Query(min_length=36, max_length=36)] = None,
+    source_type: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    needs_review: bool | None = None,
+) -> LeadPage:
+    """The lead register, one page at a time (R10). Declared before the lead-ID route."""
+    return service.page(
+        session,
+        LeadFilters(
+            query=query,
+            stage=stage.value if stage else None,
+            suppressed=suppressed,
+            campaign_id=campaign_id,
+            source_type=source_type.strip().casefold() if source_type else None,
+            needs_review=needs_review,
+        ),
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/source-types", response_model=list[str])
+def lead_source_types(_: Authenticated, session: DatabaseSession) -> list[str]:
+    return service.source_types(session)
 
 
 @router.get("/{lead_id}", response_model=LeadRead)

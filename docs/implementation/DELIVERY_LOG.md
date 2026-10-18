@@ -539,3 +539,11 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - Campaign-run and Meta-authorization polling became `refetchInterval`, with the same 1.5-second cadence and the same full resync when they settle. Direct state writes became `setQueryData`.
 - Not done yet: workspaces still receive data from `App` as props rather than reading their own queries. That is now a mechanical follow-up (each workspace can call the same hooks), and it was deferred to keep this change reviewable.
 - Verification: new test that leads still show when products fail to load; 123 frontend tests pass; TypeScript and ESLint (including exhaustive-deps) pass with no suppressions.
+
+### R10 (phase 1) - Paged lead register
+
+- Backend: `GET /leads/page` returns `{items, total, limit, offset}` of slim `LeadListItem` rows, newest first, filtered on the server by text, stage, suppression, campaign, source type (normalised as the register shows it; "unknown" means no named source) and review state. It loads only the lead rows plus three small queries for campaign IDs, source types and the next open follow-up. `GET /leads/source-types` feeds the source filter. The full `GET /leads` is unchanged.
+- Measured: the first page of 5,000 leads takes 0.11 s locally (plan target 0.3 s), so no new index was needed; the test asserts under 1 s to leave room on slower machines.
+- Frontend: the "All leads" register queries one page at a time, with search settled for 300 ms, filters and paging sent to the server, and the previous page kept on screen while the next loads. Changing a filter returns to page 1. The test suite's `leadPage` fake applies the same server rules to each test's mocked leads, so the existing register tests still check filtering and paging.
+- Phase 2, not done: the pipeline board, dashboard, email drafts, campaign register and assistant pickers still use the full lead list, and `App` still loads it for them and for the counts. Each can move to paged or summary endpoints on its own, after which the full list can be retired. Until then, startup still loads every lead.
+- Verification: 4 new backend tests (paging, item fields, every filter, 5,000-lead timing); 1 new frontend test for the requested parameters; backend 271 and frontend 124 tests pass.

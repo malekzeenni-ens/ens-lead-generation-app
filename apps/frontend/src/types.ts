@@ -406,6 +406,35 @@ export interface VerificationResult {
   schema_version: string;
 }
 
+/** One row of the paged lead register (R10); the full Lead is fetched per lead. */
+export interface LeadListItem {
+  id: string;
+  business_name: string;
+  segment: string;
+  location: string;
+  pipeline_stage: string;
+  suppressed: boolean;
+  contact_classification: string;
+  current_score: number | null;
+  contact_first_name: string | null;
+  contact_last_name: string | null;
+  phone_number: string | null;
+  public_email: string | null;
+  contact_email: string | null;
+  campaign_ids: string[];
+  source_types: string[];
+  next_follow_up_due: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeadPage {
+  items: LeadListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export type BackgroundJobStatus =
   | "queued"
   | "running"

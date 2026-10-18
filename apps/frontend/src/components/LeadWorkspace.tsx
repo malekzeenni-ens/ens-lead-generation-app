@@ -7,13 +7,13 @@ import {
   Sparkles,
   UserRoundSearch,
 } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import { ApiError, api } from "../api";
 import { emailAddressFor } from "../contact";
 import { PIPELINE_STAGES, humanize } from "../domain";
-import { usePagination } from "../pagination";
-import type { Campaign, Lead, StalledLeadDigest } from "../types";
+import type { Campaign, Lead, LeadPage, StalledLeadDigest } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import {
   EmptyState,
@@ -48,15 +48,16 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 const PRIMARY_SOURCE_TYPES = ["google", "instagram", "facebook", "manual"];
 
-function leadSourceTypes(lead: Lead): string[] {
-  const sourceTypes = [
-    ...new Set(
-      lead.sources
-        .map((source) => source.source_type.trim().toLocaleLowerCase())
-        .filter((sourceType) => sourceType && sourceType !== "website"),
-    ),
-  ];
-  return sourceTypes.length ? sourceTypes : ["unknown"];
+const LEAD_PAGE_SIZE = 10;
+
+/** `value`, settled for `delayMs`, so typing does not query the backend on every keystroke. */
+function useSettledValue<T>(value: T, delayMs: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSettled(value), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [value, delayMs]);
+  return settled;
 }
 
 function sourceLabel(sourceType: string): string {
@@ -89,52 +90,44 @@ export function LeadWorkspace({
   const [loadingDigest, setLoadingDigest] = useState(false);
   const [digestError, setDigestError] = useState<string | null>(null);
   const currentCampaigns = campaigns.filter((campaign) => campaign.status !== "inactive");
-  const sourceOptions = useMemo(
-    () => {
-      const discoveredTypes = new Set(leads.flatMap(leadSourceTypes));
-      const additionalTypes = [...discoveredTypes]
-        .filter((value) => !PRIMARY_SOURCE_TYPES.includes(value) && value !== "unknown")
-        .sort((left, right) => sourceLabel(left).localeCompare(sourceLabel(right)));
-      return [...PRIMARY_SOURCE_TYPES, ...additionalTypes];
-    },
-    [leads],
-  );
-  const filteredLeads = useMemo(() => {
-    const search = query.toLocaleLowerCase();
-    return leads.filter((lead) => {
-      const matchesSearch = [
-        lead.business_name,
-        lead.segment,
-        lead.location,
-        lead.phone_number ?? "",
-        lead.public_email ?? "",
-        lead.contact_first_name ?? "",
-        lead.contact_last_name ?? "",
-        lead.contact_email ?? "",
-        ...leadSourceTypes(lead).map(sourceLabel),
-      ].some((value) => value.toLocaleLowerCase().includes(search));
-      const matchesCampaign = !campaignId || lead.campaign_ids.includes(campaignId);
-      const matchesSource = !sourceType || leadSourceTypes(lead).includes(sourceType);
-      const matchesStage = !stage || lead.pipeline_stage === stage;
-      const matchesSuppression =
-        suppression === "all" || lead.suppressed === (suppression === "suppressed");
-      const matchesReview =
-        !reviewFilter || (reviewFilter === "review") === (lead.contact_classification === "unknown");
-      return (
-        matchesSearch &&
-        matchesCampaign &&
-        matchesSource &&
-        matchesStage &&
-        matchesSuppression &&
-        matchesReview
-      );
-    });
-  }, [campaignId, leads, query, reviewFilter, sourceType, stage, suppression]);
-  const leadPages = usePagination(
-    filteredLeads,
-    10,
-    `${query}|${campaignId}|${sourceType}|${stage}|${suppression}|${reviewFilter}`,
-  );
+  const sourceTypesQuery = useQuery({
+    queryKey: ["leads", "source-types"],
+    queryFn: () => api.leadSourceTypes(),
+  });
+  const sourceOptions = useMemo(() => {
+    const discoveredTypes = new Set(
+      (sourceTypesQuery.data ?? [])
+        .map((value) => value.trim().toLocaleLowerCase())
+        .filter((value) => value && value !== "website"),
+    );
+    const additionalTypes = [...discoveredTypes]
+      .filter((value) => !PRIMARY_SOURCE_TYPES.includes(value) && value !== "unknown")
+      .sort((left, right) => sourceLabel(left).localeCompare(sourceLabel(right)));
+    return [...PRIMARY_SOURCE_TYPES, ...additionalTypes];
+  }, [sourceTypesQuery.data]);
+
+  // The register is paged and filtered on the server (R10).
+  const searchText = useSettledValue(query.trim(), 300);
+  const filterKey = `${searchText}|${campaignId}|${sourceType}|${stage}|${suppression}|${reviewFilter}`;
+  const [pageState, setPageState] = useState({ filterKey, page: 1 });
+  const page = pageState.filterKey === filterKey ? pageState.page : 1;
+  const leadPageQuery = useQuery({
+    queryKey: ["leads", "page", filterKey, page],
+    queryFn: () =>
+      api.leadPage({
+        limit: LEAD_PAGE_SIZE,
+        offset: (page - 1) * LEAD_PAGE_SIZE,
+        query: searchText || undefined,
+        stage: stage || undefined,
+        suppressed: suppression === "all" ? undefined : suppression === "suppressed",
+        campaignId: campaignId || undefined,
+        sourceType: sourceType || undefined,
+        needsReview: reviewFilter === "review" ? true : undefined,
+      }),
+    placeholderData: keepPreviousData,
+  });
+  const leadPage: LeadPage | undefined = leadPageQuery.data;
+  const pageCount = leadPage ? Math.max(1, Math.ceil(leadPage.total / LEAD_PAGE_SIZE)) : 1;
 
   async function createLead(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -448,7 +441,14 @@ export function LeadWorkspace({
 
             {loading ? (
               <LoadingState label="Loading leads" />
-            ) : filteredLeads.length === 0 ? (
+            ) : leadPageQuery.isError ? (
+              <EmptyState
+                title="Leads could not be loaded"
+                description="The lead register is unavailable. Use Refresh to try again."
+              />
+            ) : !leadPage ? (
+              <LoadingState label="Loading leads" />
+            ) : leadPage.total === 0 ? (
               <EmptyState
                 title={leads.length === 0 ? "No leads recorded" : "No leads match"}
                 description={
@@ -474,8 +474,7 @@ export function LeadWorkspace({
                     </tr>
                   </thead>
                   <tbody>
-                    {leadPages.items.map((lead) => {
-                      const nextFollowUp = lead.follow_ups.find((item) => item.status === "open");
+                    {leadPage.items.map((lead) => {
                       return (
                         <tr key={lead.id}>
                           <td data-label="Business">
@@ -510,14 +509,14 @@ export function LeadWorkspace({
                           </td>
                           <td data-label="Lead source">
                             <div className="lead-source-list">
-                              {leadSourceTypes(lead).map((value) => (
+                              {lead.source_types.map((value) => (
                                 <span className="status-badge" key={value}>{sourceLabel(value)}</span>
                               ))}
                             </div>
                           </td>
                           <td data-label="Stage"><span className="status-badge">{humanize(lead.pipeline_stage)}</span></td>
                           <td data-label="Location">{lead.location}</td>
-                          <td data-label="Next action">{nextFollowUp?.due_date ?? "Not set"}</td>
+                          <td data-label="Next action">{lead.next_follow_up_due ?? "Not set"}</td>
                           <td data-label="Action">
                             <div className="record-actions">
                               <button
@@ -539,12 +538,12 @@ export function LeadWorkspace({
                   </table>
                 </div>
                 <Pagination
-                  page={leadPages.page}
-                  pageCount={leadPages.pageCount}
-                  pageSize={leadPages.pageSize}
-                  totalItems={leadPages.totalItems}
+                  page={page}
+                  pageCount={pageCount}
+                  pageSize={LEAD_PAGE_SIZE}
+                  totalItems={leadPage.total}
                   itemLabel="leads"
-                  onPageChange={leadPages.setPage}
+                  onPageChange={(next) => setPageState({ filterKey, page: next })}
                 />
               </>
             )}

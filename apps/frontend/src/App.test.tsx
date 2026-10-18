@@ -5,7 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 import App from "./App";
-import { api, ApiError, BackendUnavailableError } from "./api";
+import { api, ApiError, BackendUnavailableError, type LeadPageParams } from "./api";
 import { mondayIso } from "./domain";
 import type {
   ApiErrorShape,
@@ -19,6 +19,8 @@ import type {
   InstagramProfilePreview,
   KnowledgeNote,
   Lead,
+  LeadListItem,
+  LeadPage,
   MetaConnection,
   OperationsSummary,
   OutreachBatch,
@@ -52,6 +54,8 @@ vi.mock("./api", () => {
       health: vi.fn(),
       campaigns: vi.fn(),
       leads: vi.fn(),
+      leadPage: vi.fn(),
+      leadSourceTypes: vi.fn(),
       summary: vi.fn(),
       settings: vi.fn(),
       diagnostics: vi.fn(),
@@ -155,6 +159,71 @@ vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(() => Promise.resolve(() => undefined)),
 }));
+
+/** Lead source types as the backend lists them: lower-case, no "website", else "unknown". */
+function serverSourceTypes(lead: Lead): string[] {
+  const types = [
+    ...new Set(
+      lead.sources
+        .map((source) => source.source_type.trim().toLocaleLowerCase())
+        .filter((value) => value && value !== "website"),
+    ),
+  ].sort();
+  return types.length ? types : ["unknown"];
+}
+
+/** The backend's paged register, applied to the leads a test mocked (R10). */
+function fakeLeadPage(leads: Lead[], params: LeadPageParams): LeadPage {
+  const search = (params.query ?? "").toLocaleLowerCase();
+  const matching = leads.filter((item) => {
+    const text = [
+      item.business_name,
+      item.segment,
+      item.location,
+      item.phone_number ?? "",
+      item.public_email ?? "",
+      item.contact_first_name ?? "",
+      item.contact_last_name ?? "",
+      item.contact_email ?? "",
+    ];
+    return (
+      (!search || text.some((value) => value.toLocaleLowerCase().includes(search))) &&
+      (!params.stage || item.pipeline_stage === params.stage) &&
+      (params.suppressed === undefined || item.suppressed === params.suppressed) &&
+      (!params.campaignId || item.campaign_ids.includes(params.campaignId)) &&
+      (!params.sourceType || serverSourceTypes(item).includes(params.sourceType)) &&
+      (params.needsReview === undefined ||
+        (item.contact_classification === "unknown") === params.needsReview)
+    );
+  });
+  const items: LeadListItem[] = matching
+    .slice(params.offset, params.offset + params.limit)
+    .map((item) => ({
+      id: item.id,
+      business_name: item.business_name,
+      segment: item.segment,
+      location: item.location,
+      pipeline_stage: item.pipeline_stage,
+      suppressed: item.suppressed,
+      contact_classification: item.contact_classification,
+      current_score: item.current_score,
+      contact_first_name: item.contact_first_name,
+      contact_last_name: item.contact_last_name,
+      phone_number: item.phone_number,
+      public_email: item.public_email,
+      contact_email: item.contact_email,
+      campaign_ids: item.campaign_ids,
+      source_types: serverSourceTypes(item),
+      next_follow_up_due:
+        item.follow_ups
+          .filter((followUp) => followUp.status === "open")
+          .map((followUp) => followUp.due_date)
+          .sort()[0] ?? null,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+    }));
+  return { items, total: matching.length, limit: params.limit, offset: params.offset };
+}
 
 const campaign: Campaign = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -701,6 +770,12 @@ describe("local operating workbench", () => {
     vi.mocked(api.health).mockResolvedValue({ status: "ok" });
     vi.mocked(api.campaigns).mockResolvedValue([campaign]);
     vi.mocked(api.leads).mockResolvedValue([lead]);
+    vi.mocked(api.leadPage).mockImplementation(async (params) =>
+      fakeLeadPage(await api.leads(), params),
+    );
+    vi.mocked(api.leadSourceTypes).mockImplementation(async () => [
+      ...new Set((await api.leads()).flatMap(serverSourceTypes)),
+    ]);
     vi.mocked(api.summary).mockResolvedValue(summary);
     vi.mocked(api.settings).mockResolvedValue(settings);
     vi.mocked(api.diagnostics).mockResolvedValue(diagnostics);
@@ -1870,6 +1945,34 @@ describe("local operating workbench", () => {
     expect(await screen.findByText(secondCampaignLead.business_name)).toBeInTheDocument();
     expect(screen.queryByText("Luton Campaign Lead 11")).not.toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "leads pagination" })).not.toBeInTheDocument();
+  });
+
+  it("asks the backend for one page of leads with the active filters", async () => {
+    const user = userEvent.setup();
+    const manyLeads = Array.from({ length: 12 }, (_, index) => ({
+      ...lead,
+      id: `paged-lead-${index + 1}`,
+      business_name: `Paged Lead ${String(index + 1).padStart(2, "0")}`,
+    }));
+    vi.mocked(api.leads).mockResolvedValue(manyLeads);
+
+    render(<App />);
+    await screen.findByText("API connected");
+    await user.click(screen.getByRole("link", { name: /All leads/ }));
+    expect(await screen.findByText("Paged Lead 01")).toBeInTheDocument();
+    expect(api.leadPage).toHaveBeenLastCalledWith({ limit: 10, offset: 0 });
+
+    const pagination = screen.getByRole("navigation", { name: "leads pagination" });
+    await user.click(within(pagination).getByRole("button", { name: "Next leads page" }));
+    expect(await screen.findByText("Paged Lead 11")).toBeInTheDocument();
+    expect(api.leadPage).toHaveBeenLastCalledWith({ limit: 10, offset: 10 });
+
+    await user.type(screen.getByPlaceholderText("Search leads"), "Lead 12");
+    expect(await screen.findByText("Paged Lead 12")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.leadPage).toHaveBeenLastCalledWith({ limit: 10, offset: 0, query: "Lead 12" }),
+    );
+    expect(screen.queryByText("Paged Lead 01")).not.toBeInTheDocument();
   });
 
   it("shows and filters leads by their discovery source", async () => {

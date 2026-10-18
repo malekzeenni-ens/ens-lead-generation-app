@@ -27,6 +27,7 @@ import type {
   LeadAutofillResponse,
   LeadBriefing,
   LeadFilterTranslateResult,
+  LeadPage,
   MetaAuthorizationStart,
   MetaConnection,
   OperationsSummary,
@@ -182,6 +183,31 @@ export interface JobOptions {
 }
 
 export const JOB_CANCELLED = "JOB_CANCELLED";
+
+export interface LeadPageParams {
+  limit: number;
+  offset: number;
+  query?: string;
+  stage?: string;
+  suppressed?: boolean;
+  campaignId?: string;
+  sourceType?: string;
+  needsReview?: boolean;
+}
+
+function leadPageQuery(params: LeadPageParams): string {
+  const search = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+  });
+  if (params.query) search.set("query", params.query);
+  if (params.stage) search.set("stage", params.stage);
+  if (params.suppressed !== undefined) search.set("suppressed", String(params.suppressed));
+  if (params.campaignId) search.set("campaign_id", params.campaignId);
+  if (params.sourceType) search.set("source_type", params.sourceType);
+  if (params.needsReview !== undefined) search.set("needs_review", String(params.needsReview));
+  return search.toString();
+}
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -624,6 +650,9 @@ export const api = {
       options,
     ),
   activeJobs: () => request<BackgroundJob[]>("/jobs?active=true"),
+  leadPage: (params: LeadPageParams) =>
+    request<LeadPage>(`/leads/page?${leadPageQuery(params)}`),
+  leadSourceTypes: () => request<string[]>("/leads/source-types"),
   knowledgeNotes: () => request<KnowledgeNote[]>("/catalogue/knowledge-notes"),
   updateKnowledgeNote: (noteId: string, data: KnowledgeNoteUpdate) =>
     request<KnowledgeNote>(`/catalogue/knowledge-notes/${noteId}`, jsonBody("PATCH", data)),
