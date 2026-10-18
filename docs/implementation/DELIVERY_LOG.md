@@ -531,3 +531,11 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - `automation/service.py` (1,503 lines) is now a chain `base -> promotion -> discovery -> social -> service`, with helpers in `candidate_data.py`. `leads/service.py` (1,137 lines) is now `lead_base -> editing -> operations -> privacy -> service`, with helpers in `lead_read.py`. The largest module is 432 lines.
 - Done by a script that copies each method's source verbatim, then checked by comparing every definition's syntax tree before and after: 36 and 26 definitions, none added, lost or changed. Class names and method names are unchanged, so no caller or test changed; 267 tests pass.
 - `qualification/service.py` is left until it next needs feature work, as planned.
+
+### R11 - Server state through a query cache (D4)
+
+- Added `@tanstack/react-query` 5.104.1, pinned exactly; the newest release was a day old, so a version out for over two weeks was chosen. `App` owns its `QueryClient`, so existing tests render it unchanged. Retries are off under test and one retry is allowed in the app.
+- The 21-endpoint all-or-nothing loader and the hand-written refreshers are replaced by one query per resource. A failing endpoint no longer blanks the rest of the workspace; its error appears once in the banner, and the host's "not running" state stays on screen. `refreshDomains` invalidates the matching queries and still throws if a re-fetch fails, so actions report it as before.
+- Campaign-run and Meta-authorization polling became `refetchInterval`, with the same 1.5-second cadence and the same full resync when they settle. Direct state writes became `setQueryData`.
+- Not done yet: workspaces still receive data from `App` as props rather than reading their own queries. That is now a mechanical follow-up (each workspace can call the same hooks), and it was deferred to keep this change reviewable.
+- Verification: new test that leads still show when products fail to load; 123 frontend tests pass; TypeScript and ESLint (including exhaustive-deps) pass with no suppressions.

@@ -1113,6 +1113,18 @@ describe("local operating workbench", () => {
     expect(alert).toHaveTextContent("Simulated backend outage");
   });
 
+  it("keeps showing leads when another resource fails to load", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.products).mockRejectedValue(new Error("Catalogue offline"));
+
+    render(<App />);
+
+    expect(await screen.findByText("API connected")).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Catalogue offline");
+    await user.click(screen.getByRole("link", { name: /All leads/ }));
+    expect((await screen.findAllByText(lead.business_name)).length).toBeGreaterThan(0);
+  });
+
   it("keeps the desktop host's startup failure on screen instead of auto-dismissing it", async () => {
     vi.mocked(api.health).mockRejectedValue(
       new BackendUnavailableError(

@@ -15,9 +15,15 @@ import {
   Users,
   X,
 } from "lucide-react";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import brandMarkUrl from "../../desktop/brand-logo.png";
 import {
@@ -62,7 +68,6 @@ import type {
   AssistantContextSelection,
   AutomationCapabilities,
   BackupResult,
-  Campaign,
   CloudPolishStatus,
   CampaignRun,
   Diagnostics,
@@ -70,21 +75,11 @@ import type {
   EnrichmentRunResult,
   EnrichmentStatus,
   InstagramProfilePreview,
-  KnowledgeNote,
-  Lead,
   MetaConnection,
   OperationsSummary,
-  OutreachBatch,
-  OutreachLeadOption,
-  Product,
-  ProductFamily,
-  ProvenFit,
-  ScoreRun,
   ScoringProfile,
   ScoringWeights,
   ShopifyImportResult,
-  Shortlist,
-  Template,
   VerificationResult,
   WorkspaceSettings,
 } from "./types";
@@ -140,18 +135,18 @@ function notificationDurationMs(message: string): number {
   );
 }
 
-/**
- * The single resources a mutation should re-fetch afterward, instead of the
- * full workspace `refresh()`. Keeps a quick note-add from re-fetching the
- * whole catalogue; the full refresh still runs on mount, manual Refresh, and
- * campaign-run/Meta-auth completion, which resync anything left out here.
- */
 /** What the desktop host reports about the local service (`backend-status` events). */
 interface BackendStatus {
   state: "starting" | "ready" | "restarting" | "failed";
   message?: string;
 }
 
+/**
+ * The single resources a mutation should re-fetch afterward, instead of the
+ * full workspace `refresh()`. Keeps a quick note-add from re-fetching the
+ * whole catalogue; the full refresh still runs on manual Refresh and on
+ * campaign-run/Meta-auth completion, which resync anything left out here.
+ */
 type RefreshDomain =
   | "campaigns"
   | "leads"
@@ -209,35 +204,185 @@ function errorMessage(error: unknown): string {
   return "An unexpected error occurred.";
 }
 
+/** Query keys, one per resource a mutation can ask to re-fetch. "knowledge" covers three. */
+const QUERY_KEYS: Record<RefreshDomain, readonly string[]> = {
+  campaigns: ["campaigns"],
+  leads: ["leads"],
+  products: ["products"],
+  scoringProfile: ["scoring-profile", BAKERY_SEGMENT],
+  scores: ["scores"],
+  shortlists: ["shortlists"],
+  campaignRuns: ["campaign-runs"],
+  capabilities: ["capabilities"],
+  metaConnection: ["meta-connection"],
+  cloudPolish: ["cloud-polish"],
+  settings: ["settings"],
+  diagnostics: ["diagnostics"],
+  summary: ["summary"],
+  templates: ["templates"],
+  productFamilies: ["product-families"],
+  knowledge: ["knowledge"],
+  outreachLeadOptions: ["outreach-lead-options"],
+  outreachBatches: ["outreach-batches"],
+};
+
+const NO_ITEMS: unknown[] = [];
+
+/** The same empty array on every render, so effects keyed on a list do not re-run. */
+function listOf<T>(data: T[] | undefined): T[] {
+  return data ?? (NO_ITEMS as T[]);
+}
+
+function isActiveRun(run: CampaignRun): boolean {
+  return ["queued", "running"].includes(run.status);
+}
+
 export default function App() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // Data changes only through this app, so a query stays fresh until an action
+            // invalidates it. Polling and focus checks are set per query.
+            staleTime: Infinity,
+            refetchOnWindowFocus: false,
+            retry: import.meta.env.MODE === "test" ? false : 1,
+          },
+        },
+      }),
+  );
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Workbench />
+    </QueryClientProvider>
+  );
+}
+
+function Workbench() {
+  const queryClient = useQueryClient();
   const workspaceContentRef = useRef<HTMLElement>(null);
-  const [health, setHealth] = useState<HealthState>("checking");
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [campaignRuns, setCampaignRuns] = useState<CampaignRun[]>([]);
-  const [automationCapabilities, setAutomationCapabilities] =
-    useState<AutomationCapabilities | null>(null);
-  const [metaConnection, setMetaConnection] = useState<MetaConnection | null>(null);
-  const [cloudPolishStatus, setCloudPolishStatus] = useState<CloudPolishStatus | null>(null);
+
+  // Server state: one query per resource (R11). A failed query leaves the others on screen.
+  const healthQuery = useQuery({ queryKey: ["health"], queryFn: () => api.health() });
+  const campaignsQuery = useQuery({ queryKey: QUERY_KEYS.campaigns, queryFn: () => api.campaigns() });
+  const campaignRunsQuery = useQuery({
+    queryKey: QUERY_KEYS.campaignRuns,
+    queryFn: () => api.campaignRuns(),
+    refetchInterval: (query) => ((query.state.data ?? []).some(isActiveRun) ? 1500 : false),
+  });
+  const capabilitiesQuery = useQuery({
+    queryKey: QUERY_KEYS.capabilities,
+    queryFn: () => api.automationCapabilities(),
+  });
+  const metaConnectionQuery = useQuery({
+    queryKey: QUERY_KEYS.metaConnection,
+    queryFn: () => api.metaConnection(),
+    refetchInterval: (query) =>
+      query.state.data?.status === "authorization_pending" ? 1500 : false,
+  });
+  const cloudPolishQuery = useQuery({
+    queryKey: QUERY_KEYS.cloudPolish,
+    queryFn: () => api.cloudPolishStatus(),
+  });
+  const leadsQuery = useQuery({ queryKey: QUERY_KEYS.leads, queryFn: () => api.leads() });
+  const summaryQuery = useQuery({ queryKey: QUERY_KEYS.summary, queryFn: () => api.summary() });
+  const settingsQuery = useQuery({ queryKey: QUERY_KEYS.settings, queryFn: () => api.settings() });
+  const diagnosticsQuery = useQuery({
+    queryKey: QUERY_KEYS.diagnostics,
+    queryFn: () => api.diagnostics(),
+  });
+  const productsQuery = useQuery({ queryKey: QUERY_KEYS.products, queryFn: () => api.products() });
+  const scoresQuery = useQuery({ queryKey: QUERY_KEYS.scores, queryFn: () => api.latestScores() });
+  const shortlistsQuery = useQuery({
+    queryKey: QUERY_KEYS.shortlists,
+    queryFn: () => api.shortlists(),
+  });
+  const scoringProfileQuery = useQuery({
+    queryKey: QUERY_KEYS.scoringProfile,
+    queryFn: () => api.scoringProfile(BAKERY_SEGMENT),
+  });
+  const templatesQuery = useQuery({ queryKey: QUERY_KEYS.templates, queryFn: () => api.templates() });
+  const productFamiliesQuery = useQuery({
+    queryKey: QUERY_KEYS.productFamilies,
+    queryFn: () => api.productFamilies(),
+  });
+  const outreachLeadOptionsQuery = useQuery({
+    queryKey: QUERY_KEYS.outreachLeadOptions,
+    queryFn: () => api.outreachLeadOptions(),
+  });
+  const outreachBatchesQuery = useQuery({
+    queryKey: QUERY_KEYS.outreachBatches,
+    queryFn: () => api.outreachBatches(),
+  });
+  const enrichmentStatusQuery = useQuery({
+    queryKey: [...QUERY_KEYS.knowledge, "status"],
+    queryFn: () => api.enrichmentStatus(),
+  });
+  const knowledgeNotesQuery = useQuery({
+    queryKey: [...QUERY_KEYS.knowledge, "notes"],
+    queryFn: () => api.knowledgeNotes(),
+  });
+  const provenFitsQuery = useQuery({
+    queryKey: [...QUERY_KEYS.knowledge, "fits"],
+    queryFn: () => api.provenFits(),
+  });
+  const serverQueries = [
+    healthQuery,
+    campaignsQuery,
+    campaignRunsQuery,
+    capabilitiesQuery,
+    metaConnectionQuery,
+    cloudPolishQuery,
+    leadsQuery,
+    summaryQuery,
+    settingsQuery,
+    diagnosticsQuery,
+    productsQuery,
+    scoresQuery,
+    shortlistsQuery,
+    scoringProfileQuery,
+    templatesQuery,
+    productFamiliesQuery,
+    outreachLeadOptionsQuery,
+    outreachBatchesQuery,
+    enrichmentStatusQuery,
+    knowledgeNotesQuery,
+    provenFitsQuery,
+  ];
+
+  const campaigns = listOf(campaignsQuery.data);
+  const campaignRuns = listOf(campaignRunsQuery.data);
+  const automationCapabilities: AutomationCapabilities | null = capabilitiesQuery.data ?? null;
+  const metaConnection: MetaConnection | null = metaConnectionQuery.data ?? null;
+  const cloudPolishStatus: CloudPolishStatus | null = cloudPolishQuery.data ?? null;
+  const leads = listOf(leadsQuery.data);
+  const summary: OperationsSummary | null = summaryQuery.data ?? null;
+  const settings: WorkspaceSettings | null = settingsQuery.data ?? null;
+  const diagnostics: Diagnostics | null = diagnosticsQuery.data ?? null;
+  const products = listOf(productsQuery.data);
+  const scores = listOf(scoresQuery.data);
+  const shortlists = listOf(shortlistsQuery.data);
+  const scoringProfile: ScoringProfile | null = scoringProfileQuery.data ?? null;
+  const templates = listOf(templatesQuery.data);
+  const productFamilies = listOf(productFamiliesQuery.data);
+  const outreachLeadOptions = listOf(outreachLeadOptionsQuery.data);
+  const outreachBatches = listOf(outreachBatchesQuery.data);
+  const enrichmentStatus: EnrichmentStatus | null = enrichmentStatusQuery.data ?? null;
+  const knowledgeNotes = listOf(knowledgeNotesQuery.data);
+  const provenFits = listOf(provenFitsQuery.data);
+  const health: HealthState = healthQuery.isPending
+    ? "checking"
+    : !healthQuery.isError && healthQuery.data.status === "ok"
+      ? "connected"
+      : "unavailable";
+
   const [metaAuthorizationUrl, setMetaAuthorizationUrl] = useState<string | null>(null);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [summary, setSummary] = useState<OperationsSummary | null>(null);
-  const [settings, setSettings] = useState<WorkspaceSettings | null>(null);
-  const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [scores, setScores] = useState<ScoreRun[]>([]);
-  const [shortlists, setShortlists] = useState<Shortlist[]>([]);
-  const [scoringProfile, setScoringProfile] = useState<ScoringProfile | null>(null);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [productFamilies, setProductFamilies] = useState<ProductFamily[]>([]);
-  const [outreachLeadOptions, setOutreachLeadOptions] = useState<OutreachLeadOption[]>([]);
-  const [outreachBatches, setOutreachBatches] = useState<OutreachBatch[]>([]);
-  const [enrichmentStatus, setEnrichmentStatus] = useState<EnrichmentStatus | null>(null);
-  const [knowledgeNotes, setKnowledgeNotes] = useState<KnowledgeNote[]>([]);
-  const [provenFits, setProvenFits] = useState<ProvenFit[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const loading = refreshing || serverQueries.some((query) => query.isPending);
   const [activeSection, setActiveSection] = useState<WorkspaceSection>("overview");
   const [campaignLandingTask, setCampaignLandingTask] = useState<"campaigns" | "create">(
     "campaigns",
@@ -250,135 +395,53 @@ export default function App() {
   const [leadsLandingFilter, setLeadsLandingFilter] = useState<"" | "review">("");
   const [backendStatus, setBackendStatus] = useState<BackendStatus | null>(null);
 
-  async function refresh(showLoading = false): Promise<void> {
-    if (showLoading) setLoading(true);
-    try {
-      const [
-        healthResult,
-        campaignResult,
-        leadResult,
-        summaryResult,
-        settingsResult,
-        diagnosticsResult,
-        productResult,
-        scoreResult,
-        shortlistResult,
-        profileResult,
-        campaignRunResult,
-        capabilityResult,
-        metaConnectionResult,
-        cloudPolishResult,
-        templateResult,
-        productFamilyResult,
-        outreachLeadOptionResult,
-        outreachBatchResult,
-      ] =
-        await Promise.all([
-          api.health(),
-          api.campaigns(),
-          api.leads(),
-          api.summary(),
-          api.settings(),
-          api.diagnostics(),
-          api.products(),
-          api.latestScores(),
-          api.shortlists(),
-          api.scoringProfile(BAKERY_SEGMENT),
-          api.campaignRuns(),
-          api.automationCapabilities(),
-          api.metaConnection(),
-          api.cloudPolishStatus(),
-          api.templates(),
-          api.productFamilies(),
-          api.outreachLeadOptions(),
-          api.outreachBatches(),
-        ]);
-      setHealth(healthResult.status === "ok" ? "connected" : "unavailable");
-      setCampaigns(campaignResult);
-      setLeads(leadResult);
-      setSummary(summaryResult);
-      setSettings(settingsResult);
-      setDiagnostics(diagnosticsResult);
-      setProducts(productResult);
-      setScores(scoreResult);
-      setShortlists(shortlistResult);
-      setScoringProfile(profileResult);
-      setCampaignRuns(campaignRunResult);
-      setAutomationCapabilities(capabilityResult);
-      setMetaConnection(metaConnectionResult);
-      setCloudPolishStatus(cloudPolishResult);
-      setTemplates(templateResult);
-      setProductFamilies(productFamilyResult);
-      setOutreachLeadOptions(outreachLeadOptionResult);
-      setOutreachBatches(outreachBatchResult);
-      setSelectedLeadId((current) =>
-        current && leadResult.some((lead) => lead.id === current) ? current : (leadResult[0]?.id ?? null),
-      );
-      const [enrichmentResult, noteResult, fitResult] = await Promise.all([
-        api.enrichmentStatus(),
-        api.knowledgeNotes(),
-        api.provenFits(),
-      ]);
-      setEnrichmentStatus(enrichmentResult);
-      setKnowledgeNotes(noteResult);
-      setProvenFits(fitResult);
-      setError(null);
-    } catch (caught) {
-      setHealth("unavailable");
-      if (caught instanceof BackendUnavailableError) {
-        // Kept on screen: nothing works until the local service is running.
-        setBackendStatus({ state: "failed", message: caught.message });
-      } else {
-        setError(errorMessage(caught));
-      }
-    } finally {
-      setLoading(false);
+  // Report each new query failure once; the host's "not running" stays on screen.
+  let newestFailure: { at: number; error: unknown } | null = null;
+  for (const query of serverQueries) {
+    if (query.error && (!newestFailure || query.errorUpdatedAt > newestFailure.at)) {
+      newestFailure = { at: query.errorUpdatedAt, error: query.error };
     }
   }
-
-  const domainRefreshers: Record<RefreshDomain, () => Promise<void>> = {
-    campaigns: async () => setCampaigns(await api.campaigns()),
-    leads: async () => {
-      const result = await api.leads();
-      setLeads(result);
-      setSelectedLeadId((current) =>
-        current && result.some((lead) => lead.id === current) ? current : (result[0]?.id ?? null),
-      );
-    },
-    products: async () => setProducts(await api.products()),
-    scoringProfile: async () => setScoringProfile(await api.scoringProfile(BAKERY_SEGMENT)),
-    scores: async () => setScores(await api.latestScores()),
-    shortlists: async () => setShortlists(await api.shortlists()),
-    campaignRuns: async () => setCampaignRuns(await api.campaignRuns()),
-    capabilities: async () => setAutomationCapabilities(await api.automationCapabilities()),
-    metaConnection: async () => setMetaConnection(await api.metaConnection()),
-    cloudPolish: async () => setCloudPolishStatus(await api.cloudPolishStatus()),
-    settings: async () => setSettings(await api.settings()),
-    diagnostics: async () => setDiagnostics(await api.diagnostics()),
-    summary: async () => setSummary(await api.summary()),
-    templates: async () => setTemplates(await api.templates()),
-    productFamilies: async () => setProductFamilies(await api.productFamilies()),
-    outreachLeadOptions: async () => setOutreachLeadOptions(await api.outreachLeadOptions()),
-    outreachBatches: async () => setOutreachBatches(await api.outreachBatches()),
-    knowledge: async () => {
-      const [status, notes, fits] = await Promise.all([
-        api.enrichmentStatus(),
-        api.knowledgeNotes(),
-        api.provenFits(),
-      ]);
-      setEnrichmentStatus(status);
-      setKnowledgeNotes(notes);
-      setProvenFits(fits);
-    },
-  };
-
-  async function refreshDomains(domains: RefreshDomain[]): Promise<void> {
-    await Promise.all(domains.map((domain) => domainRefreshers[domain]()));
-  }
+  const newestFailureAt = newestFailure?.at ?? 0;
+  const newestFailureError = newestFailure?.error;
+  const lastReportedErrorAt = useRef(0);
+  useEffect(() => {
+    if (newestFailureAt <= lastReportedErrorAt.current) return;
+    lastReportedErrorAt.current = newestFailureAt;
+    if (newestFailureError instanceof BackendUnavailableError) {
+      setBackendStatus({ state: "failed", message: newestFailureError.message });
+    } else {
+      setError(errorMessage(newestFailureError));
+    }
+  }, [newestFailureAt, newestFailureError]);
 
   useEffect(() => {
-    void refresh(true);
-  }, []);
+    setSelectedLeadId((current) =>
+      current && leads.some((lead) => lead.id === current) ? current : (leads[0]?.id ?? null),
+    );
+  }, [leads]);
+
+  /** Re-fetch everything; the full resync after a campaign run, Meta authorization or restart. */
+  const refresh = useCallback(
+    async (showLoading = false): Promise<void> => {
+      if (showLoading) setRefreshing(true);
+      try {
+        await queryClient.invalidateQueries();
+      } finally {
+        if (showLoading) setRefreshing(false);
+      }
+    },
+    [queryClient],
+  );
+
+  /** Re-fetch only what an action changed. Throws if a re-fetch fails, so the action says so. */
+  async function refreshDomains(domains: RefreshDomain[]): Promise<void> {
+    await Promise.all(
+      domains.map((domain) =>
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS[domain] }, { throwOnError: true }),
+      ),
+    );
+  }
 
   useEffect(() => {
     if (!window.__TAURI_INTERNALS__) return;
@@ -395,7 +458,7 @@ export default function App() {
       disposed = true;
       stopListening?.();
     };
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     if (!success) return;
@@ -419,61 +482,41 @@ export default function App() {
     document.body.scrollTop = 0;
   }, [activeSection]);
 
-  const activeCampaignRuns = campaignRuns.filter((run) =>
-    ["queued", "running"].includes(run.status),
-  );
+  const activeCampaignRuns = campaignRuns.filter(isActiveRun);
   const hasActiveCampaignRun = activeCampaignRuns.length > 0;
 
+  // Campaign runs are polled while one is active (the query's refetchInterval); when the last
+  // one finishes, everything it may have changed is re-fetched.
+  const hadActiveCampaignRun = useRef(false);
   useEffect(() => {
-    if (!hasActiveCampaignRun) return;
-    const timer = window.setInterval(() => {
-      void api
-        .campaignRuns()
-        .then((currentRuns) => {
-          setCampaignRuns(currentRuns);
-          if (!currentRuns.some((run) => ["queued", "running"].includes(run.status))) {
-            void refresh();
-          }
-        })
-        .catch((caught: unknown) => setError(errorMessage(caught)));
-    }, 1500);
-    return () => window.clearInterval(timer);
-  }, [hasActiveCampaignRun]);
+    if (hadActiveCampaignRun.current && !hasActiveCampaignRun) void refresh();
+    hadActiveCampaignRun.current = hasActiveCampaignRun;
+  }, [hasActiveCampaignRun, refresh]);
+
+  // Meta authorization is polled while pending; when it settles, resync.
+  const metaStatus = metaConnection?.status;
+  const previousMetaStatus = useRef(metaStatus);
+  useEffect(() => {
+    if (
+      previousMetaStatus.current === "authorization_pending" &&
+      metaStatus !== undefined &&
+      metaStatus !== "authorization_pending"
+    ) {
+      setMetaAuthorizationUrl(null);
+      void refresh();
+    }
+    previousMetaStatus.current = metaStatus;
+  }, [metaStatus, refresh]);
 
   useEffect(() => {
-    if (metaConnection?.status !== "authorization_pending") return;
-    const timer = window.setInterval(() => {
-      void api
-        .metaConnection()
-        .then((current) => {
-          setMetaConnection(current);
-          if (current.status !== "authorization_pending") {
-            setMetaAuthorizationUrl(null);
-            void api
-              .automationCapabilities()
-              .then(setAutomationCapabilities)
-              .catch((caught: unknown) => setError(errorMessage(caught)));
-            void refresh();
-          }
-        })
-        .catch((caught: unknown) => setError(errorMessage(caught)));
-    }, 1500);
-    return () => window.clearInterval(timer);
-  }, [metaConnection?.status]);
-
-  useEffect(() => {
+    // Returning from the browser after connecting Meta should show the new state at once.
     const syncProviderConnections = (): void => {
-      void Promise.all([api.metaConnection(), api.automationCapabilities()])
-        .then(([connection, capabilities]) => {
-          setMetaConnection(connection);
-          setAutomationCapabilities(capabilities);
-          if (connection.status !== "authorization_pending") setMetaAuthorizationUrl(null);
-        })
-        .catch((caught: unknown) => setError(errorMessage(caught)));
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.metaConnection });
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.capabilities });
     };
     window.addEventListener("focus", syncProviderConnections);
     return () => window.removeEventListener("focus", syncProviderConnections);
-  }, []);
+  }, [queryClient]);
 
   async function perform<T>(
     operation: () => Promise<T>,
@@ -890,9 +933,9 @@ export default function App() {
       setMetaAuthorizationUrl(result.authorization_url);
       await openExternalUrl(result.authorization_url);
       const current = await api.metaConnection();
-      setMetaConnection(current);
+      queryClient.setQueryData(QUERY_KEYS.metaConnection, current);
       if (current.status !== "authorization_pending") {
-        setAutomationCapabilities(await api.automationCapabilities());
+        queryClient.setQueryData(QUERY_KEYS.capabilities, await api.automationCapabilities());
         setMetaAuthorizationUrl(null);
       }
       setSuccess("Meta authorization opened in your browser. Complete it there, then return here.");

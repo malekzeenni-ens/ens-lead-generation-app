@@ -11,6 +11,7 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
+    "@tanstack/react-query": "5.104.1",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-opener": "^2.0.0",
     "lucide-react": "^1.25.0",
