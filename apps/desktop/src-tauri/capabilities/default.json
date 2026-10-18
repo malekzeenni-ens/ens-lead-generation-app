@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimal permissions for the main Etch N Shine window",
+  "description": "Minimal permissions for the main Etch N Shine window. The opener may open web pages (any http or https URL, because lead websites are arbitrary) and mailto: drafts in the default browser or mail app. No other scheme is allowed, so file: paths and custom protocol handlers cannot be launched.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -9,28 +9,13 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         {
-          "url": "https://www.facebook.com/*"
-        },
-        {
-          "url": "https://www.google.com/*"
-        },
-        {
-          "url": "https://www.instagram.com/*"
-        },
-        {
-          "url": "https://wa.me/*"
-        },
-        {
-          "url": "https://ig.me/*"
-        },
-        {
-          "url": "mailto:*"
-        },
-        {
           "url": "https://*"
         },
         {
           "url": "http://*"
+        },
+        {
+          "url": "mailto:*"
         }
       ]
     }
