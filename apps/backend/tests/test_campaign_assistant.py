@@ -587,6 +587,11 @@ def test_model_is_restricted_only_while_protected_applications_are_active(
     manager.set_protection_enabled(True)
     assert manager.resource_profile(True) == ResourceProfile.STANDARD
 
+    # Reading the profile for an unprotected request must not switch protection off.
+    assert manager.resource_profile(False) == ResourceProfile.STANDARD
+    manager._protected_apps_changed({"LightBurn"})
+    assert ollama.unload_count == 2
+
 
 def test_ollama_schema_keeps_each_outcome_unambiguous_and_grammar_compatible() -> None:
     encoded = json.dumps(OLLAMA_CAMPAIGN_PROPOSAL_SCHEMA)

@@ -56,7 +56,8 @@ class CampaignAssistantManager:
         return set(self._active_applications)
 
     def resource_profile(self, protect_resources: bool = True) -> ResourceProfile:
-        self._protect_resources = protect_resources
+        """The profile a request should run under. Reading it changes nothing: protection is set
+        only by `set_protection_enabled`, at startup and when the workspace setting changes."""
         if protect_resources and self._active_applications:
             return ResourceProfile.DESIGN_SOFTWARE
         return ResourceProfile.STANDARD
