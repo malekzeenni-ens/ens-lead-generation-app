@@ -525,3 +525,9 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - Frontend: `api.ts` follows a job by polling, reports progress and cancels on abort, keeping the existing result types. Autofill shows "n of N" with "Stop after this lead"; enrichment shows progress with "Stop after this product" and no longer holds the app-wide busy state, so the rest of the workspace stays usable.
 - H5 completed: requests time out after 60 s, or 200 s for interactive AI calls, with a message that the work may still finish. Single model interactions (chat, campaign drafting, refine, polish, briefings) stay synchronous by design.
 - Verification: 9 backend job tests (real worker thread), an updated autofill test, 5 new frontend tests; backend and frontend suites pass.
+
+### R9 - Largest services split without behaviour change
+
+- `automation/service.py` (1,503 lines) is now a chain `base -> promotion -> discovery -> social -> service`, with helpers in `candidate_data.py`. `leads/service.py` (1,137 lines) is now `lead_base -> editing -> operations -> privacy -> service`, with helpers in `lead_read.py`. The largest module is 432 lines.
+- Done by a script that copies each method's source verbatim, then checked by comparing every definition's syntax tree before and after: 36 and 26 definitions, none added, lost or changed. Class names and method names are unchanged, so no caller or test changed; 267 tests pass.
+- `qualification/service.py` is left until it next needs feature work, as planned.
