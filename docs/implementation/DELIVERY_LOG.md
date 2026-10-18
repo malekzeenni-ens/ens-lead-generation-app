@@ -500,3 +500,12 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - `execute` now handles a `DomainError` like any other failure: it rolls back to the last commit (each provider batch and phase transition commits on its own), then records the failure. Before, a domain error part way through a batch committed whatever had been added, such as a lead without its evidence.
 - A provider attempt rolled back to `running` is closed as failed with the run's error code. Domain failures are now logged with their code.
 - Verification: `test_campaign_run_failures.py` (domain error and unexpected error) fails without the fix and passes with it; backend suite passes.
+
+### H1-H4, H6 - Hardening
+
+- H1: `CampaignAssistantManager.resource_profile()` no longer changes protection as a side effect. One read for an unprotected request used to stop the model being unloaded when LightBurn started; a regression test covers it.
+- H2: DPAPI calls load crypt32/kernel32 with `use_last_error=True` and declared signatures, so a failure reports the real Windows error code (it was always 0). New Windows-only tests round-trip a secret and check a damaged vault's error code; the second fails on the old code.
+- H3: one shared CSV escaper (`app/core/csv_safety.py`), now also covering tab and carriage-return prefixes, used by the lead export and by CSV files the assistant generates, which were not escaped before.
+- H4: changed from the plan. The opener also handles `target="_blank"` links to lead websites, which can be any domain and sometimes plain http, so the http(s) wildcards stay. The redundant per-domain entries were removed and the capability description now states that only web pages and `mailto:` can be opened, never `file:` or custom protocols.
+- H6: cloud polish defaults to `claude-sonnet-5-5`, offers `claude-haiku-5-5` as the lower-cost option, and keeps the older IDs valid. It sends `effort: "low"` only to models that accept it, raises `max_tokens` to 4000, and maps a retired model to `CLOUD_POLISH_MODEL_UNAVAILABLE`. The SDK is still imported only when a polish runs.
+- Verification: backend suite, frontend 118 tests, Ruff, mypy, ESLint, TypeScript pass.

@@ -386,9 +386,15 @@ export function SettingsWorkspace({
                   <input type="password" name="cloud-api-key" autoComplete="new-password" />
                 </label>
                 <label>Cloud model
-                  <select name="cloud-polish-model" defaultValue={settings.cloud_polish_model || "claude-sonnet-5"}>
-                    <option value="claude-sonnet-5">Claude Sonnet 5 (recommended)</option>
-                    <option value="claude-haiku-4-5">Claude Haiku 4.5 (lower cost)</option>
+                  <select name="cloud-polish-model" defaultValue={settings.cloud_polish_model || "claude-sonnet-5-5"}>
+                    <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (recommended)</option>
+                    <option value="claude-haiku-5-5">Claude Haiku 5.5 (lower cost)</option>
+                    {settings.cloud_polish_model === "claude-sonnet-5" ? (
+                      <option value="claude-sonnet-5">Claude Sonnet 5 (previous, still saved)</option>
+                    ) : null}
+                    {settings.cloud_polish_model === "claude-haiku-4-5" ? (
+                      <option value="claude-haiku-4-5">Claude Haiku 4.5 (previous, still saved)</option>
+                    ) : null}
                   </select>
                 </label>
                 <label className="checkbox-row"><input type="checkbox" name="cloud-polish-enabled" defaultChecked={settings.cloud_polish_enabled} /> Enable cloud polish</label>

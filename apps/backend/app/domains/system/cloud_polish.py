@@ -1,6 +1,6 @@
 from app.core.secrets import SecretStore
 from app.domains.system.cloud_polish_schemas import CloudPolishStatusRead
-from app.domains.system.schemas import WorkspaceSettings
+from app.domains.system.schemas import DEFAULT_CLOUD_POLISH_MODEL, WorkspaceSettings
 
 _KEY = "cloud_polish_credentials"
 
@@ -13,7 +13,7 @@ class CloudPolishConfigurationService:
         return CloudPolishStatusRead(
             configured=self.secret_store.get_json(_KEY) is not None,
             enabled=settings.cloud_polish_enabled,
-            model=settings.cloud_polish_model or "claude-sonnet-5",
+            model=settings.cloud_polish_model or DEFAULT_CLOUD_POLISH_MODEL,
         )
 
     def configure(self, api_key: str, settings: WorkspaceSettings) -> CloudPolishStatusRead:

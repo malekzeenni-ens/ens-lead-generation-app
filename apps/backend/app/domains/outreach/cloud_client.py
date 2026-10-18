@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.core.errors import DomainError
 from app.domains.outreach.cloud_prompt import CLOUD_POLISH_SYSTEM_PROMPT
 from app.domains.outreach.schemas import OutreachDraftRefineResult
+from app.domains.system.schemas import CLOUD_POLISH_EFFORT_MODELS
+
+if TYPE_CHECKING:
+    from anthropic.types import OutputConfigParam
 
 logger = logging.getLogger(__name__)
 
@@ -25,23 +29,28 @@ def polish_with_anthropic(*, api_key: str, model: str, user_message: str) -> Clo
     import anthropic
 
     client = anthropic.Anthropic(api_key=api_key, timeout=30.0, max_retries=2)
+    output_config: OutputConfigParam = {
+        "format": {
+            "type": "json_schema",
+            "schema": {
+                "type": "object",
+                "properties": {"subject": {"type": "string"}, "body": {"type": "string"}},
+                "required": ["subject", "body"],
+                "additionalProperties": False,
+            },
+        }
+    }
+    if model in CLOUD_POLISH_EFFORT_MODELS:
+        # Polishing one email needs little reasoning. These models think by default, and
+        # thinking shares max_tokens with the answer, so low effort also prevents truncation.
+        output_config["effort"] = "low"
     try:
         response = client.messages.create(
             model=model,
-            max_tokens=2000,
+            max_tokens=4000,
             system=CLOUD_POLISH_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_message}],
-            output_config={
-                "format": {
-                    "type": "json_schema",
-                    "schema": {
-                        "type": "object",
-                        "properties": {"subject": {"type": "string"}, "body": {"type": "string"}},
-                        "required": ["subject", "body"],
-                        "additionalProperties": False,
-                    },
-                }
-            },
+            output_config=output_config,
         )
     except anthropic.AuthenticationError as exc:
         raise DomainError(
@@ -53,6 +62,12 @@ def polish_with_anthropic(*, api_key: str, model: str, user_message: str) -> Clo
         raise DomainError(
             "CLOUD_POLISH_PERMISSION",
             "That API key is not permitted to use this model.",
+            status_code=409,
+        ) from exc
+    except anthropic.NotFoundError as exc:
+        raise DomainError(
+            "CLOUD_POLISH_MODEL_UNAVAILABLE",
+            "The selected cloud model is no longer available. Choose another model in Settings.",
             status_code=409,
         ) from exc
     except anthropic.RateLimitError as exc:

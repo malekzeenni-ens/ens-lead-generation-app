@@ -49,7 +49,7 @@ from app.domains.outreach.schemas import (
     OutreachZohoOpenFailure,
 )
 from app.domains.outreach.state import refresh_batch_status
-from app.domains.system.schemas import WorkspaceSettings
+from app.domains.system.schemas import DEFAULT_CLOUD_POLISH_MODEL, WorkspaceSettings
 from app.domains.templates.repository import TemplateRepository
 
 _ELIGIBLE_STAGES = {
@@ -588,7 +588,7 @@ class OutreachService:
                 "Remove the price and try again.",
                 status_code=409,
             )
-        model = workspace_settings.cloud_polish_model or "claude-sonnet-5"
+        model = workspace_settings.cloud_polish_model or DEFAULT_CLOUD_POLISH_MODEL
         result = polish_with_anthropic(api_key=api_key, model=model, user_message=message)
         subject = strip_prices(result.value.subject)
         body = strip_prices(result.value.body)

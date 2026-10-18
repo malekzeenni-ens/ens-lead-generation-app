@@ -57,7 +57,7 @@ The Python SDK dependency is declared in `apps/backend/pyproject.toml` and locke
 1. Check `GET /api/v1/system/summary` for `average_draft_edit_ratio` and `approved_drafts_measured`. The implementation session could not reach the local API, so the decision metric is unverified. The feature was implemented on the operator's explicit instruction, without evidence that the metric justified it.
 2. Compare the 3B result with a larger local model on the same draft first. The available Ollama inventory during implementation contained only `llama3.2:3b`; no 8B model comparison was performed.
 3. In Settings, save a real key directly into the protected vault, enable the feature, and polish one real draft. Check the wording, price removal, review-only editor behavior, and that Settings shows only whether a key is saved. Do not paste a real key into a chat, issue, test fixture, or log.
-4. Choose the provider model deliberately in Settings. Sonnet 5 is the default/recommended writing model; Haiku 4.5 is the lower-cost option. Verify provider availability and the operator's own account access before use.
+4. Choose the provider model deliberately in Settings. Sonnet 5.5 is the default/recommended writing model; Haiku 5.5 is the lower-cost option (changed 18 October 2026; a saved Sonnet 5 or Haiku 4.5 choice keeps working). Verify provider availability and the operator's own account access before use.
 
 No real key was used and no live Anthropic call was made in the implementation or test runs. No installer was rebuilt.
 

@@ -65,6 +65,8 @@ A polish call sends roughly 2,500 input tokens and returns about 300, so **an in
 
 > **Flag this to the operator, do not decide it silently.** Haiku is the cheapest and weakest of the current models, and this feature exists precisely because writing quality is the problem. `claude-sonnet-5` at $2.00/$10.00 per 1M is roughly twice the price — still under a cent per polish — and materially better at copy. Recommend Sonnet 5 and let the operator choose. Put the chosen model in the workspace setting (§5) so it can be changed without a code edit, and validate it against an allowlist of `claude-haiku-4-5` and `claude-sonnet-5`.
 
+> **Amended 18 October 2026.** The default is now `claude-sonnet-5-5`, the current Sonnet at the same price, and Settings offer it with `claude-haiku-5-5` as the lower-cost option. `claude-sonnet-5` and `claude-haiku-4-5` stay on the allowlist so a saved choice keeps working. These models think by default and thinking shares `max_tokens` with the answer, so the call now sends `output_config.effort: "low"` to every model that accepts it (not Haiku 4.5, which rejects the parameter) and raises `max_tokens` to 4000. A retired model returns `CLOUD_POLISH_MODEL_UNAVAILABLE`, asking the operator to choose another in Settings.
+
 ### Request shape
 
 ```python
@@ -126,7 +128,7 @@ Put this in a new `app/domains/outreach/cloud_prompt.py` with a `CLOUD_POLISH_PR
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `cloud_polish_enabled` | `bool` | `False` | Master switch. False means the endpoint 409s and the button is hidden. |
-| `cloud_polish_model` | `str` | `""` | Empty means `claude-sonnet-5`. Validate against the allowlist. |
+| `cloud_polish_model` | `str` | `""` | Empty means `claude-sonnet-5-5` (was `claude-sonnet-5` before 18 October 2026). Validate against the allowlist. |
 
 **Status endpoint.** `GET /api/v1/system/cloud-polish` returning `{configured: bool, enabled: bool, model: str}`. `configured` is whether a key is in the vault. **Never return the key or any part of it.**
 

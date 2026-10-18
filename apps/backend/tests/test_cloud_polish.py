@@ -27,6 +27,7 @@ from tests.test_outreach_drafts import _batch, _ready_lead, _template
     [
         ("AuthenticationError", 409),
         ("PermissionDeniedError", 409),
+        ("NotFoundError", 409),
         ("RateLimitError", 503),
         ("BadRequestError", 502),
         ("APITimeoutError", 504),
@@ -42,6 +43,7 @@ def test_anthropic_errors_map_to_operator_status(
         {
             "AuthenticationError": 401,
             "PermissionDeniedError": 403,
+            "NotFoundError": 404,
             "RateLimitError": 429,
             "BadRequestError": 400,
         }.get(error_type, 503),
@@ -115,7 +117,7 @@ def test_disabled_by_default_and_missing_key_are_explicit(client: TestClient) ->
     assert client.get("/api/v1/system/cloud-polish").json() == {
         "configured": False,
         "enabled": False,
-        "model": "claude-sonnet-5",
+        "model": "claude-sonnet-5-5",
     }
     disabled = client.post(
         "/api/v1/outreach/drafts/unknown/polish", json={"subject": "S", "body": "B"}
@@ -403,3 +405,49 @@ def test_the_anthropic_sdk_is_not_imported_at_startup() -> None:
         [sys.executable, "-c", probe], cwd=Path(__file__).parents[1], check=False
     )
     assert completed.returncode == 0
+
+
+@pytest.mark.parametrize(
+    ("model", "effort"),
+    [
+        ("claude-sonnet-5-5", "low"),
+        ("claude-haiku-5-5", "low"),
+        ("claude-sonnet-5", "low"),
+        ("claude-haiku-4-5", None),
+    ],
+)
+def test_effort_is_sent_only_to_models_that_accept_it(
+    monkeypatch: Any, model: str, effort: str | None
+) -> None:
+    captured: dict[str, Any] = {}
+    _fake_anthropic(monkeypatch, _response(), captured)
+    cloud_client.polish_with_anthropic(api_key="sk-ant-test-secret", model=model, user_message="x")
+    assert captured["output_config"].get("effort") == effort
+    assert captured["output_config"]["format"]["type"] == "json_schema"
+    assert captured["max_tokens"] == 4000
+
+
+def test_a_retired_model_asks_for_another_choice(monkeypatch: Any) -> None:
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    error = anthropic.NotFoundError(
+        "model not found", response=httpx.Response(404, request=request), body={}
+    )
+
+    class FakeMessages:
+        @staticmethod
+        def create(**_: Any) -> Any:
+            raise error
+
+    class FakeAnthropic:
+        messages = FakeMessages()
+
+        def __init__(self, **_: Any) -> None:
+            pass
+
+    monkeypatch.setattr(anthropic, "Anthropic", FakeAnthropic)
+    with pytest.raises(DomainError) as caught:
+        cloud_client.polish_with_anthropic(
+            api_key="sk-ant-test-secret", model="claude-sonnet-5", user_message="{}"
+        )
+    assert caught.value.code == "CLOUD_POLISH_MODEL_UNAVAILABLE"
+    assert "Choose another model in Settings" in caught.value.message

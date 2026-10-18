@@ -4,7 +4,17 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.core.config import ALLOWED_OLLAMA_MODELS
 
-ALLOWED_CLOUD_POLISH_MODELS = {"claude-haiku-4-5", "claude-sonnet-5"}
+DEFAULT_CLOUD_POLISH_MODEL = "claude-sonnet-5-5"
+# Settings offer the current Sonnet and Haiku; the previous IDs stay valid so a saved choice keeps
+# working until the operator changes it.
+ALLOWED_CLOUD_POLISH_MODELS = {
+    "claude-sonnet-5-5",
+    "claude-haiku-5-5",
+    "claude-sonnet-5",
+    "claude-haiku-4-5",
+}
+# Models that accept `output_config.effort`; Claude Haiku 4.5 rejects it with a 400.
+CLOUD_POLISH_EFFORT_MODELS = frozenset({"claude-sonnet-5-5", "claude-haiku-5-5", "claude-sonnet-5"})
 
 
 def _validate_local_ai_model(value: str) -> str:
