@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.csv_safety import safe_csv_cell
 from app.core.errors import DomainError
 from app.db.models import (
     AuditEvent,
@@ -1120,13 +1121,5 @@ class LeadService:
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
         for row in rows:
-            writer.writerow({key: self._safe_csv_cell(row.get(key)) for key in fieldnames})
+            writer.writerow({key: safe_csv_cell(row.get(key)) for key in fieldnames})
         return output.getvalue()
-
-    @staticmethod
-    def _safe_csv_cell(value: Any) -> Any:
-        if not isinstance(value, str):
-            return value
-        if value.lstrip().startswith(("=", "+", "-", "@")):
-            return f"'{value}"
-        return value

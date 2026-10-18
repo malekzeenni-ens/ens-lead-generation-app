@@ -11,6 +11,7 @@ from uuid import uuid4
 from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile, ZipInfo
 
 from app.core.config import Settings
+from app.core.csv_safety import safe_csv_text
 from app.core.errors import DomainError
 from app.db.models import AssistantAttachment
 from app.domains.assistant.schemas import AssistantAttachmentUpload
@@ -95,6 +96,9 @@ class AssistantFileStore:
         stem = Path(self._safe_filename(suggested_filename)).stem or "assistant-file"
         stem = re.sub(r"[^A-Za-z0-9 _-]+", "", stem).strip()[:100] or "assistant-file"
         filename = f"{stem}.{requested_format}"
+        if requested_format == "csv":
+            # Model output can echo scraped website text; no cell may run as a formula.
+            content = safe_csv_text(content)
         if requested_format == "docx":
             file_content = self._docx(content)
         else:
