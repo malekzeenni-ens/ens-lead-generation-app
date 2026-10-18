@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -25,6 +27,19 @@ class AutomationRepository:
         if campaign_id:
             statement = statement.where(CampaignRun.campaign_id == campaign_id)
         return list(session.scalars(statement.order_by(CampaignRun.created_at.desc()).limit(limit)))
+
+    def interrupt_running_attempts(self, session: Session) -> list[str]:
+        """Close provider attempts a previous process left running. Startup only."""
+        attempts = list(
+            session.scalars(select(ProviderAttempt).where(ProviderAttempt.status == "running"))
+        )
+        now = datetime.now(UTC)
+        for attempt in attempts:
+            attempt.status = "interrupted"
+            attempt.error_code = "PROCESS_INTERRUPTED"
+            attempt.error_message = "The app closed before this provider call finished."
+            attempt.completed_at = now
+        return [attempt.id for attempt in attempts]
 
     def incomplete_runs(self, session: Session) -> list[CampaignRun]:
         return list(

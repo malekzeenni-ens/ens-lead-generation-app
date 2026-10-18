@@ -35,6 +35,7 @@ from app.db.session import Database
 from app.domains.automation.manager import CampaignRunManager
 from app.domains.automation.providers import MetaInstagramProvider
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
+from app.domains.campaign_assistant.service import CampaignAssistantService
 from app.domains.catalogue.pack_autoload import apply_pack_if_changed
 from app.domains.system.cloud_polish import CloudPolishConfigurationService
 from app.domains.system.meta import MetaConnectionService
@@ -84,6 +85,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(_: FastAPI):  # type: ignore[no-untyped-def]
         campaign_run_manager.resume_incomplete()
         with database.session_factory() as session:
+            CampaignAssistantService(
+                campaign_assistant_manager, runtime_settings
+            ).recover_interrupted(session)
             workspace_settings = SystemService().get_settings(session)
             campaign_assistant_manager.set_protection_enabled(
                 workspace_settings.protect_design_software_resources

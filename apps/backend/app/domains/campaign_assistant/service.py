@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from datetime import UTC, datetime
 from typing import Any
@@ -47,6 +48,8 @@ from app.domains.campaigns.schemas import (
 from app.domains.campaigns.service import CampaignService
 from app.domains.catalogue.repository import CatalogueRepository
 from app.domains.system.schemas import WorkspaceSettings
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_CHANNELS = frozenset({"email", "instagram"})
 ALLOWED_OFFER_SETTINGS = frozenset({"digital_mock_up", "introductory_pricing"})
@@ -170,8 +173,8 @@ class CampaignAssistantService:
                 instagram_connected=instagram_connected,
                 correlation_id=correlation_id,
             )
-        except DomainError:
-            self._mark_failed(session, draft)
+        except Exception as exc:
+            self._mark_failed(session, draft.id, exc)
             raise
 
     def message(
@@ -213,8 +216,8 @@ class CampaignAssistantService:
                 instagram_connected=instagram_connected,
                 correlation_id=correlation_id,
             )
-        except DomainError:
-            self._mark_failed(session, draft)
+        except Exception as exc:
+            self._mark_failed(session, draft.id, exc)
             raise
 
     def manual_update(
@@ -363,8 +366,8 @@ class CampaignAssistantService:
                 correlation_id=correlation_id,
                 confirmed_overrides=confirmed_context,
             )
-        except DomainError:
-            self._mark_failed(session, draft)
+        except Exception as exc:
+            self._mark_failed(session, draft.id, exc)
             raise
 
     def discard(
@@ -950,9 +953,43 @@ class CampaignAssistantService:
             prompt_version=draft.prompt_version,
         )
 
-    def _mark_failed(self, session: Session, draft: CampaignDraft) -> None:
-        draft.status = DraftStatus.GENERATION_FAILED.value
-        session.commit()
+    def _mark_failed(self, session: Session, draft_id: str, exc: Exception) -> None:
+        """Record a failed generation so the draft stays editable.
+
+        Any exception counts, not only a DomainError: a draft left in `generating` can never be
+        edited again. The session is rolled back first, because the failure may have left it
+        unable to flush.
+        """
+        session.rollback()
+        draft = self.repository.get(session, draft_id)
+        if draft is not None and draft.status == DraftStatus.GENERATING.value:
+            draft.status = DraftStatus.GENERATION_FAILED.value
+            session.commit()
+        if isinstance(exc, DomainError):
+            logger.warning(
+                "Campaign draft generation failed",
+                extra={"campaign_draft_id": draft_id, "error_code": exc.code},
+            )
+        else:
+            logger.error(
+                "Campaign draft generation failed unexpectedly",
+                exc_info=exc,
+                extra={"campaign_draft_id": draft_id, "error_code": type(exc).__name__},
+            )
+
+    def recover_interrupted(self, session: Session) -> int:
+        """Mark drafts left generating by a previous process as failed. Run only at startup,
+        before any generation can be in flight."""
+        drafts = self.repository.list(session, status=DraftStatus.GENERATING.value)
+        for draft in drafts:
+            draft.status = DraftStatus.GENERATION_FAILED.value
+        if drafts:
+            session.commit()
+            logger.warning(
+                "Recovered campaign drafts interrupted during generation",
+                extra={"campaign_draft_ids": [draft.id for draft in drafts]},
+            )
+        return len(drafts)
 
     def _require_enabled(self, settings: WorkspaceSettings) -> None:
         require_local_ai_enabled(self.runtime_settings, settings)

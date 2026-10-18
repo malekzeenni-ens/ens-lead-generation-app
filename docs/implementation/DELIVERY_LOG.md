@@ -458,3 +458,9 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - Lead create, edit and discovery promotion now check website host, phone, email and Instagram/Facebook handle as well as name/location. A name-only match holds a discovery candidate for review with its reason shown in the review queue.
 - Structured log events record the suppression ID and matched identifier kind only.
 - Verification: 6 new tests in `test_suppression_identifiers.py`; full backend suite 199 passed; Ruff, strict mypy, ESLint and TypeScript pass. Two schema-version assertions now read the head revision instead of naming it.
+
+### R3 - No work left stuck in progress
+
+- Any exception during campaign-draft generation, not only a `DomainError`, now rolls back and marks the draft `generation_failed`, so it stays editable. Unexpected errors are logged with their traceback and the draft ID.
+- At startup, drafts still `generating` become `generation_failed`, and provider attempts still `running` become `interrupted` with `PROCESS_INTERRUPTED`. Both recoveries and run resumption are logged.
+- Verification: 2 new tests in `test_interrupted_work.py`; full backend suite 201 passed with resource warnings as errors.

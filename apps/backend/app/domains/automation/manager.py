@@ -227,6 +227,13 @@ class CampaignRunManager:
     def resume_incomplete(self) -> None:
         with self.database.session_factory() as session:
             service = CampaignAutomationService(self.settings)
+            interrupted = service.repository.interrupt_running_attempts(session)
+            if interrupted:
+                session.commit()
+                logger.warning(
+                    "Closed provider attempts interrupted by a previous shutdown",
+                    extra={"provider_attempt_ids": interrupted},
+                )
             runs = service.repository.incomplete_runs(session)
             weekly_groups: dict[str, list[str]] = {}
             manual_run_ids: list[str] = []
@@ -235,6 +242,14 @@ class CampaignRunManager:
                     manual_run_ids.append(run.id)
                 else:
                     weekly_groups.setdefault(run.batch_id, []).append(run.id)
+        if manual_run_ids or weekly_groups:
+            logger.info(
+                "Resuming incomplete campaign runs",
+                extra={
+                    "manual_run_count": len(manual_run_ids),
+                    "weekly_batch_count": len(weekly_groups),
+                },
+            )
         for run_id in manual_run_ids:
             self.submit(run_id, str(uuid4()))
         for run_ids in weekly_groups.values():
