@@ -1,4 +1,5 @@
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -9,9 +10,20 @@ import {
   Info,
   LoaderCircle,
   Trash2,
+  X,
   type LucideIcon,
 } from "lucide-react";
-import { type KeyboardEvent, type ReactNode, useId, useState } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+
+import { PAGE_SIZE_OPTIONS } from "../pagination";
+import { useRememberedState } from "../remembered";
 
 export type HealthState = "checking" | "connected" | "unavailable";
 
@@ -419,6 +431,8 @@ interface PaginationProps {
   itemLabel: string;
   onPageChange: (page: number) => void;
   compact?: boolean;
+  /** Shows a rows-per-page choice when given. */
+  onPageSizeChange?: (size: number) => void;
 }
 
 type PageToken = number | "ellipsis-left" | "ellipsis-right";
@@ -448,8 +462,10 @@ export function Pagination({
   itemLabel,
   onPageChange,
   compact = false,
+  onPageSizeChange,
 }: PaginationProps) {
-  if (totalItems <= pageSize) return null;
+  const smallestPageSize = onPageSizeChange ? Math.min(...PAGE_SIZE_OPTIONS) : pageSize;
+  if (totalItems <= Math.min(pageSize, smallestPageSize)) return null;
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalItems);
 
@@ -459,6 +475,20 @@ export function Pagination({
         Showing {start}–{end} of {totalItems} {itemLabel}
       </p>
       <div className="pagination__controls">
+        {onPageSizeChange ? (
+          <label className="pagination__size">
+            <span>Rows</span>
+            <select
+              value={pageSize}
+              aria-label={`${itemLabel} per page`}
+              onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <button
           type="button"
           className="pagination__button pagination__button--direction"
@@ -501,5 +531,215 @@ export function Pagination({
         </button>
       </div>
     </nav>
+  );
+}
+
+export type StatusTone = "neutral" | "success" | "warning" | "error" | "accent";
+
+interface StatusPillProps {
+  tone?: StatusTone;
+  children: ReactNode;
+}
+
+/** One shape for every status; the dot and colour carry the meaning. */
+export function StatusPill({ tone = "neutral", children }: StatusPillProps) {
+  return <span className={`status-pill status-pill--${tone}`}>{children}</span>;
+}
+
+interface CollapsibleProps {
+  /** Remembers whether the section is open, per screen, for the session. */
+  rememberKey?: string;
+  title: ReactNode;
+  /** Shown beside the title while the section is collapsed, e.g. "3 notes". */
+  summary?: ReactNode;
+  icon?: LucideIcon;
+  actions?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+  className?: string;
+}
+
+/** A section that expands and collapses, the same way on every screen. */
+export function Collapsible({
+  rememberKey,
+  title,
+  summary,
+  icon: Icon,
+  actions,
+  defaultOpen = true,
+  children,
+  className = "",
+}: CollapsibleProps) {
+  const [open, setOpen] = useRememberedState(
+    rememberKey ? `collapsible:${rememberKey}` : undefined,
+    defaultOpen,
+  );
+  const bodyId = useId();
+  return (
+    <section className={`collapsible${open ? " collapsible--open" : ""}${className ? ` ${className}` : ""}`}>
+      <div className="collapsible__header">
+        <button
+          type="button"
+          className="collapsible__toggle"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <ChevronDown className="collapsible__chevron" size={18} aria-hidden="true" />
+          {Icon ? <Icon size={18} aria-hidden="true" /> : null}
+          <span className="collapsible__title">{title}</span>
+          {!open && summary ? <span className="collapsible__summary">{summary}</span> : null}
+        </button>
+        {actions ? <div className="collapsible__actions">{actions}</div> : null}
+      </div>
+      <div className="collapsible__body" id={bodyId} hidden={!open}>
+        <div className="collapsible__content">{children}</div>
+      </div>
+    </section>
+  );
+}
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+interface DrawerProps {
+  open: boolean;
+  title: string;
+  description?: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  wide?: boolean;
+}
+
+/** A panel that slides in from the right for editing and previews. */
+export function Drawer({ open, title, description, onClose, children, footer, wide = false }: DrawerProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    return () => returnFocus?.focus();
+  }, [open]);
+
+  if (!open) return null;
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab" || !panelRef.current) return;
+    const focusable = [...panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  return (
+    <div className="drawer-layer">
+      <div className="drawer-backdrop" aria-hidden="true" onClick={onClose} />
+      <div
+        ref={panelRef}
+        className={`drawer${wide ? " drawer--wide" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onKeyDown={handleKeyDown}
+      >
+        <header className="drawer__header">
+          <div>
+            <h2 id={titleId}>{title}</h2>
+            {description ? <p>{description}</p> : null}
+          </div>
+          <button type="button" className="icon-button" aria-label={`Close ${title}`} title="Close" onClick={onClose}>
+            <X size={18} aria-hidden="true" />
+          </button>
+        </header>
+        <div className="drawer__body">{children}</div>
+        {footer ? <footer className="drawer__footer">{footer}</footer> : null}
+      </div>
+    </div>
+  );
+}
+
+interface FilterChipProps {
+  label: string;
+  onRemove: () => void;
+}
+
+/** An active filter, removable in one click. */
+export function FilterChip({ label, onRemove }: FilterChipProps) {
+  return (
+    <span className="filter-chip">
+      {label}
+      <button type="button" aria-label={`Remove filter ${label}`} onClick={onRemove}>
+        <X size={14} aria-hidden="true" />
+      </button>
+    </span>
+  );
+}
+
+interface ToolbarProps {
+  children: ReactNode;
+  /** Active filters as chips, with a "Clear all" control. */
+  chips?: { label: string; onRemove: () => void }[];
+  onClearAll?: () => void;
+  summary?: ReactNode;
+}
+
+/** Search, filters and a result count, sticking below the page header while scrolling. */
+export function Toolbar({ children, chips = [], onClearAll, summary }: ToolbarProps) {
+  return (
+    <div className="toolbar">
+      <div className="toolbar__controls">{children}</div>
+      {chips.length > 0 || summary ? (
+        <div className="toolbar__status">
+          {chips.length > 0 ? (
+            <div className="toolbar__chips" aria-label="Active filters">
+              {chips.map((chip) => (
+                <FilterChip key={chip.label} label={chip.label} onRemove={chip.onRemove} />
+              ))}
+              {onClearAll ? (
+                <button type="button" className="toolbar__clear" onClick={onClearAll}>
+                  Clear all
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {summary ? <p className="toolbar__summary" aria-live="polite">{summary}</p> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+interface SkeletonRowsProps {
+  rows?: number;
+  label: string;
+}
+
+/** Placeholder rows shaped like real ones, so the page does not jump when data arrives. */
+export function SkeletonRows({ rows = 5, label }: SkeletonRowsProps) {
+  return (
+    <div className="skeleton-rows" role="status" aria-label={label}>
+      {Array.from({ length: rows }, (_, index) => (
+        <div className="skeleton-row" key={index} aria-hidden="true">
+          <span className="skeleton-block skeleton-block--title" />
+          <span className="skeleton-block" />
+          <span className="skeleton-block skeleton-block--short" />
+        </div>
+      ))}
+    </div>
   );
 }
