@@ -146,7 +146,7 @@ export function CampaignRegisterTab({
         "the selected template";
       const providerName = (weeklyProvider ?? "scoring").replaceAll("_", " ");
       const confirmed = window.confirm(
-        `Enable weekly automation for "${campaign.name}"?\n\nOn the first app opening each week, it will run ${providerName}, refresh the shortlist and prepare up to ${formValue(form, "edit-shortlist")} local drafts using ${templateName}.\n\nNo email will be sent automatically.`,
+        `Enable weekly automation for "${campaign.name}"?\n\nOnce each week while the app is open, it will run ${providerName}, refresh the shortlist and prepare up to ${formValue(form, "edit-shortlist")} local drafts using ${templateName}.\n\nNo email will be sent automatically.`,
       );
       if (!confirmed) return;
     }
@@ -582,15 +582,15 @@ export function CampaignRegisterTab({
                           <div>
                             <h3>Weekly outreach</h3>
                             <p>
-                              On the first app opening of each week, prepare drafts from this
+                              Once each week while the app is open, prepare drafts from this
                               campaign&apos;s strongest contact-ready leads.
                             </p>
                           </div>
                         </div>
                         <GuidanceNote title="Before you enable weekly outreach">
-                          Enabling this campaign authorises a current-week refresh when the app
-                          first opens, or when you manually run due campaigns. It prepares local
-                          drafts only; review, approval and sending remain your decisions.
+                          Enabling this campaign authorises one refresh each week while the app is
+                          open, or when you manually run due campaigns. It prepares local drafts
+                          only; review, approval and sending remain your decisions.
                         </GuidanceNote>
                         <label className="choice-row">
                           <input

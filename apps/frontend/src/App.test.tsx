@@ -939,7 +939,7 @@ describe("local operating workbench", () => {
     expect(screen.getByText(lead.business_name)).toBeInTheDocument();
   });
 
-  it("checks weekly outreach on first open and exposes completed campaign drafts", async () => {
+  it("shows the backend's weekly runs on open without triggering a check itself", async () => {
     const user = userEvent.setup();
     const automatedCampaign: Campaign = {
       ...campaign,
@@ -966,8 +966,8 @@ describe("local operating workbench", () => {
     render(<App />);
     await screen.findByText("API connected");
 
-    await waitFor(() => expect(api.ensureWeeklyOutreach).toHaveBeenCalledTimes(1));
-    expect(screen.getByText("You are caught up for this week")).toBeInTheDocument();
+    expect(await screen.findByText("You are caught up for this week")).toBeInTheDocument();
+    expect(api.ensureWeeklyOutreach).not.toHaveBeenCalled();
     expect(screen.getByText(automatedCampaign.name)).toBeInTheDocument();
     expect(screen.getByText("1 need attention")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Review" }));
@@ -987,7 +987,7 @@ describe("local operating workbench", () => {
     try {
       render(<App />);
       await screen.findByText("API connected");
-      await waitFor(() => expect(api.ensureWeeklyOutreach).toHaveBeenCalledTimes(1));
+      expect(api.ensureWeeklyOutreach).not.toHaveBeenCalled();
 
       expect(screen.getByText("How the weekly check works")).toBeInTheDocument();
       const capacityHelp = screen.getByRole("button", {
@@ -998,11 +998,11 @@ describe("local operating workbench", () => {
 
       confirm.mockReturnValueOnce(false);
       await user.click(screen.getByRole("button", { name: "Run due campaigns" }));
-      expect(api.ensureWeeklyOutreach).toHaveBeenCalledTimes(1);
+      expect(api.ensureWeeklyOutreach).not.toHaveBeenCalled();
 
       confirm.mockReturnValueOnce(true);
       await user.click(screen.getByRole("button", { name: "Run due campaigns" }));
-      await waitFor(() => expect(api.ensureWeeklyOutreach).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(api.ensureWeeklyOutreach).toHaveBeenCalledTimes(1));
       expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining("No email will be sent"));
     } finally {
       confirm.mockRestore();

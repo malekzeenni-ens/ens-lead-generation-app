@@ -764,6 +764,9 @@ class CampaignRun(Base):
     __table_args__ = (
         Index("ix_campaign_run_campaign_created", "campaign_id", "created_at"),
         Index("ix_campaign_run_status_created", "status", "created_at"),
+        # Created by migration 0011: one weekly run per campaign per week. Manual runs have no
+        # week and are unaffected, because SQLite treats NULLs as distinct.
+        UniqueConstraint("campaign_id", "week_start", name="uq_campaign_run_campaign_week"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)

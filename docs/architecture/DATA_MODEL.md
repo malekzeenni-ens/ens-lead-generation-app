@@ -26,7 +26,7 @@
 | `score_run` | Historical deterministic calculation with profile/rule versions, category breakdown, evidence/missing fields, product-match snapshot, optional campaign-run/fingerprint links, manual override and final score |
 | `shortlist` | Unique campaign/week selection run with requested/effective capacity, status and generation time |
 | `shortlist_item` | Ranked lead recommendation with score, visible reasons, product-match snapshot and operator decision state |
-| `campaign_run` | Durable manual or first-open weekly execution with batch, optional week/batch link, phase/status, provider state, counters, warnings/errors, cancellation and timings; one weekly run per campaign/week |
+| `campaign_run` | Durable manual or scheduled weekly execution with batch, optional week/batch link, phase/status, provider state, counters, warnings/errors, cancellation and timings; one weekly run per campaign/week |
 | `discovery_candidate` | Staged provider business evidence and duplicate/promotion/rejection decision, separate from canonical leads |
 | `provider_attempt` | Bounded provider query/request/result counts and safe terminal error evidence for a campaign run |
 | `outreach_batch` | One local template/campaign preparation run with derived review/ready/closed state |
@@ -72,7 +72,7 @@ Lead names are Unicode-normalised, trimmed, whitespace-collapsed, and case-folde
 - Shopify imports upsert products by case-folded handle, collapse variants, and never store the uploaded raw CSV.
 - Provider and assisted-social results enter `discovery_candidate` first. Exact provider/social-handle/website/phone/email/name matches link to existing leads; high-confidence fuzzy names wait for operator review; accepted new businesses are promoted transactionally with campaign membership, contacts, evidence and initial stage history.
 - Current-week campaign automation never overwrites an existing shortlist. Unchanged deterministic inputs reuse the latest score run by SHA-256 fingerprint.
-- The first app opening in a local calendar week creates at most one weekly run per enabled campaign. Opening on Tuesday or later catches up that same week without creating missed-week backlog.
+- The backend weekly scheduler creates at most one weekly run per enabled campaign per local calendar week (unique `campaign_id, week_start`, migration 0011). If the app was closed at the start of the week, the first check after it opens catches up that same week without creating missed-week backlog.
 - Weekly campaigns execute sequentially. Draft preparation failures are isolated to one campaign and can be retried on the same durable run.
 - A lead shortlisted by several campaigns receives at most one weekly draft: the highest campaign-specific score wins, followed by rank and a stable campaign-name tie-break. The workspace-wide weekly cap is applied after this deduplication.
 - Draft creation and approval both re-check suppression, pipeline stage, a valid direct-contact or public business email, contact classification, outreach hold and active-draft conflicts. A valid direct email takes recipient priority. Lead contact/context/stage/hold changes invalidate an existing approval.

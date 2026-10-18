@@ -472,3 +472,11 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - The same name in a different or unknown locality now goes to review with a stated reason instead of linking automatically. Phone keys under nine digits no longer match.
 - Each link or review hold is logged with the candidate, lead and match rank.
 - Verification: 22 new tests in `test_lead_matching.py`; existing discovery tests unchanged and passing; full backend suite 223 passed.
+
+### R4 - Weekly outreach scheduled by the backend (FR-060, D5)
+
+- New `WeeklyScheduler` thread, started in the lifespan and stopped first at shutdown. It runs the idempotent weekly check at start (on its own thread, so startup does not wait) and every 15 minutes (`ENS_WEEKLY_SCHEDULER_POLL_SECONDS`), and survives a failing check.
+- `queue_weekly_due` is serialised with a lock and takes the week explicitly. The runs it creates are logged with the week and correlation ID.
+- The frontend no longer triggers the check on load; the manual "Run due campaigns" action stays. Help text and the enable confirmation now describe the new behaviour.
+- Correction to the plan: the database already allowed only one weekly run per campaign per week (migration 0011). No new migration was needed; the model now declares the constraint so the two match.
+- Verification: 4 new tests in `test_weekly_scheduler.py` (week rollover with the app open, thread start and recovery, a four-way race, the constraint); two frontend tests updated; 227 backend and 112 frontend tests pass.

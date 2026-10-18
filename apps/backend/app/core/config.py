@@ -74,6 +74,9 @@ class Settings(BaseSettings):
         "xtool creative space.exe",
     )
     campaign_run_inline: bool = False
+    # Weekly outreach is checked while the app runs (FR-060). Off in tests, which drive it directly.
+    weekly_scheduler_enabled: bool = True
+    weekly_scheduler_poll_seconds: float = Field(default=900.0, ge=30.0, le=86_400.0)
     # The private product knowledge pack (ADR-021). Unset, it is looked for beside the database
     # and then at the repository root, and applied at startup and after each Shopify import.
     knowledge_pack_path: Path | None = None

@@ -199,7 +199,6 @@ function errorMessage(error: unknown): string {
 
 export default function App() {
   const workspaceContentRef = useRef<HTMLElement>(null);
-  const weeklyEnsureStartedRef = useRef(false);
   const [health, setHealth] = useState<HealthState>("checking");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignRuns, setCampaignRuns] = useState<CampaignRun[]>([]);
@@ -362,17 +361,6 @@ export default function App() {
   useEffect(() => {
     void refresh(true);
   }, []);
-
-  useEffect(() => {
-    if (loading || health !== "connected" || weeklyEnsureStartedRef.current) return;
-    weeklyEnsureStartedRef.current = true;
-    void api
-      .ensureWeeklyOutreach()
-      .then((runs) => {
-        if (runs.length > 0) setCampaignRuns(runs);
-      })
-      .catch((caught: unknown) => setError(errorMessage(caught)));
-  }, [health, loading]);
 
   useEffect(() => {
     if (!success) return;

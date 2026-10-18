@@ -34,6 +34,7 @@ from app.db.migrations import run_migrations
 from app.db.session import Database
 from app.domains.automation.manager import CampaignRunManager
 from app.domains.automation.providers import MetaInstagramProvider
+from app.domains.automation.scheduler import WeeklyScheduler
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.campaign_assistant.service import CampaignAssistantService
 from app.domains.catalogue.pack_autoload import apply_pack_if_changed
@@ -80,6 +81,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         database, runtime_settings, instagram_provider=instagram_provider
     )
     campaign_assistant_manager = CampaignAssistantManager(runtime_settings)
+    weekly_scheduler = WeeklyScheduler(
+        campaign_run_manager.queue_weekly_due,
+        poll_seconds=runtime_settings.weekly_scheduler_poll_seconds,
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):  # type: ignore[no-untyped-def]
@@ -95,10 +100,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             campaign_assistant_manager.set_preferred_model(workspace_settings.local_ai_model)
             apply_pack_if_changed(session, runtime_settings, "startup-knowledge-pack")
         campaign_assistant_manager.start()
+        if runtime_settings.weekly_scheduler_enabled:
+            weekly_scheduler.start()
         try:
             yield
         finally:
             logger.info("Etch N Shine local backend shutdown started")
+            weekly_scheduler.stop()
             campaign_assistant_manager.shutdown()
             campaign_run_manager.shutdown()
             meta_connection_service.shutdown()

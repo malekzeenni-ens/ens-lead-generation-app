@@ -254,9 +254,9 @@ export function DashboardWorkspace({
       />
 
       <GuidanceNote title="How the weekly check works">
-        On the first app opening each week, enabled campaigns refresh sequentially and prepare
-        local drafts only. Opening later in the week catches up once; every draft still requires
-        your edit and approval, and nothing is sent automatically.
+        While the app is open, enabled campaigns refresh once each week and prepare local drafts
+        only. If the app was closed at the start of the week, it catches up when you next open it;
+        every draft still requires your edit and approval, and nothing is sent automatically.
       </GuidanceNote>
 
       <section

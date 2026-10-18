@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
+from datetime import date
 from threading import Lock
 from uuid import uuid4
 
@@ -32,6 +33,8 @@ class CampaignRunManager:
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="campaign-run")
         self._futures: dict[str, Future[None]] = {}
         self._lock = Lock()
+        # The scheduler and the manual endpoint must not both decide what is due at once.
+        self._weekly_lock = Lock()
 
     def _execute(self, run_id: str, correlation_id: str) -> None:
         try:
@@ -141,8 +144,13 @@ class CampaignRunManager:
             self.submit(run_id, correlation_id)
         return run_ids
 
-    def queue_weekly_due(self, correlation_id: str) -> list[str]:
-        week_start = current_week_start()
+    def queue_weekly_due(self, correlation_id: str, week_start: date | None = None) -> list[str]:
+        """Queue one run per enabled campaign that has none for the week; returns the week's
+        run IDs. Idempotent, and serialised so the scheduler and the endpoint cannot race."""
+        with self._weekly_lock:
+            return self._queue_weekly_due(correlation_id, week_start or current_week_start())
+
+    def _queue_weekly_due(self, correlation_id: str, week_start: date) -> list[str]:
         new_run_ids: list[str] = []
         with self.database.session_factory() as session:
             service = CampaignAutomationService(self.settings)
@@ -185,6 +193,14 @@ class CampaignRunManager:
             ]
 
         if new_run_ids:
+            logger.info(
+                "Weekly outreach runs queued",
+                extra={
+                    "week_start": str(week_start),
+                    "campaign_run_ids": new_run_ids,
+                    "correlation_id": correlation_id,
+                },
+            )
             self.submit_weekly(new_run_ids, correlation_id)
         return current_ids
 

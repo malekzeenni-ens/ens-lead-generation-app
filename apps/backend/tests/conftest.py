@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
@@ -15,6 +16,10 @@ from app.db.migrations import backend_directory, run_migrations
 from app.main import create_app
 
 SESSION_TOKEN = "test-session-token-with-at-least-thirty-two-characters"  # noqa: S105 -- test fixture
+
+# Every Settings() built in the suite, not only this file's fixture, leaves the background weekly
+# scheduler off; tests that cover it drive it directly.
+os.environ.setdefault("ENS_WEEKLY_SCHEDULER_ENABLED", "false")
 
 
 def head_revision() -> str:

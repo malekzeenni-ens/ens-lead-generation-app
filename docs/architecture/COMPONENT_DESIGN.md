@@ -46,7 +46,7 @@ The backend is a modular monolith. Domain modules live under `app/domains`; API 
 - Generate one campaign shortlist per week within capacity while enforcing suppression, stage, score, freshness and recent-recommendation controls; approve, defer, dismiss or replace individual items.
 - Prepare local email-draft batches from editable templates; show eligibility checks and recent notes; append edited revisions; approve, bulk-approve, reject or reopen without any external transfer.
 - Capture one primary contact and structured reusable email context inside each lead; render only explicit safe template fields and prefer the direct contact email at draft/handoff boundaries.
-- On the first app opening of each local calendar week, queue each opted-in active campaign once, run campaigns sequentially, refresh its configured source, score and shortlist, then prepare local drafts from complete contact-ready Context.
+- While the app is running, a backend scheduler (`automation/scheduler.py`) checks every 15 minutes and queues each opted-in active campaign once per local calendar week, run campaigns sequentially, refresh its configured source, score and shortlist, then prepare local drafts from complete contact-ready Context.
 - Deduplicate shared leads across campaign shortlists by strongest campaign score, apply a workspace-wide weekly cap, isolate campaign failures and reuse the same weekly run for dashboard retry.
 
 ## UI composition
