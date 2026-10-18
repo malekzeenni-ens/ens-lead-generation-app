@@ -196,6 +196,10 @@ export function CatalogueWorkspace({
   const [knowledgeResult, setKnowledgeResult] = useState<EnrichmentImportResult | null>(null);
   const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
   const [enrichResult, setEnrichResult] = useState<EnrichmentRunResult | null>(null);
+  const [enrichProgress, setEnrichProgress] = useState<{ current: number; total: number } | null>(
+    null,
+  );
+  const enrichAbort = useRef<AbortController | null>(null);
   const [includeStale, setIncludeStale] = useState(false);
   const weightFormRef = useRef<HTMLFormElement>(null);
   const [weightTotal, setWeightTotal] = useState(0);
@@ -267,8 +271,20 @@ export function CatalogueWorkspace({
   }
 
   async function startEnrichment(): Promise<void> {
-    const result = await onRunEnrichment(includeStale);
-    if (result) setEnrichResult(result);
+    const controller = new AbortController();
+    enrichAbort.current = controller;
+    setEnrichResult(null);
+    setEnrichProgress({ current: 0, total: 0 });
+    try {
+      const result = await onRunEnrichment(includeStale, {
+        signal: controller.signal,
+        onProgress: (current, total) => setEnrichProgress({ current, total }),
+      });
+      if (result) setEnrichResult(result);
+    } finally {
+      enrichAbort.current = null;
+      setEnrichProgress(null);
+    }
   }
 
   async function saveNote(noteId: string, form: FormData): Promise<void> {
@@ -559,12 +575,25 @@ export function CatalogueWorkspace({
           <button
             className="primary-action"
             type="button"
-            disabled={busy || !enrichmentStatus?.products_awaiting_enrichment}
+            disabled={busy || enrichProgress !== null || !enrichmentStatus?.products_awaiting_enrichment}
             onClick={() => void startEnrichment()}
           >
             <Sparkles size={17} aria-hidden="true" />
-            {busy ? "Enriching products…" : "Enrich pending products"}
+            {enrichProgress
+              ? enrichProgress.total
+                ? `Enriching ${enrichProgress.current} of ${enrichProgress.total}…`
+                : "Starting enrichment…"
+              : "Enrich pending products"}
           </button>
+          {enrichProgress ? (
+            <button
+              className="tertiary-action"
+              type="button"
+              onClick={() => enrichAbort.current?.abort()}
+            >
+              Stop after this product
+            </button>
+          ) : null}
           {enrichResult ? (
             <div className="import-summary" role="status">
               <strong>Enrichment finished</strong>

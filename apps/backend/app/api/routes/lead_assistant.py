@@ -3,12 +3,12 @@ from typing import cast
 from fastapi import APIRouter, Request
 
 from app.api.dependencies import Authenticated, DatabaseSession
+from app.api.routes.jobs import job_manager
 from app.core.config import Settings
-from app.domains.automation.enrichment import SafeWebsiteEnricher
+from app.domains.campaign_assistant.gate import require_local_ai_enabled
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.lead_assistant.schemas import (
     LeadAutofillRequest,
-    LeadAutofillResponse,
     LeadBriefingResponse,
     LeadFilterTranslateRequest,
     LeadFilterTranslateResult,
@@ -17,6 +17,8 @@ from app.domains.lead_assistant.schemas import (
 )
 from app.domains.lead_assistant.service import LeadAssistantService
 from app.domains.system.service import SystemService
+from app.jobs.kinds import LEAD_AUTOFILL
+from app.jobs.schemas import BackgroundJobRead
 
 router = APIRouter(prefix="/lead-assistant", tags=["lead-assistant"])
 service = LeadAssistantService()
@@ -62,26 +64,18 @@ def brief_lead(
     )
 
 
-@router.post("/autofill", response_model=LeadAutofillResponse)
+@router.post("/autofill", response_model=BackgroundJobRead, status_code=202)
 def autofill_leads(
     data: LeadAutofillRequest,
     request: Request,
     _: Authenticated,
     session: DatabaseSession,
-) -> LeadAutofillResponse:
-    runtime_settings = _runtime_settings(request)
-    enricher = SafeWebsiteEnricher(runtime_settings)
-    try:
-        return service.autofill_leads(
-            session,
-            data,
-            manager=_manager(request),
-            runtime_settings=runtime_settings,
-            workspace_settings=SystemService().get_settings(session),
-            enricher=enricher,
-        )
-    finally:
-        enricher.close()
+) -> BackgroundJobRead:
+    """Queue context suggestions for up to 20 leads; poll the returned job for the result."""
+    require_local_ai_enabled(_runtime_settings(request), SystemService().get_settings(session))
+    return job_manager(request).submit(
+        session, LEAD_AUTOFILL, data.model_dump(mode="json"), request.state.correlation_id
+    )
 
 
 @router.post("/stalled-digest", response_model=StalledLeadDigestResponse)

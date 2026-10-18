@@ -23,7 +23,9 @@ import brandMarkUrl from "../../desktop/brand-logo.png";
 import {
   ApiError,
   BackendUnavailableError,
+  JOB_CANCELLED,
   api,
+  type JobOptions,
   type CampaignRunProvider,
   type CampaignInput,
   type CampaignUpdate,
@@ -983,12 +985,28 @@ export default function App() {
     );
   }
 
-  async function runEnrichment(includeStale: boolean): Promise<EnrichmentRunResult | null> {
-    return perform(
-      () => api.runEnrichment(includeStale),
-      "Pending products enriched with the local model.",
-      ["products", "knowledge"],
-    );
+  // A background job (ADR-022): it does not hold the app-wide busy state, so the rest of the
+  // workspace stays usable while it runs.
+  async function runEnrichment(
+    includeStale: boolean,
+    options?: JobOptions,
+  ): Promise<EnrichmentRunResult | null> {
+    setSuccess(null);
+    setError(null);
+    try {
+      const result = await api.runEnrichment(includeStale, options);
+      await refreshDomains(["products", "knowledge"]);
+      setSuccess("Pending products enriched with the local model.");
+      return result;
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.details.code === JOB_CANCELLED) {
+        await refreshDomains(["products", "knowledge"]);
+        setSuccess(caught.message);
+      } else {
+        setError(errorMessage(caught));
+      }
+      return null;
+    }
   }
 
   async function updateKnowledgeNote(

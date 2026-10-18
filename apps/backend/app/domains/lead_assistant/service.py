@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
@@ -148,10 +149,19 @@ class LeadAssistantService:
         runtime_settings: Settings,
         workspace_settings: WorkspaceSettings,
         enricher: SafeWebsiteEnricher,
+        progress: Callable[[int, int], None] | None = None,
+        cancelled: Callable[[], bool] | None = None,
     ) -> LeadAutofillResponse:
+        """Suggest missing context for each lead. Run as a background job, it reports progress
+        after each lead and stops between leads when cancelled (`InterruptedError`)."""
         require_local_ai_enabled(runtime_settings, workspace_settings)
         items: list[LeadAutofillResultItem] = []
-        for lead_id in data.lead_ids:
+        total = len(data.lead_ids)
+        for index, lead_id in enumerate(data.lead_ids):
+            if cancelled is not None and cancelled():
+                raise InterruptedError("Lead autofill cancelled")
+            if progress is not None:
+                progress(index, total)
             lead = self.lead_repository.get(session, lead_id)
             if lead is None:
                 items.append(
@@ -197,6 +207,7 @@ class LeadAssistantService:
                     model_cls=LeadAutofillSuggestion,
                     error_prefix="LEAD_AUTOFILL",
                     protect_resources=workspace_settings.protect_design_software_resources,
+                    cancelled=cancelled,
                 )
             except DomainError as exc:
                 if exc.code == "CAMPAIGN_ASSISTANT_BUSY":
@@ -217,6 +228,8 @@ class LeadAssistantService:
                     suggestion=result.value,
                 )
             )
+        if progress is not None:
+            progress(total, total)
         return LeadAutofillResponse(items=items)
 
     def stalled_digest(

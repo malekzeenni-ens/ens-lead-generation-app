@@ -406,6 +406,30 @@ export interface VerificationResult {
   schema_version: string;
 }
 
+export type BackgroundJobStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled"
+  | "interrupted";
+
+/** Long AI work the backend runs outside the request that started it (ADR-022). */
+export interface BackgroundJob {
+  id: string;
+  kind: string;
+  status: BackgroundJobStatus;
+  progress_current: number;
+  progress_total: number;
+  result: Record<string, unknown> | null;
+  error_code: string | null;
+  error_message: string | null;
+  cancellation_requested: boolean;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
 export interface ApiErrorShape {
   code: string;
   message: string;

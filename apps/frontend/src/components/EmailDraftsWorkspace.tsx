@@ -13,7 +13,7 @@ import {
   Sparkles,
   XCircle,
 } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useRef, useState } from "react";
 
 import { emailAddressFor } from "../contact";
 import { ApiError, api } from "../api";
@@ -530,6 +530,11 @@ export function EmailDraftsWorkspace({
   const [autofillItems, setAutofillItems] = useState<LeadAutofillResultItem[]>([]);
   const [autofilling, setAutofilling] = useState(false);
   const [autofillError, setAutofillError] = useState<string | null>(null);
+  const [autofillProgress, setAutofillProgress] = useState<{ current: number; total: number }>({
+    current: 0,
+    total: 0,
+  });
+  const autofillAbort = useRef<AbortController | null>(null);
   const selectedTemplateId = templateId || templates[0]?.id || "";
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
   const recipientEmailByLeadId = useMemo(
@@ -631,16 +636,24 @@ export function EmailDraftsWorkspace({
 
   async function autofillMissingContext(): Promise<void> {
     if (!blockedLeadIds.length || blockedLeadIds.length > 20) return;
+    const controller = new AbortController();
+    autofillAbort.current = controller;
     setAutofilling(true);
     setAutofillError(null);
+    setAutofillProgress({ current: 0, total: blockedLeadIds.length });
     try {
-      const response = await api.autofillLeads(blockedLeadIds);
+      // Runs as a background job; up to twenty leads can take several minutes.
+      const response = await api.autofillLeads(blockedLeadIds, {
+        signal: controller.signal,
+        onProgress: (current, total) => setAutofillProgress({ current, total }),
+      });
       setAutofillItems(response.items);
     } catch (error) {
       setAutofillError(
         error instanceof ApiError ? error.details.message : "Lead context could not be suggested.",
       );
     } finally {
+      autofillAbort.current = null;
       setAutofilling(false);
     }
   }
@@ -772,7 +785,18 @@ export function EmailDraftsWorkspace({
                     onClick={() => void autofillMissingContext()}
                   >
                     <Sparkles size={17} aria-hidden="true" />
-                    {autofilling ? "Preparing context…" : "Fill missing context with AI"}
+                    {autofilling
+                      ? `Preparing context… ${autofillProgress.current} of ${autofillProgress.total}`
+                      : "Fill missing context with AI"}
+                  </button>
+                ) : null}
+                {autofilling ? (
+                  <button
+                    className="tertiary-action"
+                    type="button"
+                    onClick={() => autofillAbort.current?.abort()}
+                  >
+                    Stop after this lead
                   </button>
                 ) : null}
               </div>

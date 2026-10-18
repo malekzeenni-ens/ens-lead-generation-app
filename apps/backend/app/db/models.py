@@ -759,6 +759,37 @@ class ScoringProfile(Base):
     score_runs: Mapped[list[ScoreRun]] = relationship(back_populates="profile")
 
 
+class BackgroundJob(Base):
+    """Long work that runs outside the request that started it (ADR-022).
+
+    The request returns the job at once; the frontend polls it for progress and can cancel it.
+    """
+
+    __tablename__ = "background_job"
+    __table_args__ = (
+        Index("ix_background_job_status_created", "status", "created_at"),
+        Index("ix_background_job_kind_created", "kind", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    kind: Mapped[str] = mapped_column(String(60), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
+    progress_current: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    progress_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    error_code: Mapped[str | None] = mapped_column(String(100))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    cancellation_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    correlation_id: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+
 class CampaignRun(Base):
     __tablename__ = "campaign_run"
     __table_args__ = (

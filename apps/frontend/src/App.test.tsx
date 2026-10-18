@@ -47,6 +47,7 @@ vi.mock("./api", () => {
   return {
     ApiError: MockApiError,
     BackendUnavailableError: MockBackendUnavailableError,
+    JOB_CANCELLED: "JOB_CANCELLED",
     api: {
       health: vi.fn(),
       campaigns: vi.fn(),

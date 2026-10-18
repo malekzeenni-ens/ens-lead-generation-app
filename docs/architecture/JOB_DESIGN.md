@@ -1,6 +1,10 @@
 # Persistent job design
 
-**Status:** Operator-triggered and backend-scheduled weekly campaign runs implemented; operating-system scheduling, leases, general retry queues and budgets remain planned
+**Status:** Operator-triggered and backend-scheduled weekly campaign runs implemented; general background jobs for long local AI work implemented (ADR-022); operating-system scheduling, leases, general retry queues and budgets remain planned
+
+## Background jobs (ADR-022)
+
+`background_job` holds long local AI work started from the UI: lead autofill and catalogue enrichment. One worker thread runs them; each reports progress (committed, so finished work survives a cancellation), checks for cancellation between steps, and waits its turn for the shared model lock while interactive requests keep failing fast. The API returns the job with `202`; `GET /jobs/{id}`, `GET /jobs?active=true` and `POST /jobs/{id}/cancel` follow it. At startup, queued jobs are requeued and running ones marked `interrupted`.
 
 `campaign_run`, `discovery_candidate`, and `provider_attempt` now persist the requested work, phase, progress counters, candidate evidence, safe failures, cancellation request, and terminal outcome. A single-process worker executes one run at a time and resumes queued/running records after application restart. It supports explicit buttons plus an idempotent current-week check that a backend scheduler thread repeats every 15 minutes while the app runs (`ENS_WEEKLY_SCHEDULER_POLL_SECONDS`), serialised with the manual action. Weekly runs execute campaigns sequentially and expose campaign-level retry, but the app cannot run while closed and this is not the full leased job design below.
 

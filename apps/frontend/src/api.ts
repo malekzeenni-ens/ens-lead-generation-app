@@ -6,6 +6,7 @@ import type {
   AssistantContextSelection,
   AssistantConversation,
   AutomationCapabilities,
+  BackgroundJob,
   BackupResult,
   Campaign,
   CampaignAssistantStatus,
@@ -62,6 +63,20 @@ export class ApiError extends Error {
 
 /** The desktop host reported that the local service could not start or was stopped. */
 export class BackendUnavailableError extends Error {}
+
+// Interactive local AI calls can take the model's full 120-second limit, so they get longer.
+// Long batch work runs as background jobs instead (ADR-022) and is followed by polling.
+const DEFAULT_TIMEOUT_MS = 60_000;
+const AI_TIMEOUT_MS = 200_000;
+const AI_PATH = /^\/(assistant|campaign-assistant|lead-assistant)\/|\/(refine|polish)$/;
+
+const TIMED_OUT: ApiErrorShape = {
+  code: "REQUEST_TIMEOUT",
+  message:
+    "The local service took too long to answer. It may still finish; refresh in a moment to check.",
+  details: {},
+  correlation_id: "",
+};
 
 const UNREACHABLE: ApiErrorShape = {
   code: "BACKEND_UNREACHABLE",
@@ -121,9 +136,15 @@ async function rawRequest(path: string, init?: RequestInit): Promise<Response> {
     throw caught;
   });
   const connection = await connectionPromise;
+  const timeout = new AbortController();
+  const timer = setTimeout(
+    () => timeout.abort(),
+    AI_PATH.test(path) ? AI_TIMEOUT_MS : DEFAULT_TIMEOUT_MS,
+  );
   let response: Response;
   try {
     response = await fetch(`${connection.baseUrl}${path}`, {
+      signal: timeout.signal,
       ...init,
       headers: {
         "Content-Type": "application/json",
@@ -132,7 +153,9 @@ async function rawRequest(path: string, init?: RequestInit): Promise<Response> {
       },
     });
   } catch {
-    throw new ApiError(UNREACHABLE);
+    throw new ApiError(timeout.signal.aborted ? TIMED_OUT : UNREACHABLE);
+  } finally {
+    clearTimeout(timer);
   }
   if (!response.ok) {
     throw new ApiError(await errorShape(response));
@@ -148,6 +171,53 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 function jsonBody(method: string, data: unknown): RequestInit {
   return { method, body: JSON.stringify(data) };
+}
+
+export interface JobOptions {
+  /** Called with the job's progress each time it is polled. */
+  onProgress?: (current: number, total: number) => void;
+  /** Aborting asks the backend to cancel the job; the promise then rejects with JOB_CANCELLED. */
+  signal?: AbortSignal;
+  pollIntervalMs?: number;
+}
+
+export const JOB_CANCELLED = "JOB_CANCELLED";
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+/** Start a background job, follow it to the end, and resolve with its result. */
+async function runJob<T>(start: Promise<BackgroundJob>, options: JobOptions = {}): Promise<T> {
+  let job = await start;
+  let cancelRequested = false;
+  for (;;) {
+    options.onProgress?.(job.progress_current, job.progress_total);
+    if (job.status === "succeeded") return job.result as T;
+    if (job.status === "cancelled") {
+      throw new ApiError({
+        code: JOB_CANCELLED,
+        message: "Stopped. Work finished before you stopped it was kept.",
+        details: {},
+        correlation_id: "",
+      });
+    }
+    if (job.status === "failed" || job.status === "interrupted") {
+      throw new ApiError({
+        code: job.error_code ?? "JOB_FAILED",
+        message: job.error_message ?? "The job did not finish.",
+        details: { job_id: job.id },
+        correlation_id: "",
+      });
+    }
+    if (options.signal?.aborted && !cancelRequested) {
+      cancelRequested = true;
+      job = await request<BackgroundJob>(`/jobs/${job.id}/cancel`, jsonBody("POST", {}));
+      continue;
+    }
+    await delay(options.pollIntervalMs ?? 1500);
+    job = await request<BackgroundJob>(`/jobs/${job.id}`);
+  }
 }
 
 export interface CampaignInput {
@@ -498,10 +568,10 @@ export const api = {
       `/lead-assistant/leads/${leadId}/briefing`,
       jsonBody("POST", {}),
     ),
-  autofillLeads: (leadIds: string[]) =>
-    request<LeadAutofillResponse>(
-      "/lead-assistant/autofill",
-      jsonBody("POST", { lead_ids: leadIds }),
+  autofillLeads: (leadIds: string[], options?: JobOptions) =>
+    runJob<LeadAutofillResponse>(
+      request<BackgroundJob>("/lead-assistant/autofill", jsonBody("POST", { lead_ids: leadIds })),
+      options,
     ),
   stalledLeadDigest: (limit?: number) =>
     request<StalledLeadDigest>(
@@ -545,11 +615,15 @@ export const api = {
       jsonBody("POST", { filename, content }),
     ),
   enrichmentStatus: () => request<EnrichmentStatus>("/catalogue/enrichment/status"),
-  runEnrichment: (includeStale: boolean) =>
-    request<EnrichmentRunResult>(
-      "/catalogue/enrichment/run",
-      jsonBody("POST", { include_stale: includeStale }),
+  runEnrichment: (includeStale: boolean, options?: JobOptions) =>
+    runJob<EnrichmentRunResult>(
+      request<BackgroundJob>(
+        "/catalogue/enrichment/run",
+        jsonBody("POST", { include_stale: includeStale }),
+      ),
+      options,
     ),
+  activeJobs: () => request<BackgroundJob[]>("/jobs?active=true"),
   knowledgeNotes: () => request<KnowledgeNote[]>("/catalogue/knowledge-notes"),
   updateKnowledgeNote: (noteId: string, data: KnowledgeNoteUpdate) =>
     request<KnowledgeNote>(`/catalogue/knowledge-notes/${noteId}`, jsonBody("PATCH", data)),

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -19,6 +19,7 @@ from app.api.routes import (
     campaigns,
     catalogue,
     health,
+    jobs,
     lead_assistant,
     leads,
     outreach,
@@ -41,6 +42,8 @@ from app.domains.catalogue.pack_autoload import apply_pack_if_changed
 from app.domains.system.cloud_polish import CloudPolishConfigurationService
 from app.domains.system.meta import MetaConnectionService
 from app.domains.system.service import SystemService
+from app.jobs.kinds import register_job_kinds
+from app.jobs.manager import JobManager
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         database, runtime_settings, instagram_provider=instagram_provider
     )
     campaign_assistant_manager = CampaignAssistantManager(runtime_settings)
+    job_manager = JobManager(database, inline=runtime_settings.campaign_run_inline)
     weekly_scheduler = WeeklyScheduler(
         campaign_run_manager.queue_weekly_due,
         poll_seconds=runtime_settings.weekly_scheduler_poll_seconds,
@@ -94,6 +98,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI):  # type: ignore[no-untyped-def]
         campaign_run_manager.resume_incomplete()
+        job_manager.recover()
         with database.session_factory() as session:
             CampaignAssistantService(
                 campaign_assistant_manager, runtime_settings
@@ -112,6 +117,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             logger.info("Etch N Shine local backend shutdown started")
             weekly_scheduler.stop()
+            job_manager.shutdown()
             campaign_assistant_manager.shutdown()
             campaign_run_manager.shutdown()
             meta_connection_service.shutdown()
@@ -131,6 +137,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.database = database
     app.state.campaign_run_manager = campaign_run_manager
     app.state.campaign_assistant_manager = campaign_assistant_manager
+    app.state.job_manager = job_manager
+    register_job_kinds(
+        job_manager,
+        manager=lambda: cast(CampaignAssistantManager, app.state.campaign_assistant_manager),
+        settings=runtime_settings,
+    )
     app.state.meta_connection_service = meta_connection_service
     app.state.cloud_polish_configuration_service = cloud_polish_configuration_service
 
@@ -202,6 +214,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(campaign_assistant.router, prefix=prefix)
     app.include_router(assistant.router, prefix=prefix)
     app.include_router(automation.router, prefix=prefix)
+    app.include_router(jobs.router, prefix=prefix)
     app.include_router(lead_assistant.router, prefix=prefix)
     app.include_router(leads.router, prefix=prefix)
     app.include_router(catalogue.router, prefix=prefix)

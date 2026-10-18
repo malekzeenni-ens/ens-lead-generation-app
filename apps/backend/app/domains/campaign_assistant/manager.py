@@ -133,7 +133,10 @@ class CampaignAssistantManager:
         model_cls: type[ModelT],
         error_prefix: str,
         protect_resources: bool,
+        cancelled: Callable[[], bool] | None = None,
     ) -> tuple[OllamaStructuredResult[ModelT], ResourceProfile]:
+        """With `cancelled`, a background job waits for its turn instead of failing as busy,
+        and raises `InterruptedError` if it is cancelled while waiting."""
         return self._run_locked(
             lambda profile: self.ollama.generate_structured(
                 messages,
@@ -144,6 +147,7 @@ class CampaignAssistantManager:
             ),
             protect_resources=protect_resources,
             busy_message="The local assistant is already processing another request.",
+            cancelled=cancelled,
         )
 
     def _run_locked(
@@ -152,13 +156,20 @@ class CampaignAssistantManager:
         *,
         protect_resources: bool,
         busy_message: str,
+        cancelled: Callable[[], bool] | None = None,
     ) -> tuple[T, ResourceProfile]:
-        if not self._generation_lock.acquire(blocking=False):
-            raise DomainError(
-                "CAMPAIGN_ASSISTANT_BUSY",
-                busy_message,
-                status_code=409,
-            )
+        if cancelled is None:
+            # An interactive request answers straight away rather than queue behind a job.
+            if not self._generation_lock.acquire(blocking=False):
+                raise DomainError(
+                    "CAMPAIGN_ASSISTANT_BUSY",
+                    busy_message,
+                    status_code=409,
+                )
+        else:
+            while not self._generation_lock.acquire(timeout=1.0):
+                if cancelled():
+                    raise InterruptedError("Cancelled while waiting for the local model")
         profile = self.resource_profile(protect_resources)
         try:
             result = run(profile)

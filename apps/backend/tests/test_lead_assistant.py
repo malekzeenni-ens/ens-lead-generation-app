@@ -9,7 +9,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, ValidationError
 
-from app.api.routes import lead_assistant as lead_assistant_route
 from app.core.config import Settings
 from app.core.errors import DomainError
 from app.db.models import Lead, LeadNote
@@ -32,6 +31,7 @@ from app.domains.lead_assistant.staleness import find_stalled_leads
 from app.domains.leads.activity import latest_activity_at
 from app.domains.outreach.prompt import _OLLAMA_REFINE_SCHEMA
 from app.domains.system.schemas import WorkspaceSettings
+from app.jobs import kinds as job_kinds
 from tests.conftest import lead_payload
 
 
@@ -52,8 +52,9 @@ class FakeStructuredManager:
         model_cls: type[BaseModel],
         error_prefix: str,
         protect_resources: bool,
+        cancelled: Any = None,
     ) -> tuple[OllamaStructuredResult[BaseModel], ResourceProfile]:
-        del schema, error_prefix, protect_resources
+        del schema, error_prefix, protect_resources, cancelled
         self.calls.append(messages)
         if self.busy:
             raise DomainError(
@@ -210,7 +211,7 @@ def test_briefing_handles_sparse_lead_and_response_bounds(
         )
 
 
-def test_autofill_degrades_per_lead_and_busy_aborts_batch(
+def test_autofill_runs_as_a_job_and_degrades_per_lead(
     client: TestClient,
     app: FastAPI,
     monkeypatch: pytest.MonkeyPatch,
@@ -225,11 +226,7 @@ def test_autofill_degrades_per_lead_and_busy_aborts_batch(
         website=False,
     )
     enricher = FailingEnricher()
-    monkeypatch.setattr(
-        lead_assistant_route,
-        "SafeWebsiteEnricher",
-        lambda _settings: enricher,
-    )
+    monkeypatch.setattr(job_kinds, "SafeWebsiteEnricher", lambda _settings: enricher)
     manager = FakeStructuredManager(
         [
             {
@@ -252,8 +249,12 @@ def test_autofill_degrades_per_lead_and_busy_aborts_batch(
         "/api/v1/lead-assistant/autofill",
         json={"lead_ids": [with_site["id"], without_site["id"], "missing-lead"]},
     )
-    assert response.status_code == 200, response.text
-    items = response.json()["items"]
+    assert response.status_code == 202, response.text
+    job = response.json()
+    assert job["kind"] == "lead_autofill"
+    assert job["status"] == "succeeded"
+    assert (job["progress_current"], job["progress_total"]) == (3, 3)
+    items = job["result"]["items"]
     assert items[0]["suggestion"] is not None
     assert items[1]["suggestion"] is not None
     assert items[2]["skipped_reason"] == "Lead not found."
@@ -261,12 +262,12 @@ def test_autofill_degrades_per_lead_and_busy_aborts_batch(
     assert len(manager.calls) == 2
 
     app.state.campaign_assistant_manager = FakeStructuredManager([], busy=True)
-    busy = client.post(
+    failed = client.post(
         "/api/v1/lead-assistant/autofill",
         json={"lead_ids": [without_site["id"]]},
-    )
-    assert busy.status_code == 409
-    assert busy.json()["code"] == "CAMPAIGN_ASSISTANT_BUSY"
+    ).json()
+    assert failed["status"] == "failed"
+    assert failed["error_code"] == "CAMPAIGN_ASSISTANT_BUSY"
 
 
 def test_bulk_update_is_all_or_nothing_at_request_validation(

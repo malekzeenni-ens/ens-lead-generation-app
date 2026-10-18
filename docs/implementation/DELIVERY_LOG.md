@@ -517,3 +517,11 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - Safety copy before upgrades: `run_migrations` copies an existing database before applying pending revisions. This replaced a copy inside migration 0018 that hung, because SQLite's backup call spins while the same connection holds an open write transaction. The new migration test found it; a stack dump confirmed it.
 - Found while tracing a stray warning: an R4 test opened the app's database without starting the app, so its engine was never disposed. Fixed.
 - Verification: 4 new tests in `test_audit_minimisation.py` (runtime guard, call-site scan, history kept with and deleted with the lead, migration backfill, scrub and safety copy); full backend suite 258 passed with resource warnings as errors.
+
+### R7 - Background jobs for long AI work (ADR-022), and H5 request timeouts
+
+- New `app/jobs/` package and `background_job` table (migration `0019`): a single worker, progress committed per step, cancellation between steps, startup recovery, a one-at-a-time rule per kind, and a log line for every transition. Routes: `GET /jobs`, `GET /jobs/{id}`, `POST /jobs/{id}/cancel`.
+- Lead autofill and catalogue enrichment now return a job (`202`). Preconditions are still checked up front. A job waits its turn for the shared model lock instead of failing as busy, so the operator's own requests still go first between steps. This resolves the trade-off that had kept enrichment in the foreground.
+- Frontend: `api.ts` follows a job by polling, reports progress and cancels on abort, keeping the existing result types. Autofill shows "n of N" with "Stop after this lead"; enrichment shows progress with "Stop after this product" and no longer holds the app-wide busy state, so the rest of the workspace stays usable.
+- H5 completed: requests time out after 60 s, or 200 s for interactive AI calls, with a message that the work may still finish. Single model interactions (chat, campaign drafting, refine, polish, briefings) stay synchronous by design.
+- Verification: 9 backend job tests (real worker thread), an updated autofill test, 5 new frontend tests; backend and frontend suites pass.

@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 
 import type {
   CampaignInput,
+  JobOptions,
   CampaignRunProvider,
   CampaignUpdate,
   KnowledgeNoteUpdate,
@@ -94,7 +95,10 @@ export interface WorkspaceActions {
     filename: string,
     content: string,
   ) => Promise<EnrichmentImportResult | null>;
-  runEnrichment: (includeStale: boolean) => Promise<EnrichmentRunResult | null>;
+  runEnrichment: (
+    includeStale: boolean,
+    options?: JobOptions,
+  ) => Promise<EnrichmentRunResult | null>;
   updateKnowledgeNote: (noteId: string, data: KnowledgeNoteUpdate) => Promise<boolean>;
   updateProvenFit: (fitId: string, data: ProvenFitUpdate) => Promise<boolean>;
   updateScoringProfile: (name: string, weights: ScoringWeights) => Promise<boolean>;

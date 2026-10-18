@@ -3,6 +3,7 @@ from typing import Annotated, cast
 from fastapi import APIRouter, Query, Request, status
 
 from app.api.dependencies import Authenticated, DatabaseSession
+from app.api.routes.jobs import job_manager
 from app.core.config import Settings
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.catalogue.pack_autoload import apply_pack_if_changed
@@ -10,7 +11,6 @@ from app.domains.catalogue.schemas import (
     EnrichmentImport,
     EnrichmentImportResult,
     EnrichmentRunRequest,
-    EnrichmentRunResult,
     EnrichmentStatus,
     KnowledgeNoteRead,
     KnowledgeNoteUpdate,
@@ -27,6 +27,8 @@ from app.domains.catalogue.schemas import (
 )
 from app.domains.catalogue.service import CatalogueService
 from app.domains.system.service import SystemService
+from app.jobs.kinds import CATALOGUE_ENRICHMENT
+from app.jobs.schemas import BackgroundJobRead
 
 router = APIRouter(prefix="/catalogue", tags=["catalogue"])
 service = CatalogueService()
@@ -131,26 +133,22 @@ def get_enrichment_status(_: Authenticated, session: DatabaseSession) -> Enrichm
     return service.enrichment_status(session)
 
 
-@router.post("/enrichment/run", response_model=EnrichmentRunResult)
+@router.post("/enrichment/run", response_model=BackgroundJobRead, status_code=202)
 def run_enrichment(
     data: EnrichmentRunRequest,
     request: Request,
     _: Authenticated,
     session: DatabaseSession,
-) -> EnrichmentRunResult:
-    """Enrich pending products with the local model, in the foreground.
-
-    Deliberately not a background job: every local generation shares one non-blocking lock, so
-    a background run would make the operator's own assistant requests fail while it worked.
-    """
+) -> BackgroundJobRead:
+    """Queue enrichment of pending products; poll the returned job for progress and result."""
     manager = cast(CampaignAssistantManager, request.app.state.campaign_assistant_manager)
-    workspace_settings = SystemService().get_settings(session)
-    return service.run_enrichment(
+    service.check_enrichment_allowed(manager, SystemService().get_settings(session))
+    return job_manager(request).submit(
         session,
-        data,
-        manager=manager,
-        workspace_settings=workspace_settings,
-        correlation_id=request.state.correlation_id,
+        CATALOGUE_ENRICHMENT,
+        data.model_dump(mode="json"),
+        request.state.correlation_id,
+        one_at_a_time=True,
     )
 
 

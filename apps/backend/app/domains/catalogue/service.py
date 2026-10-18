@@ -4,6 +4,7 @@ import csv
 import io
 import json
 from collections import defaultdict
+from collections.abc import Callable
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -713,22 +714,12 @@ class CatalogueService:
             for fit in self.repository.list_fits(session, segment=segment)
         ]
 
-    def run_enrichment(
-        self,
-        session: Session,
-        data: EnrichmentRunRequest,
-        *,
-        manager: CampaignAssistantManager,
-        workspace_settings: WorkspaceSettings,
-        correlation_id: str,
-    ) -> EnrichmentRunResult:
-        """Fill in sales knowledge for products the shipped pack does not cover.
-
-        Runs in the foreground, one product at a time, because every local generation shares a
-        single non-blocking lock: a background run would make the operator's own assistant
-        requests fail while it worked. Refused while the engraving software is running, which is
-        when the GPU is needed elsewhere.
-        """
+    @staticmethod
+    def check_enrichment_allowed(
+        manager: CampaignAssistantManager, workspace_settings: WorkspaceSettings
+    ) -> None:
+        """Checked before a run is queued, so the operator hears at once, and again when it
+        starts."""
         if not workspace_settings.local_campaign_assistant_enabled:
             raise DomainError(
                 "LOCAL_AI_DISABLED",
@@ -745,13 +736,38 @@ class CatalogueService:
                 status_code=409,
             )
 
+    def run_enrichment(
+        self,
+        session: Session,
+        data: EnrichmentRunRequest,
+        *,
+        manager: CampaignAssistantManager,
+        workspace_settings: WorkspaceSettings,
+        correlation_id: str,
+        progress: Callable[[int, int], None] | None = None,
+        cancelled: Callable[[], bool] | None = None,
+    ) -> EnrichmentRunResult:
+        """Fill in sales knowledge for products the shipped pack does not cover.
+
+        Runs as a background job (ADR-022), one product at a time. Each product waits for its
+        turn at the shared model lock, so the operator's own assistant requests still go first
+        between products. Progress is committed after each product, so a cancelled run keeps
+        what it finished. Refused while the engraving software is running, which is when the GPU
+        is needed elsewhere.
+        """
+        self.check_enrichment_allowed(manager, workspace_settings)
+
         pending = self.repository.list_pending_enrichment(
             session, include_stale=data.include_stale
         )[: data.limit]
         issues: list[ImportIssue] = []
         enriched = 0
         failed = 0
-        for product in pending:
+        for index, product in enumerate(pending):
+            if cancelled is not None and cancelled():
+                raise InterruptedError("Catalogue enrichment cancelled")
+            if progress is not None:
+                progress(index, len(pending))
             try:
                 result, _profile = manager.generate_structured(
                     build_enrichment_messages(product),
@@ -759,6 +775,7 @@ class CatalogueService:
                     model_cls=ProductEnrichmentProposal,
                     error_prefix="PRODUCT_ENRICHMENT",
                     protect_resources=(workspace_settings.protect_design_software_resources),
+                    cancelled=cancelled,
                 )
             except DomainError as exc:
                 failed += 1

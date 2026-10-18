@@ -228,6 +228,30 @@ describe("api.ts request handling", () => {
     });
   });
 
+  it("gives up on a request that does not answer in time", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          (_url: string, init: RequestInit) =>
+            new Promise((_resolve, reject) => {
+              init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+            }),
+        ),
+      );
+      const { api } = await import("./api");
+      const pending = api.health();
+      const expectation = expect(pending).rejects.toMatchObject({
+        details: { code: "REQUEST_TIMEOUT" },
+      });
+      await vi.advanceTimersByTimeAsync(60_000);
+      await expectation;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("resolves an empty 204 response without parsing a body", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
     const { api } = await import("./api");
@@ -315,5 +339,91 @@ describe("api.ts exportLeads", () => {
     const result = await api.exportLeads("json");
 
     expect(result.filename).toBe("etch-n-shine-leads.json");
+  });
+});
+
+describe("api.ts background jobs", () => {
+  beforeEach(() => {
+    vi.stubEnv("VITE_ENS_API_URL", "http://127.0.0.1:8765/api/v1");
+    vi.stubEnv("VITE_ENS_SESSION_TOKEN", "dev-session-token");
+  });
+
+  function job(overrides: Record<string, unknown>): Response {
+    return new Response(
+      JSON.stringify({
+        id: "job-1",
+        kind: "catalogue_enrichment",
+        status: "running",
+        progress_current: 0,
+        progress_total: 3,
+        result: null,
+        error_code: null,
+        error_message: null,
+        cancellation_requested: false,
+        created_at: "2026-10-18T10:00:00Z",
+        started_at: null,
+        completed_at: null,
+        ...overrides,
+      }),
+      { status: 200 },
+    );
+  }
+
+  it("follows a job to its result and reports progress on the way", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(job({ status: "queued" }))
+      .mockResolvedValueOnce(job({ progress_current: 2 }))
+      .mockResolvedValueOnce(
+        job({ status: "succeeded", progress_current: 3, result: { products_enriched: 3 } }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { api } = await import("./api");
+    const progress: number[] = [];
+
+    const result = await api.runEnrichment(false, {
+      pollIntervalMs: 1,
+      onProgress: (current) => progress.push(current),
+    });
+
+    expect(result).toEqual({ products_enriched: 3 });
+    expect(progress).toEqual([0, 2, 3]);
+    expect((fetchMock.mock.calls[1] as [string])[0]).toBe("http://127.0.0.1:8765/api/v1/jobs/job-1");
+  });
+
+  it("asks the backend to cancel when aborted and reports the stop", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(job({}))
+      .mockResolvedValueOnce(job({ status: "cancelled", cancellation_requested: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { api, JOB_CANCELLED } = await import("./api");
+
+    await expect(
+      api.runEnrichment(false, { pollIntervalMs: 1, signal: controller.signal }),
+    ).rejects.toMatchObject({ details: { code: JOB_CANCELLED } });
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe("http://127.0.0.1:8765/api/v1/jobs/job-1/cancel");
+    expect(init.method).toBe("POST");
+  });
+
+  it("rejects with the job's own error when it fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        job({
+          status: "failed",
+          error_code: "ENRICHMENT_PROTECTED_PROFILE",
+          error_message: "Enrichment is paused while the engraving software is running.",
+        }),
+      ),
+    );
+    const { api } = await import("./api");
+    await expect(api.autofillLeads(["lead-1"], { pollIntervalMs: 1 })).rejects.toMatchObject({
+      message: "Enrichment is paused while the engraving software is running.",
+      details: { code: "ENRICHMENT_PROTECTED_PROFILE" },
+    });
   });
 });
