@@ -50,23 +50,40 @@
   --ens-control-height-md: 38px;
   --ens-control-height-lg: 44px;
   --ens-sidebar-expanded: 240px;
-  --ens-transition-fast: 140ms;
+  --ens-transition-fast: var(--ens-motion-fast);
 
   /*
-   * Type scale (introduced 2026-07-21 UX audit). Consolidates the small-text
-   * range that previously spanned ~18 distinct, visually-indistinguishable
-   * one-off rem values (0.63-0.82rem) down to 7 steps; each merge stays within
-   * 0.01-0.02rem of every value it replaces. Larger, clearly-deliberate sizes
-   * (headings, score/metric emphasis text) are left as literals — merging
-   * those wasn't duplication, just distinct choices.
+   * Type scale (UX redesign A1): six sizes. Labels and badges use xs, body text and
+   * controls sm, card titles md, section titles and figures lg, large figures xl and
+   * page titles 2xl. The earlier small-text tokens, which spread ~10-13 px over seven
+   * near-identical steps, are folded onto the scale below so every screen follows it.
    */
-  --ens-text-3xs: 0.64rem;
-  --ens-text-2xs: 0.68rem;
-  --ens-text-xs: 0.69rem;
-  --ens-text-sm: 0.72rem;
-  --ens-text-base: 0.75rem;
-  --ens-text-md: 0.78rem;
-  --ens-text-lg: 0.82rem;
+  --ens-type-xs: 0.75rem;
+  --ens-type-sm: 0.875rem;
+  --ens-type-md: 1rem;
+  --ens-type-lg: 1.25rem;
+  --ens-type-xl: 1.5rem;
+  --ens-type-2xl: 2rem;
+  --ens-text-3xs: var(--ens-type-xs);
+  --ens-text-2xs: var(--ens-type-xs);
+  --ens-text-xs: var(--ens-type-xs);
+  --ens-text-sm: var(--ens-type-xs);
+  --ens-text-base: var(--ens-type-xs);
+  --ens-text-md: var(--ens-type-sm);
+  --ens-text-lg: var(--ens-type-sm);
+  /* Used by the weekly overview but never defined until now. */
+  --ens-text-xl: var(--ens-type-lg);
+  --ens-text-2xl: var(--ens-type-xl);
+
+  /*
+   * Motion (UX redesign A3): explain change, never decorate. Under reduced motion
+   * every duration becomes 0 ms.
+   */
+  --ens-motion-fast: 120ms;
+  --ens-motion-base: 200ms;
+  --ens-motion-slow: 300ms;
+  --ens-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ens-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--ens-text-primary);
   background: var(--ens-app-background);
   font-family: "Segoe UI", Inter, Geist, "IBM Plex Sans", system-ui, sans-serif;
@@ -136,20 +153,20 @@ strong {
 
 h1 {
   margin-bottom: var(--ens-space-2);
-  font-size: clamp(1.45rem, 2.4vw, 1.75rem);
+  font-size: clamp(var(--ens-type-xl), 2.4vw, 1.75rem);
   line-height: 1.2;
   letter-spacing: -0.015em;
 }
 
 h2 {
   margin-bottom: var(--ens-space-1);
-  font-size: 1.05rem;
+  font-size: var(--ens-type-md);
   line-height: 1.3;
 }
 
 h3 {
   margin-bottom: var(--ens-space-1);
-  font-size: 0.92rem;
+  font-size: var(--ens-type-sm);
   line-height: 1.35;
 }
 
@@ -645,6 +662,10 @@ h3 {
   scrollbar-width: thin;
 }
 
+.workspace-content:focus {
+  outline: none;
+}
+
 .workspace-content > *:not(.visually-hidden) {
   width: min(100%, 1440px);
   margin-right: auto;
@@ -678,7 +699,7 @@ h3 {
 .page-intro p:last-child {
   margin-bottom: 0;
   color: var(--ens-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--ens-type-sm);
   line-height: 1.55;
 }
 
@@ -767,7 +788,7 @@ h3 {
 .metric-card strong {
   margin: 1px 0;
   color: var(--ens-text-primary);
-  font-size: 1.15rem;
+  font-size: var(--ens-type-lg);
   line-height: 1.25;
 }
 
@@ -1437,7 +1458,21 @@ textarea {
 }
 
 .status-badge {
-  padding: var(--ens-space-1) var(--ens-space-2);
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: var(--ens-radius-pill);
+  white-space: nowrap;
+}
+
+.status-badge--success::before,
+.status-badge--warning::before,
+.status-badge--error::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentcolor;
+  content: "";
 }
 
 .status-badge--success {
@@ -1926,7 +1961,7 @@ td small {
 
 .pipeline-summary strong {
   display: block;
-  font-size: 1.1rem;
+  font-size: var(--ens-type-md);
 }
 
 .pipeline-summary p {
@@ -2060,7 +2095,7 @@ td small {
 .automation-metrics dd {
   margin: 2px 0 0;
   color: var(--ens-text-primary);
-  font-size: 0.88rem;
+  font-size: var(--ens-type-sm);
   font-weight: 600;
 }
 
@@ -2209,7 +2244,7 @@ td small {
 
 .lead-contact-routes a {
   color: var(--ens-text-accent);
-  font-size: 0.84rem;
+  font-size: var(--ens-type-sm);
 }
 
 .record-actions,
@@ -2405,7 +2440,7 @@ td small {
 
 .lead-detail-header h2 {
   margin-bottom: var(--ens-space-1);
-  font-size: 1.15rem;
+  font-size: var(--ens-type-lg);
 }
 
 .lead-detail-header p:last-child {
@@ -4279,6 +4314,12 @@ td small {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --ens-motion-fast: 0ms;
+    --ens-motion-base: 0ms;
+    --ens-motion-slow: 0ms;
+  }
+
   *,
   *::before,
   *::after {

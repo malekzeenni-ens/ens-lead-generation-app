@@ -29,6 +29,7 @@ import { ApiError, api } from "../api";
 import {
   PIPELINE_STAGES,
   classificationLabel,
+  classificationTone,
   formatCurrency,
   formatDate,
   formatDateTime,
@@ -537,7 +538,7 @@ export function PipelineWorkspace({
                       <Sparkles size={16} aria-hidden="true" /> Ask AI about this lead
                     </button>
                     <span className="status-badge">{humanize(selectedLead.pipeline_stage)}</span>
-                    <span className={`status-badge${selectedLead.suppressed ? " status-badge--warning" : " status-badge--success"}`}>
+                    <span className={`status-badge status-badge--${selectedLead.suppressed ? "warning" : classificationTone(selectedLead.contact_classification)}`}>
                       {selectedLead.suppressed ? "Do not contact" : classificationLabel(selectedLead.contact_classification)}
                     </span>
                   </div>

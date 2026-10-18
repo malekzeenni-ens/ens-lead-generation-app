@@ -81,6 +81,13 @@ export function classificationLabel(value: string): string {
   return labels[value] ?? humanize(value);
 }
 
+/** Unclassified contacts and partnerships need a decision, so they read as attention. */
+export function classificationTone(value: string): "success" | "warning" {
+  return value === "unknown" || value === "partnership_individual_treatment"
+    ? "warning"
+    : "success";
+}
+
 export function formatDate(value: string | null): string {
   if (!value) return "Not set";
   const source = value.length === 10 ? `${value}T00:00:00` : value;
