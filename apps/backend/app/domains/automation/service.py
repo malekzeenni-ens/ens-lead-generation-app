@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from contextlib import suppress
 from datetime import UTC, date, datetime
-from difflib import SequenceMatcher
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -50,10 +49,9 @@ from app.domains.automation.schemas import (
 from app.domains.campaigns.repository import CampaignRepository
 from app.domains.leads.identity import (
     normalize_business_name,
-    phone_match_key,
     social_identity,
-    website_host,
 )
+from app.domains.leads.matching import MatchKeys, MatchKind, match, match_keys
 from app.domains.leads.repository import LeadRepository
 from app.domains.leads.suppression import find_active_suppression, identifier_hashes
 from app.domains.qualification.service import QualificationService
@@ -137,6 +135,19 @@ def _candidate_phone(candidate: DiscoveryCandidate) -> str | None:
         return candidate.phone
     phones = _candidate_website_evidence(candidate).get("public_phones")
     return str(phones[0]) if isinstance(phones, list) and phones else None
+
+
+def _lead_match_keys(lead: Lead) -> MatchKeys:
+    return match_keys(
+        business_name=lead.business_name,
+        location=lead.location,
+        website=lead.website,
+        phone=lead.phone_number,
+        emails=[lead.public_email, lead.contact_email],
+        social=[
+            (identity.platform, identity.normalized_handle) for identity in lead.social_identities
+        ],
+    )
 
 
 def _candidate_social_profiles(
@@ -519,46 +530,38 @@ class CampaignAutomationService:
                 self._link_existing(session, candidate, lead)
                 return lead
 
-        candidates = self.repository.candidate_leads(session)
-        candidate_host = website_host(candidate.website)
-        candidate_phone_key = phone_match_key(_candidate_phone(candidate))
-        candidate_email = _candidate_public_email(candidate)
-        candidate_social_keys = {
-            (platform, handle) for platform, handle, _ in _candidate_social_profiles(candidate)
+        existing_leads = {lead.id: lead for lead in self.repository.candidate_leads(session)}
+        result = match(
+            match_keys(
+                business_name=candidate.business_name,
+                location=candidate.location,
+                website=candidate.website,
+                phone=_candidate_phone(candidate),
+                emails=[_candidate_public_email(candidate)],
+                social=[
+                    (platform, handle)
+                    for platform, handle, _ in _candidate_social_profiles(candidate)
+                ],
+            ),
+            ((lead.id, _lead_match_keys(lead)) for lead in existing_leads.values()),
+        )
+        log_context = {
+            "discovery_candidate_id": candidate.id,
+            "campaign_run_id": candidate.run_id,
+            "matched_lead_id": result.lead_id,
+            "match_rank": result.rank.name if result.rank else None,
         }
-        exact: Lead | None = None
-        fuzzy: tuple[Lead, float] | None = None
-        for lead in candidates:
-            same_host = candidate_host and candidate_host == website_host(lead.website)
-            same_name = lead.normalized_name == candidate.normalized_name
-            same_phone = bool(
-                candidate_phone_key and candidate_phone_key == phone_match_key(lead.phone_number)
-            )
-            same_email = bool(
-                candidate_email
-                and lead.public_email
-                and candidate_email == lead.public_email.casefold()
-            )
-            lead_social_keys = {
-                (identity.platform, identity.normalized_handle)
-                for identity in lead.social_identities
-            }
-            same_social = bool(candidate_social_keys & lead_social_keys)
-            if same_host or same_name or same_phone or same_email or same_social:
-                exact = lead
-                break
-            confidence = SequenceMatcher(
-                None, candidate.normalized_name, lead.normalized_name
-            ).ratio()
-            if confidence >= 0.94 and (fuzzy is None or confidence > fuzzy[1]):
-                fuzzy = (lead, confidence)
-        if exact is not None:
-            self._link_existing(session, candidate, exact)
-            return exact
-        if fuzzy is not None and not force:
+        if result.kind is MatchKind.EXACT and result.lead_id is not None:
+            lead = existing_leads[result.lead_id]
+            self._link_existing(session, candidate, lead)
+            logger.info("Discovery candidate linked to an existing lead", extra=log_context)
+            return lead
+        if result.kind is MatchKind.REVIEW and not force:
             candidate.status = CandidateStatus.REVIEW_REQUIRED.value
-            candidate.matched_lead_id = fuzzy[0].id
-            candidate.duplicate_confidence = round(fuzzy[1], 3)
+            candidate.matched_lead_id = result.lead_id
+            candidate.duplicate_confidence = result.confidence
+            candidate.review_reason = result.reason
+            logger.info("Discovery candidate held for duplicate review", extra=log_context)
             return None
 
         lead_name = candidate.business_name[:200]

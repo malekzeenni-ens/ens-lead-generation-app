@@ -464,3 +464,11 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - Any exception during campaign-draft generation, not only a `DomainError`, now rolls back and marks the draft `generation_failed`, so it stays editable. Unexpected errors are logged with their traceback and the draft ID.
 - At startup, drafts still `generating` become `generation_failed`, and provider attempts still `running` become `interrupted` with `PROCESS_INTERRUPTED`. Both recoveries and run resumption are logged.
 - Verification: 2 new tests in `test_interrupted_work.py`; full backend suite 201 passed with resource warnings as errors.
+
+### R2 - Duplicate matching ranks identifiers and respects location (FR-015, D1)
+
+- New pure module `leads/matching.py`. Ranks, strongest first: social handle, website host, phone, email, name with the same locality. The strongest match across all leads wins, so a phone match on one lead beats a name match on another.
+- Locality compares UK postcode districts when both addresses have one, otherwise place words ("Leeds" matches "12 High Street, Leeds LS1 1AA").
+- The same name in a different or unknown locality now goes to review with a stated reason instead of linking automatically. Phone keys under nine digits no longer match.
+- Each link or review hold is logged with the candidate, lead and match rank.
+- Verification: 22 new tests in `test_lead_matching.py`; existing discovery tests unchanged and passing; full backend suite 223 passed.
