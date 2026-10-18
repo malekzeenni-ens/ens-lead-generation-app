@@ -493,4 +493,10 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - Changed from the plan: no dialog plugin was added. Reporting failures in the app's own window needs no new dependency and gives a better message.
 - Frontend: a persistent notice for "reconnecting" and "not running"; the host's failure message stays on screen; network failures become `BACKEND_UNREACHABLE`; non-JSON error bodies are described with their status and correlation ID; a failed host connection is retried on the next request; 204 responses resolve without parsing. Request timeouts (H5) wait for R7, because long AI requests are still synchronous.
 - Verification: 5 new backend tests; 3 Rust tests (restart budget, status serialisation, and a real backend that serves health and exits on the shutdown request within the grace period); 6 new frontend tests. Backend 232, frontend 118, Rust 3 passed; Clippy, rustfmt, Ruff, mypy, ESLint and TypeScript pass.
-- Manual check still to do on the desktop: kill the backend `python.exe` from Task Manager and confirm the app reconnects within about five seconds.
+- Manual desktop check (desktop:dev against a throwaway database and log folder): the backend process was killed and the host logged the exit and restarted it on the same port about three seconds later. Closing the window then sent the shutdown request; the backend logged "Shutdown requested by the desktop host" and "Application shutdown complete" and exited without being killed, leaving no process or dev server behind.
+
+### R6 - A failed campaign run leaves nothing half-written
+
+- `execute` now handles a `DomainError` like any other failure: it rolls back to the last commit (each provider batch and phase transition commits on its own), then records the failure. Before, a domain error part way through a batch committed whatever had been added, such as a lead without its evidence.
+- A provider attempt rolled back to `running` is closed as failed with the run's error code. Domain failures are now logged with their code.
+- Verification: `test_campaign_run_failures.py` (domain error and unexpected error) fails without the fix and passes with it; backend suite passes.

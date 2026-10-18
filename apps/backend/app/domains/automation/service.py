@@ -1400,23 +1400,44 @@ class CampaignAutomationService:
         except InterruptedError:
             return
         except DomainError as exc:
-            run.status = CampaignRunStatus.FAILED.value
-            run.phase = "failed"
-            run.error_code = exc.code
-            run.error_message = exc.message
-            run.completed_at = datetime.now(UTC)
-            session.commit()
+            logger.warning(
+                "Campaign run failed", extra={"campaign_run_id": run_id, "error_code": exc.code}
+            )
+            self._fail_run(session, run_id, exc.code, exc.message)
         except Exception:
             logger.exception("Campaign run failed", extra={"campaign_run_id": run_id})
-            session.rollback()
-            stored = self.repository.get_run(session, run_id)
-            if stored is not None:
-                stored.status = CampaignRunStatus.FAILED.value
-                stored.phase = "failed"
-                stored.error_code = "CAMPAIGN_RUN_FAILED"
-                stored.error_message = "The campaign run failed safely; existing data was retained."
-                stored.completed_at = datetime.now(UTC)
-                session.commit()
+            self._fail_run(
+                session,
+                run_id,
+                "CAMPAIGN_RUN_FAILED",
+                "The campaign run failed safely; existing data was retained.",
+            )
+
+    def _fail_run(self, session: Session, run_id: str, code: str, message: str) -> None:
+        """Record a failed run without keeping its unfinished work.
+
+        Work up to the last commit stays: each provider batch, with its evidence, and each phase
+        transition is committed on its own. Anything after that is rolled back, so a failure part
+        way through a batch cannot leave a lead without its campaign link or evidence. A provider
+        attempt rolled back to `running` is closed as failed.
+        """
+        session.rollback()
+        run = self.repository.get_run(session, run_id)
+        if run is None:
+            return
+        now = datetime.now(UTC)
+        for attempt in run.attempts:
+            if attempt.status == "running":
+                attempt.status = "failed"
+                attempt.error_code = code
+                attempt.error_message = message
+                attempt.completed_at = now
+        run.status = CampaignRunStatus.FAILED.value
+        run.phase = "failed"
+        run.error_code = code
+        run.error_message = message
+        run.completed_at = now
+        session.commit()
 
     def decide_candidate(
         self,
