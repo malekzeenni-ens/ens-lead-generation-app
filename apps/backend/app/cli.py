@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import traceback
+from datetime import UTC, datetime
 from pathlib import Path
 
 import uvicorn
@@ -28,19 +30,37 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _serve(settings: Settings) -> None:
+    """Run the API. A startup failure is also written to `startup-error.log`, because the desktop
+    host may not show the process's own output."""
+    try:
+        app = create_app(settings)
+        server = uvicorn.Server(
+            uvicorn.Config(
+                app,
+                host=settings.host,
+                port=settings.port,
+                access_log=False,
+                server_header=False,
+                log_config=None,
+            )
+        )
+        # Lets the authenticated shutdown endpoint stop the server cleanly.
+        app.state.server = server
+    except Exception:
+        (settings.log_directory / "startup-error.log").write_text(
+            f"{datetime.now(UTC).isoformat()}\n{traceback.format_exc()}", encoding="utf-8"
+        )
+        raise
+    server.run()
+
+
 def main() -> None:
     args = _parser().parse_args()
     settings = Settings()
     settings.prepare_directories()
     if args.command == "serve":
-        uvicorn.run(
-            create_app(settings),
-            host=settings.host,
-            port=settings.port,
-            access_log=False,
-            server_header=False,
-            log_config=None,
-        )
+        _serve(settings)
         return
 
     run_migrations(settings.database_path)

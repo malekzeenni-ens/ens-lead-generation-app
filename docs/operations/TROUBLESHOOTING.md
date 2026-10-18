@@ -3,6 +3,11 @@
 ## Desktop reports that the backend is unavailable
 
 - Use the error’s correlation reference and inspect `%LOCALAPPDATA%\EtchNShine\LeadGeneration\logs`.
+- The window opens straight away and shows **The local service is not running** with the reason if the backend cannot start. Three files in that folder explain why:
+  - `application.jsonl`: the backend's structured log, including migration output and any migration failure with its traceback.
+  - `startup-error.log`: the traceback when the backend failed before it could serve requests.
+  - `backend-stderr.log`: everything the backend process printed, with a line for each start, unexpected exit, restart and forced stop recorded by the desktop host. It is rotated to `backend-stderr.log.1` at 2 MB.
+- If the backend stops while the app is open, the desktop host restarts it (at most three times in five minutes) and shows **Reconnecting to the local service** meanwhile. After that it stops trying and shows the reason.
 - Confirm no endpoint/security product quarantined `ens-backend.exe`.
 - In development, run `uv sync --all-packages --dev --locked` and confirm `apps\backend\app\cli.py` exists.
 - Run the sidecar and packaged-host smoke commands from `BUILD_AND_PACKAGE.md` to distinguish Python packaging from UI problems.
@@ -27,7 +32,7 @@ Wait for the current local operation, confirm only one desktop/backend instance 
 
 ## Migration or startup fails
 
-Do not edit tables manually. Preserve the database and logs, create a filesystem-level incident copy only after the app is stopped, and verify the latest application backup. Record the Alembic revision from its manifest. Use the restore runbook if necessary.
+Check `application.jsonl` and `startup-error.log` first (see above). Do not edit tables manually. Preserve the database and logs, create a filesystem-level incident copy only after the app is stopped, and verify the latest application backup. Record the Alembic revision from its manifest. Use the restore runbook if necessary.
 
 ## Installer warning or quarantine
 

@@ -65,12 +65,22 @@ class JsonFormatter(logging.Formatter):
 
 
 def configure_logging(log_directory: Path) -> None:
+    """Send application logs to `<log_directory>/application.jsonl`.
+
+    Idempotent for the same directory. A different directory replaces the previous file handler,
+    which is closed, so the log always lands where the current settings say.
+    """
     log_directory.mkdir(parents=True, exist_ok=True)
-    handler = RotatingFileHandler(
-        log_directory / "application.jsonl", maxBytes=2_000_000, backupCount=5, encoding="utf-8"
-    )
-    handler.setFormatter(JsonFormatter())
+    target = (log_directory / "application.jsonl").resolve()
     root = logging.getLogger()
     root.setLevel(logging.INFO)
-    if not any(isinstance(existing, RotatingFileHandler) for existing in root.handlers):
-        root.addHandler(handler)
+    for existing in list(root.handlers):
+        if not isinstance(existing, RotatingFileHandler):
+            continue
+        if Path(existing.baseFilename).resolve() == target:
+            return
+        root.removeHandler(existing)
+        existing.close()
+    handler = RotatingFileHandler(target, maxBytes=2_000_000, backupCount=5, encoding="utf-8")
+    handler.setFormatter(JsonFormatter())
+    root.addHandler(handler)

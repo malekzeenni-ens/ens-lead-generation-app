@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 import App from "./App";
-import { api, ApiError } from "./api";
+import { api, ApiError, BackendUnavailableError } from "./api";
 import { mondayIso } from "./domain";
 import type {
   ApiErrorShape,
@@ -42,8 +43,10 @@ vi.mock("./api", () => {
       this.details = details;
     }
   }
+  class MockBackendUnavailableError extends Error {}
   return {
     ApiError: MockApiError,
+    BackendUnavailableError: MockBackendUnavailableError,
     api: {
       health: vi.fn(),
       campaigns: vi.fn(),
@@ -148,6 +151,9 @@ vi.mock("./api", () => {
 });
 
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(() => Promise.resolve(() => undefined)),
+}));
 
 const campaign: Campaign = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -1104,6 +1110,55 @@ describe("local operating workbench", () => {
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("Action could not be completed");
     expect(alert).toHaveTextContent("Simulated backend outage");
+  });
+
+  it("keeps the desktop host's startup failure on screen instead of auto-dismissing it", async () => {
+    vi.mocked(api.health).mockRejectedValue(
+      new BackendUnavailableError(
+        "The local service could not start: the backend exited during startup. Details are in backend-stderr.log in the logs folder.",
+      ),
+    );
+
+    render(<App />);
+
+    expect(await screen.findByText("The local service is not running")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("backend-stderr.log");
+    expect(screen.queryByText("Action could not be completed")).not.toBeInTheDocument();
+  });
+
+  it("shows a reconnecting notice while the host restarts the backend, then refreshes", async () => {
+    type StatusHandler = (event: { payload: { state: string; message?: string } }) => void;
+    let emit: StatusHandler | undefined;
+    vi.mocked(listen).mockImplementation((_event, handler) => {
+      emit = handler as unknown as StatusHandler;
+      return Promise.resolve(() => undefined);
+    });
+    window.__TAURI_INTERNALS__ = {};
+
+    try {
+      render(<App />);
+      await screen.findByText("API connected");
+      await waitFor(() => expect(emit).toBeDefined());
+      const healthChecksBefore = vi.mocked(api.health).mock.calls.length;
+
+      act(() =>
+        emit?.({
+          payload: {
+            state: "restarting",
+            message: "The local service stopped unexpectedly and is restarting.",
+          },
+        }),
+      );
+      expect(screen.getByText("Reconnecting to the local service")).toBeInTheDocument();
+
+      act(() => emit?.({ payload: { state: "ready" } }));
+      expect(screen.queryByText("Reconnecting to the local service")).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(vi.mocked(api.health).mock.calls.length).toBeGreaterThan(healthChecksBefore),
+      );
+    } finally {
+      delete window.__TAURI_INTERNALS__;
+    }
   });
 
   it("surfaces field-level validation details in the error banner", async () => {

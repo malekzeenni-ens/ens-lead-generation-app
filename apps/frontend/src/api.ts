@@ -60,11 +60,26 @@ export class ApiError extends Error {
   }
 }
 
+/** The desktop host reported that the local service could not start or was stopped. */
+export class BackendUnavailableError extends Error {}
+
+const UNREACHABLE: ApiErrorShape = {
+  code: "BACKEND_UNREACHABLE",
+  message: "The local service is not responding. It restarts automatically; try again in a few seconds.",
+  details: {},
+  correlation_id: "",
+};
+
 let connectionPromise: Promise<BackendConnection> | undefined;
 
 async function resolveConnection(): Promise<BackendConnection> {
   if (window.__TAURI_INTERNALS__) {
-    return invoke<BackendConnection>("backend_connection");
+    try {
+      return await invoke<BackendConnection>("backend_connection");
+    } catch (caught) {
+      // The host rejects with its own explanation, including where the log is.
+      throw new BackendUnavailableError(typeof caught === "string" ? caught : String(caught));
+    }
   }
   const baseUrl = import.meta.env.VITE_ENS_API_URL;
   const sessionToken = import.meta.env.VITE_ENS_SESSION_TOKEN;
@@ -76,26 +91,58 @@ async function resolveConnection(): Promise<BackendConnection> {
   return { baseUrl, sessionToken };
 }
 
+/** The backend's error body, or a safe description when the body is not one. */
+async function errorShape(response: Response): Promise<ApiErrorShape> {
+  try {
+    const body = (await response.json()) as Partial<ApiErrorShape>;
+    if (typeof body.code === "string" && typeof body.message === "string") {
+      return {
+        code: body.code,
+        message: body.message,
+        details: body.details ?? {},
+        correlation_id: body.correlation_id ?? "",
+      };
+    }
+  } catch {
+    // Not JSON; fall through to a generic description.
+  }
+  return {
+    code: `HTTP_${response.status}`,
+    message: `The local service returned an unexpected response (${response.status}).`,
+    details: {},
+    correlation_id: response.headers.get("X-Correlation-ID") ?? "",
+  };
+}
+
 async function rawRequest(path: string, init?: RequestInit): Promise<Response> {
-  connectionPromise ??= resolveConnection();
-  const connection = await connectionPromise;
-  const response = await fetch(`${connection.baseUrl}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      "X-Session-Token": connection.sessionToken,
-      ...init?.headers,
-    },
+  // A failed resolution is not cached, so the next request asks the host again.
+  connectionPromise ??= resolveConnection().catch((caught: unknown) => {
+    connectionPromise = undefined;
+    throw caught;
   });
+  const connection = await connectionPromise;
+  let response: Response;
+  try {
+    response = await fetch(`${connection.baseUrl}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-Token": connection.sessionToken,
+        ...init?.headers,
+      },
+    });
+  } catch {
+    throw new ApiError(UNREACHABLE);
+  }
   if (!response.ok) {
-    const error = (await response.json()) as ApiErrorShape;
-    throw new ApiError(error);
+    throw new ApiError(await errorShape(response));
   }
   return response;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await rawRequest(path, init);
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 

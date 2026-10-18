@@ -69,9 +69,14 @@ def _error_response(
 def create_app(settings: Settings | None = None) -> FastAPI:
     runtime_settings = settings or Settings()
     runtime_settings.prepare_directories()
-    run_migrations(runtime_settings.database_path)
+    # Logging first, so a failed migration is recorded rather than lost.
     configure_logging(runtime_settings.log_directory)
     logger.info("Etch N Shine local backend initialization started")
+    try:
+        run_migrations(runtime_settings.database_path)
+    except Exception:
+        logger.exception("Database migration failed during startup")
+        raise
     database = Database(runtime_settings.database_path)
     secret_store = build_secret_store(runtime_settings.database_path.parent)
     meta_connection_service = MetaConnectionService(runtime_settings, secret_store)

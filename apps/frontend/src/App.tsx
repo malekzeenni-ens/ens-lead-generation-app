@@ -15,12 +15,14 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
 
 import brandMarkUrl from "../../desktop/brand-logo.png";
 import {
   ApiError,
+  BackendUnavailableError,
   api,
   type CampaignRunProvider,
   type CampaignInput,
@@ -142,6 +144,12 @@ function notificationDurationMs(message: string): number {
  * whole catalogue; the full refresh still runs on mount, manual Refresh, and
  * campaign-run/Meta-auth completion, which resync anything left out here.
  */
+/** What the desktop host reports about the local service (`backend-status` events). */
+interface BackendStatus {
+  state: "starting" | "ready" | "restarting" | "failed";
+  message?: string;
+}
+
 type RefreshDomain =
   | "campaigns"
   | "leads"
@@ -181,7 +189,9 @@ function validationDetails(error: ApiError): string[] {
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    const base = `${error.message} Reference: ${error.details.correlation_id}`;
+    const base = error.details.correlation_id
+      ? `${error.message} Reference: ${error.details.correlation_id}`
+      : error.message;
     const details = validationDetails(error);
     return details.length > 0 ? `${base} — ${details.join("; ")}` : base;
   }
@@ -236,6 +246,7 @@ export default function App() {
     id: null,
   });
   const [leadsLandingFilter, setLeadsLandingFilter] = useState<"" | "review">("");
+  const [backendStatus, setBackendStatus] = useState<BackendStatus | null>(null);
 
   async function refresh(showLoading = false): Promise<void> {
     if (showLoading) setLoading(true);
@@ -312,7 +323,12 @@ export default function App() {
       setError(null);
     } catch (caught) {
       setHealth("unavailable");
-      setError(errorMessage(caught));
+      if (caught instanceof BackendUnavailableError) {
+        // Kept on screen: nothing works until the local service is running.
+        setBackendStatus({ state: "failed", message: caught.message });
+      } else {
+        setError(errorMessage(caught));
+      }
     } finally {
       setLoading(false);
     }
@@ -360,6 +376,23 @@ export default function App() {
 
   useEffect(() => {
     void refresh(true);
+  }, []);
+
+  useEffect(() => {
+    if (!window.__TAURI_INTERNALS__) return;
+    let stopListening: (() => void) | undefined;
+    let disposed = false;
+    void listen<BackendStatus>("backend-status", (event) => {
+      setBackendStatus(event.payload);
+      if (event.payload.state === "ready") void refresh();
+    }).then((stop) => {
+      if (disposed) stop();
+      else stopListening = stop;
+    });
+    return () => {
+      disposed = true;
+      stopListening?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -1530,6 +1563,19 @@ export default function App() {
             <div className="toast" role="status">
               <ShieldCheck size={18} aria-hidden="true" /><span>{success}</span>
               <button type="button" className="icon-button" aria-label="Dismiss notification" title="Dismiss notification" onClick={() => setSuccess(null)}><X size={17} /></button>
+            </div>
+          ) : null}
+          {backendStatus?.state === "restarting" || backendStatus?.state === "failed" ? (
+            <div className="alert" role="alert">
+              <AlertTriangle size={20} aria-hidden="true" />
+              <div>
+                <strong>
+                  {backendStatus.state === "restarting"
+                    ? "Reconnecting to the local service"
+                    : "The local service is not running"}
+                </strong>
+                <p>{backendStatus.message}</p>
+              </div>
             </div>
           ) : null}
           {error ? (

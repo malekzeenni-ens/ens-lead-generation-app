@@ -480,3 +480,17 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 - The frontend no longer triggers the check on load; the manual "Run due campaigns" action stays. Help text and the enable confirmation now describe the new behaviour.
 - Correction to the plan: the database already allowed only one weekly run per campaign per week (migration 0011). No new migration was needed; the model now declares the constraint so the two match.
 - Verification: 4 new tests in `test_weekly_scheduler.py` (week rollover with the app open, thread start and recovery, a four-way race, the constraint); two frontend tests updated; 227 backend and 112 frontend tests pass.
+
+### Phase 1 gate and test tooling
+
+- `npm.cmd run quality` failed at `npm audit` on advisories published since the lock was last updated (two critical in `tinypool`/`vitest`, all development tooling). Fixed with `npm audit fix` and vitest 3.2 to 5.0.5; no config change was needed and the frontend suite dropped from 103 s to 46 s. The full gate then passed.
+
+### R5 - Startup errors recorded; desktop host supervises the backend
+
+- Backend: logging is configured before migrations, and a migration failure is logged with its traceback. Alembic no longer replaces the app's log handlers when migrations run in process, so migration output reaches `application.jsonl`. `serve` writes `startup-error.log` on failure, and a new authenticated `POST /system/shutdown` stops the managed uvicorn server so lifespan shutdown runs.
+- Fixed a latent logging defect found by the new tests: `configure_logging` opened a new file handler on every call and kept only the first directory configured in a process. It is now idempotent per directory and closes a replaced handler.
+- Desktop host: the window opens immediately and the backend starts in the background. The frontend waits through `backend_connection`, which now returns the failure reason and log path instead of the app closing silently. Backend output goes to `backend-stderr.log` (rotated at 2 MB). A supervisor restarts a backend that exits unexpectedly, at most three times in five minutes, and emits `backend-status` events. On exit the host requests a clean shutdown and kills the process only after five seconds.
+- Changed from the plan: no dialog plugin was added. Reporting failures in the app's own window needs no new dependency and gives a better message.
+- Frontend: a persistent notice for "reconnecting" and "not running"; the host's failure message stays on screen; network failures become `BACKEND_UNREACHABLE`; non-JSON error bodies are described with their status and correlation ID; a failed host connection is retried on the next request; 204 responses resolve without parsing. Request timeouts (H5) wait for R7, because long AI requests are still synchronous.
+- Verification: 5 new backend tests; 3 Rust tests (restart budget, status serialisation, and a real backend that serves health and exits on the shutdown request within the grace period); 6 new frontend tests. Backend 232, frontend 118, Rust 3 passed; Clippy, rustfmt, Ruff, mypy, ESLint and TypeScript pass.
+- Manual check still to do on the desktop: kill the backend `python.exe` from Task Manager and confirm the app reconnects within about five seconds.

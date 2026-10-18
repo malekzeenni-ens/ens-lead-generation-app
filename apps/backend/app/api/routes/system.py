@@ -1,4 +1,5 @@
-from typing import cast
+import logging
+from typing import Any, cast
 
 from fastapi import APIRouter, Request, status
 
@@ -27,6 +28,7 @@ from app.domains.system.service import SystemService
 
 router = APIRouter(prefix="/system", tags=["system"])
 service = SystemService()
+logger = logging.getLogger(__name__)
 
 
 def _meta(request: Request) -> MetaConnectionService:
@@ -136,3 +138,18 @@ def select_meta_account(
 @router.post("/providers/meta/disconnect", response_model=MetaConnectionRead)
 def disconnect_meta(request: Request, _: Authenticated) -> MetaConnectionRead:
     return _meta(request).disconnect()
+
+
+@router.post("/shutdown", status_code=status.HTTP_202_ACCEPTED)
+def request_shutdown(request: Request, _: Authenticated) -> dict[str, bool]:
+    """Let the desktop host stop the backend cleanly, so lifespan shutdown runs before exit.
+
+    Accepted only from the authenticated host. Without a managed server (in tests) nothing stops.
+    """
+    server: Any = getattr(request.app.state, "server", None)
+    if server is None:
+        logger.info("Shutdown requested without a managed server; ignored")
+        return {"stopping": False}
+    logger.info("Shutdown requested by the desktop host")
+    server.should_exit = True
+    return {"stopping": True}

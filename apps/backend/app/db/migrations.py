@@ -12,6 +12,7 @@ def backend_directory() -> Path:
 
 def run_migrations(database_path: Path) -> None:
     config = Config(str(backend_directory() / "alembic.ini"))
+    config.attributes["configure_logger"] = False
     config.set_main_option("script_location", str(backend_directory() / "migrations"))
     config.set_main_option("sqlalchemy.url", sqlite_url(database_path))
     command.upgrade(config, "head")

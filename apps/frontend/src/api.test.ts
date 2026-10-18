@@ -106,6 +106,29 @@ describe("api.ts connection resolution", () => {
   });
 });
 
+describe("api.ts desktop host failures", () => {
+  it("surfaces the host's startup failure and asks the host again on the next request", async () => {
+    window.__TAURI_INTERNALS__ = {};
+    invokeMock
+      .mockRejectedValueOnce("The local service could not start: boom. Details are in backend-stderr.log in the logs folder.")
+      .mockResolvedValueOnce({
+        baseUrl: "http://127.0.0.1:54321/api/v1",
+        sessionToken: "tauri-session-token",
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "ok" }), { status: 200 })),
+    );
+
+    const { api, BackendUnavailableError } = await import("./api");
+    const failure = api.health();
+    await expect(failure).rejects.toBeInstanceOf(BackendUnavailableError);
+    await expect(failure).rejects.toThrow(/could not start: boom/);
+    await expect(api.health()).resolves.toEqual({ status: "ok" });
+    expect(invokeMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("api.ts request handling", () => {
   beforeEach(() => {
     vi.stubEnv("VITE_ENS_API_URL", "http://127.0.0.1:8765/api/v1");
@@ -179,6 +202,36 @@ describe("api.ts request handling", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as InstanceType<typeof ApiError>).details).toEqual(errorBody);
     expect((error as Error).message).toBe(errorBody.message);
+  });
+
+  it("reports an unreachable backend instead of a raw network error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    const { api, ApiError } = await import("./api");
+    const failure = api.health();
+    await expect(failure).rejects.toBeInstanceOf(ApiError);
+    await expect(failure).rejects.toMatchObject({ details: { code: "BACKEND_UNREACHABLE" } });
+  });
+
+  it("describes a non-JSON error response with its status and correlation ID", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("<html>Bad gateway</html>", {
+          status: 502,
+          headers: { "X-Correlation-ID": "corr-502" },
+        }),
+      ),
+    );
+    const { api } = await import("./api");
+    await expect(api.health()).rejects.toMatchObject({
+      details: { code: "HTTP_502", correlation_id: "corr-502" },
+    });
+  });
+
+  it("resolves an empty 204 response without parsing a body", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+    const { api } = await import("./api");
+    await expect(api.health()).resolves.toBeUndefined();
   });
 
   it("maps outreach review and Zoho handoff actions to their API routes", async () => {

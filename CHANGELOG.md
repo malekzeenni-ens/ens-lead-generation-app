@@ -32,3 +32,4 @@
 - A campaign draft can no longer be left stuck in "generating". An unexpected failure, or closing the app mid-generation, now leaves it marked as failed and editable, and provider calls cut off by a closed app are shown as interrupted.
 - Discovery no longer merges two different businesses that share a name. A same-name result in another town is held for review, and when identifiers disagree the strongest one decides which lead a result belongs to.
 - Weekly outreach now runs on schedule while the app is open, instead of only when it is first opened each week. Leaving the app open over the weekend no longer skips Monday's preparation.
+- The desktop window now opens immediately. If the local service cannot start, the app says why and where the log is, instead of closing without a message. If the service stops while the app is open, it is restarted automatically and the app shows that it is reconnecting. Closing the app now shuts the service down cleanly.

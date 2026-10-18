@@ -113,16 +113,16 @@ def test_reapplying_never_rolls_back_ai_or_hand_written_wording(tmp_path: Path) 
             assert product.summary == "Newer wording from an AI run."
 
 
-def test_a_broken_pack_blocks_neither_startup_nor_a_catalogue_import(
-    tmp_path: Path, capfd: Any
-) -> None:
+def test_a_broken_pack_blocks_neither_startup_nor_a_catalogue_import(tmp_path: Path) -> None:
     pack_path = tmp_path / PACK_FILENAME
     pack_path.write_text("{ not json", encoding="utf-8")
-    with _client(_settings(tmp_path, pack_path)) as client:
+    settings = _settings(tmp_path, pack_path)
+    with _client(settings) as client:
         _import_csv(client)
         assert client.get("/api/v1/catalogue/knowledge-notes").json() == []
-    # The app's own log handler writes to stderr rather than propagating to caplog.
-    assert "was not applied" in capfd.readouterr().err
+    # The warning lands in the application log, where an operator would look for it.
+    log = (settings.log_directory / "application.jsonl").read_text(encoding="utf-8")
+    assert "was not applied" in log
 
 
 def test_the_pack_is_found_beside_the_database_when_no_path_is_set(tmp_path: Path) -> None:
