@@ -13,6 +13,8 @@ The repository initially contained five Markdown documents and no Git metadata, 
 - `Etch_N_Shine_Lead_Generation_App_Implementation_Kickoff.md`
 - `Etch_N_Shine_Universal_Application_Design_System.md`
 
+(These now live in `docs/source/`; they were moved from the repository root on 18 October 2026.)
+
 The kickoff names `Etch_N_Shine_Lead_Generation_App_BRD_FSD(1).md`; that exact file is absent. The file without `(1)` identifies itself as BRD/FSD v1.0 and is therefore treated as the intended authoritative input. No requirement content was discarded because of the filename mismatch.
 
 | Assessment area | Finding |

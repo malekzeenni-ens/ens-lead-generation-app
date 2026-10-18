@@ -4,6 +4,33 @@
 **Source:** Whole-codebase architecture review of `main` at `8608a65`.
 **Delivery approach:** Tested vertical slices, smallest coherent increment first, as set out in `CONTRIBUTING.md`. Each work item lands as its own commit (or short series), passes `npm.cmd run quality`, and updates `DELIVERY_LOG.md`, `REQUIREMENTS_TRACEABILITY.md` and `CHANGELOG.md` where behaviour changes.
 
+## Status (18 October 2026)
+
+Implemented on branch `refinement/architecture-review`, one commit per item, each with tests and a `DELIVERY_LOG.md` entry. D1 and D2 were approved by the operator; D3–D5 were taken as recommended.
+
+| Item | Status | Notes |
+|---|---|---|
+| R0.1, R0.2 | Done | `main` also failed `ruff format`; backend suite 308 s → about 75 s |
+| R1 | Done | ADR-023, migration 0017 |
+| R2 | Done | FR-015 updated (D1) |
+| R3 | Done | |
+| R4 | Done | The one-run-per-week constraint already existed (migration 0011); no migration was needed |
+| R5 | Done, changed | No dialog plugin: the host reports failures in the app's own window. Restart and clean shutdown checked manually on the desktop |
+| R6 | Done | |
+| R7 | Done | ADR-022, migration 0019. Autofill and enrichment are jobs; single model interactions stay synchronous |
+| R8 | Done | ADR-024, migration 0018. The safety copy moved into `run_migrations` and now covers every upgrade |
+| R9 | Done | Automation and lead services split, verified identical at the AST level |
+| R10 | Phase 1 done | Paged register endpoint and the All leads screen. Other screens still use the full list (phase 2) |
+| R11 | Done, partly | Query cache in place; workspaces still receive data as props from `App` |
+| H1–H4, H6 | Done | H4 changed: the http(s) wildcards are needed for lead websites; scope stated and redundant entries removed |
+| H5 | Done | Timeouts added after R7 moved long work to jobs |
+| H7 | Done, changed | Moved to `docs/source/`, not `docs/archive/`, because the BRD and design system are still authoritative |
+| H8 | Not started | As planned |
+
+Also done, unplanned: eight npm advisories in test tooling (vitest 3 → 5); a logging handler leak; two tests that left database engines undisposed.
+
+Remaining work: R10 phase 2, the workspace-level part of R11, and H8.
+
 ## 1. Summary
 
 The application is in good shape: loopback-only API with a per-session token, DPAPI secrets, approval gates before anything leaves the machine, and 193 backend plus 112 frontend tests passing. The review found:
