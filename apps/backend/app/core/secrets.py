@@ -4,8 +4,9 @@ import ctypes
 import hashlib
 import json
 import os
+from functools import cache
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 
 class SecretStore(Protocol):
@@ -40,6 +41,31 @@ class _DataBlob(ctypes.Structure):
     ]
 
 
+_BlobPointer = ctypes.POINTER(_DataBlob)
+
+
+@cache
+def _windows_libraries() -> tuple[Any, Any]:
+    """crypt32 and kernel32 with declared signatures. `use_last_error` makes
+    `ctypes.get_last_error()` report the real Windows error code; `ctypes.windll` does not."""
+    crypt32 = ctypes.WinDLL("crypt32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    for function in (crypt32.CryptProtectData, crypt32.CryptUnprotectData):
+        function.argtypes = [
+            _BlobPointer,
+            ctypes.c_wchar_p,
+            _BlobPointer,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_ulong,
+            _BlobPointer,
+        ]
+        function.restype = ctypes.c_int
+    kernel32.LocalFree.argtypes = [ctypes.c_void_p]
+    kernel32.LocalFree.restype = ctypes.c_void_p
+    return crypt32, kernel32
+
+
 class DpapiSecretStore:
     """Small Windows user-scoped DPAPI vault; SQLite stores no provider secrets."""
 
@@ -66,8 +92,7 @@ class DpapiSecretStore:
         source, source_buffer = cls._blob(plaintext)
         entropy, entropy_buffer = cls._blob(cls._ENTROPY)
         output = _DataBlob()
-        crypt32 = ctypes.windll.crypt32
-        kernel32 = ctypes.windll.kernel32
+        crypt32, kernel32 = _windows_libraries()
         result = crypt32.CryptProtectData(
             ctypes.byref(source),
             "Etch N Shine provider credentials",
@@ -83,15 +108,14 @@ class DpapiSecretStore:
         try:
             return ctypes.string_at(output.pbData, output.cbData)
         finally:
-            kernel32.LocalFree(output.pbData)
+            kernel32.LocalFree(ctypes.cast(output.pbData, ctypes.c_void_p))
 
     @classmethod
     def _unprotect(cls, ciphertext: bytes) -> bytes:
         source, source_buffer = cls._blob(ciphertext)
         entropy, entropy_buffer = cls._blob(cls._ENTROPY)
         output = _DataBlob()
-        crypt32 = ctypes.windll.crypt32
-        kernel32 = ctypes.windll.kernel32
+        crypt32, kernel32 = _windows_libraries()
         result = crypt32.CryptUnprotectData(
             ctypes.byref(source),
             None,
@@ -107,7 +131,7 @@ class DpapiSecretStore:
         try:
             return ctypes.string_at(output.pbData, output.cbData)
         finally:
-            kernel32.LocalFree(output.pbData)
+            kernel32.LocalFree(ctypes.cast(output.pbData, ctypes.c_void_p))
 
     def get_json(self, key: str) -> dict[str, object] | None:
         path = self._path(key)
