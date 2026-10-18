@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   Bot,
-  Database,
   FileText,
   GitBranch,
   LayoutDashboard,
@@ -1593,21 +1592,6 @@ function Workbench() {
             <NavigationItem href="#templates" icon={FileText} label="Templates" count={templates.length} active={activeSection === "templates"} onSelect={() => setActiveSection("templates")} />
             <NavigationItem href="#settings" icon={Settings} label="Settings" active={activeSection === "settings"} onSelect={() => setActiveSection("settings")} />
           </nav>
-          <div className="sidebar-control">
-            <ShieldCheck size={20} aria-hidden="true" />
-            <div>
-              <strong>Controlled mode</strong>
-              <p>
-                {automationCapabilities?.google_places_configured ||
-                automationCapabilities?.instagram_connected
-                  ? "Connected discovery providers are available; AI and outbound messaging are off."
-                  : "External providers, AI and outbound messaging are off."}
-              </p>
-            </div>
-          </div>
-          <div className="sidebar-footer">
-            <Database size={16} aria-hidden="true" /><span>Local database</span><small>v0.1.0</small>
-          </div>
         </aside>
 
         <main
@@ -1654,17 +1638,6 @@ function Workbench() {
         </main>
       </div>
 
-      <footer className="status-bar">
-        <span><ShieldCheck size={14} aria-hidden="true" /> Operator-controlled mode</span>
-        <span>
-          {automationCapabilities?.instagram_connected
-            ? `Instagram @${automationCapabilities.instagram_account} connected; messaging disabled`
-            : automationCapabilities?.google_places_configured
-              ? "Google discovery available; AI and messaging disabled"
-              : "External discovery, AI and messaging disabled"}
-        </span>
-        <span>Etch ’N’ Shine · v0.1.0</span>
-      </footer>
     </div>
   );
 }

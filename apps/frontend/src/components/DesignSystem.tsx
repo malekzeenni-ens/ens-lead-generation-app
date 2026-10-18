@@ -3,9 +3,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleHelp,
-  CircleCheck,
-  CircleDashed,
-  CircleX,
   Inbox,
   Info,
   LoaderCircle,
@@ -31,25 +28,24 @@ interface ConnectionBadgeProps {
   state: HealthState;
 }
 
-const connectionPresentation: Record<
-  HealthState,
-  { icon: LucideIcon; label: string; detail: string }
-> = {
-  checking: { icon: CircleDashed, label: "API checking", detail: "Local service" },
-  connected: { icon: CircleCheck, label: "API connected", detail: "Local service" },
-  unavailable: { icon: CircleX, label: "API unavailable", detail: "Action required" },
+const connectionLabels: Record<HealthState, string> = {
+  checking: "Connecting to service",
+  connected: "Service connected",
+  unavailable: "Service offline",
 };
 
+/** A quiet dot while the local service is healthy; an explicit label when it is not. */
 export function ConnectionBadge({ state }: ConnectionBadgeProps) {
-  const presentation = connectionPresentation[state];
-  const Icon = presentation.icon;
+  const label = connectionLabels[state];
   return (
-    <div className={`connection-badge connection-badge--${state}`} role="status" aria-live="polite">
-      <Icon size={18} aria-hidden="true" />
-      <span>
-        <strong>{presentation.label}</strong>
-        <small>{presentation.detail}</small>
-      </span>
+    <div
+      className={`connection-status connection-status--${state}`}
+      role="status"
+      aria-live="polite"
+      title={label}
+    >
+      <span className="connection-status__dot" aria-hidden="true" />
+      <span className={state === "connected" ? "visually-hidden" : undefined}>{label}</span>
     </div>
   );
 }

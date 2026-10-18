@@ -866,7 +866,7 @@ describe("local operating workbench", () => {
 
   it("shows the accessible desktop shell and operating summary", async () => {
     render(<App />);
-    expect(await screen.findByText("API connected")).toBeInTheDocument();
+    expect(await screen.findByText("Service connected")).toBeInTheDocument();
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Workspace navigation" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute(
@@ -874,7 +874,8 @@ describe("local operating workbench", () => {
       "location",
     );
     expect(screen.getByRole("heading", { name: "Lead intelligence dashboard" })).toBeInTheDocument();
-    expect(screen.getByText("Controlled mode")).toBeInTheDocument();
+    // The old sidebar "Controlled mode" card and footer status bar were removed (UX B1).
+    expect(screen.queryByText("Controlled mode")).not.toBeInTheDocument();
     expect(screen.getByText("Active campaigns")).toBeInTheDocument();
   });
 
@@ -888,7 +889,7 @@ describe("local operating workbench", () => {
       model: "claude-sonnet-5",
     });
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Email drafts/ }));
     await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
     expect(screen.queryByRole("button", { name: "Polish with cloud AI" })).not.toBeInTheDocument();
@@ -908,7 +909,7 @@ describe("local operating workbench", () => {
       body: "A polished body.",
     });
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Email drafts/ }));
     await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
     await user.click(await screen.findByRole("button", { name: "Polish with cloud AI" }));
@@ -940,7 +941,7 @@ describe("local operating workbench", () => {
       }),
     );
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Email drafts/ }));
     await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
     await user.click(await screen.findByRole("button", { name: "Polish with cloud AI" }));
@@ -955,7 +956,7 @@ describe("local operating workbench", () => {
   it("places the AI assistant in the sidebar instead of Campaigns", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
 
     expect(screen.getByRole("link", { name: "AI assistant" })).toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
@@ -978,7 +979,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.assistantConversations).mockResolvedValue([conversation]);
     vi.mocked(api.sendAssistantMessage).mockResolvedValue(conversation);
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
 
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
     await user.click(screen.getByRole("button", { name: "Ask AI" }));
@@ -1007,7 +1008,7 @@ describe("local operating workbench", () => {
   it("navigates from a dashboard metric card to the pre-filtered leads register", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
 
     await user.click(screen.getByRole("button", { name: /Needs attention/ }));
 
@@ -1046,7 +1047,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.outreachBatches).mockResolvedValue([outreachBatch]);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
 
     expect(await screen.findByText("You are caught up for this week")).toBeInTheDocument();
     expect(api.ensureWeeklyOutreach).not.toHaveBeenCalled();
@@ -1068,7 +1069,7 @@ describe("local operating workbench", () => {
 
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       expect(api.ensureWeeklyOutreach).not.toHaveBeenCalled();
 
       expect(screen.getByText("How the weekly check works")).toBeInTheDocument();
@@ -1094,7 +1095,7 @@ describe("local operating workbench", () => {
   it("navigates from the Active products card straight to the Catalogue workspace", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
 
     await user.click(screen.getByRole("button", { name: /Active products/ }));
 
@@ -1104,7 +1105,7 @@ describe("local operating workbench", () => {
   it("creates a product family in Catalogue and assigns it to a campaign", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
 
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
     await user.click(screen.getByRole("tab", { name: /Product families/ }));
@@ -1154,7 +1155,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.products).mockResolvedValue([product, secondProduct]);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
     await user.click(screen.getByRole("tab", { name: /Product families/ }));
     await user.click(screen.getByText("Edit family"));
@@ -1182,7 +1183,7 @@ describe("local operating workbench", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("API unavailable")).toBeInTheDocument();
+    expect(await screen.findByText("Service offline")).toBeInTheDocument();
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("Action could not be completed");
     expect(alert).toHaveTextContent("Simulated backend outage");
@@ -1194,7 +1195,7 @@ describe("local operating workbench", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("API connected")).toBeInTheDocument();
+    expect(await screen.findByText("Service connected")).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("Catalogue offline");
     await user.click(screen.getByRole("link", { name: /All leads/ }));
     expect((await screen.findAllByText(lead.business_name)).length).toBeGreaterThan(0);
@@ -1225,7 +1226,7 @@ describe("local operating workbench", () => {
 
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       await waitFor(() => expect(emit).toBeDefined());
       const healthChecksBefore = vi.mocked(api.health).mock.calls.length;
 
@@ -1265,7 +1266,7 @@ describe("local operating workbench", () => {
     );
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
     await user.click(screen.getByRole("tab", { name: "Create campaign" }));
     await user.type(screen.getByRole("textbox", { name: "Campaign name" }), "New Luton Campaign");
@@ -1278,7 +1279,7 @@ describe("local operating workbench", () => {
   it("switches task tabs with the keyboard", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
 
     const campaignsTab = screen.getByRole("tab", { name: /Campaigns/ });
@@ -1295,7 +1296,7 @@ describe("local operating workbench", () => {
   it("creates a configured campaign from the campaign workspace", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
     await user.click(screen.getByRole("tab", { name: "Create campaign" }));
     const name = screen.getByRole("textbox", { name: "Campaign name" });
@@ -1335,7 +1336,7 @@ describe("local operating workbench", () => {
     });
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: "AI assistant" }));
     await user.click(screen.getByRole("tab", { name: /^Campaign draft/ }));
     expect(await screen.findByText("The local AI assistant is ready.")).toBeInTheDocument();
@@ -1413,7 +1414,7 @@ describe("local operating workbench", () => {
     });
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: "AI assistant" }));
     await user.type(
       screen.getByRole("textbox", { name: "Ask the local assistant" }),
@@ -1481,7 +1482,7 @@ describe("local operating workbench", () => {
     });
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: "AI assistant" }));
     await user.click(screen.getByRole("tab", { name: /^Campaign draft/ }));
 
@@ -1504,7 +1505,7 @@ describe("local operating workbench", () => {
   it("runs scoring and product matching for a campaign on demand", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
 
     await user.click(screen.getByRole("button", { name: "Refresh scoring only" }));
@@ -1535,7 +1536,7 @@ describe("local operating workbench", () => {
     });
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
 
     await user.click(screen.getByRole("button", { name: "Run Google Places" }));
@@ -1556,7 +1557,7 @@ describe("local operating workbench", () => {
       .mockResolvedValue([{ ...campaignRun, status: "queued" }]);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     expect(screen.queryByText(/Running:/)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
@@ -1570,7 +1571,7 @@ describe("local operating workbench", () => {
   it("keeps a longer notification visible proportionally longer, then dismisses it", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
 
     vi.useFakeTimers();
@@ -1606,7 +1607,7 @@ describe("local operating workbench", () => {
       instagram_status: "connected",
     });
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
     await user.click(screen.getByRole("tab", { name: "Social leads" }));
 
@@ -1645,7 +1646,7 @@ describe("local operating workbench", () => {
       instagram_status: "connected",
     });
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
     await user.click(screen.getByRole("tab", { name: "Social leads" }));
     await user.click(screen.getByRole("button", { name: "Enrich saved Instagram profiles" }));
@@ -1662,7 +1663,7 @@ describe("local operating workbench", () => {
 
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       await user.click(screen.getByRole("link", { name: /Campaigns/ }));
       await user.click(screen.getByRole("tab", { name: "Social leads" }));
       await user.click(screen.getByRole("tab", { name: "Find profiles" }));
@@ -1698,7 +1699,7 @@ describe("local operating workbench", () => {
   it("edits campaign shortlist threshold and product categories", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
     const campaignRecord = screen.getByRole("heading", { name: campaign.name }).closest("article");
     if (!campaignRecord) throw new Error("Campaign record is missing.");
@@ -1734,7 +1735,7 @@ describe("local operating workbench", () => {
 
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       await user.click(screen.getByRole("link", { name: /Campaigns/ }));
       const campaignRecord = screen.getByRole("heading", { name: campaign.name }).closest("article");
       if (!campaignRecord) throw new Error("Campaign record is missing.");
@@ -1781,7 +1782,7 @@ describe("local operating workbench", () => {
 
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       await user.click(screen.getByRole("link", { name: /Campaigns/ }));
       const campaignRecord = screen.getByRole("heading", { name: campaign.name }).closest("article");
       if (!campaignRecord) throw new Error("Campaign record is missing.");
@@ -1824,7 +1825,7 @@ describe("local operating workbench", () => {
 
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       await user.click(screen.getByRole("link", { name: /Campaigns/ }));
 
       expect(screen.queryByRole("heading", { name: archivedCampaign.name })).not.toBeInTheDocument();
@@ -1874,7 +1875,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.campaigns).mockResolvedValue([campaign, archivedCampaign]);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /All leads/ }));
     await user.click(screen.getByRole("tab", { name: "Add lead" }));
 
@@ -1888,7 +1889,7 @@ describe("local operating workbench", () => {
   it("submits an evidence-backed lead", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /All leads/ }));
     await user.click(screen.getByRole("tab", { name: "Add lead" }));
     await user.selectOptions(screen.getByRole("combobox", { name: "Campaign" }), campaign.id);
@@ -1931,7 +1932,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.leads).mockResolvedValue([...firstCampaignLeads, secondCampaignLead]);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /All leads/ }));
 
     const pagination = await screen.findByRole("navigation", { name: "leads pagination" });
@@ -1957,7 +1958,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.leads).mockResolvedValue(manyLeads);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /All leads/ }));
     expect(await screen.findByText("Paged Lead 01")).toBeInTheDocument();
     expect(api.leadPage).toHaveBeenLastCalledWith({ limit: 10, offset: 0 });
@@ -2008,7 +2009,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.leads).mockResolvedValue([lead, googleLead, instagramLead]);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /All leads/ }));
 
     expect(await screen.findByText("Google Bakery")).toBeInTheDocument();
@@ -2027,7 +2028,7 @@ describe("local operating workbench", () => {
   it("opens a registered lead in the pipeline workspace", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /All leads/ }));
     await user.click(screen.getByRole("button", { name: "Manage" }));
     expect(screen.getByRole("heading", { name: "Pipeline workspace" })).toBeInTheDocument();
@@ -2041,7 +2042,7 @@ describe("local operating workbench", () => {
   it("opens lead details by default in the pipeline overview", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Pipeline/ }));
 
     const disclosure = screen.getByText("Lead details and retention").closest("details");
@@ -2055,7 +2056,7 @@ describe("local operating workbench", () => {
   it("shows the lead's website as a link that opens in a new browser tab", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Pipeline/ }));
 
     const websiteLink = screen.getByRole("link", { name: lead.website ?? "" });
@@ -2067,7 +2068,7 @@ describe("local operating workbench", () => {
   it("saves a primary contact and reusable email context from the lead Context tab", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Pipeline/ }));
     await user.click(screen.getByRole("tab", { name: "Context" }));
 
@@ -2115,7 +2116,7 @@ describe("local operating workbench", () => {
     const user = userEvent.setup();
     vi.mocked(api.leads).mockResolvedValue([{ ...lead, website: null }]);
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Pipeline/ }));
 
     expect(screen.queryByRole("link", { name: /example\.test/ })).not.toBeInTheDocument();
@@ -2124,7 +2125,7 @@ describe("local operating workbench", () => {
   it("changes a pipeline stage and records a note", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Pipeline/ }));
     await user.click(screen.getByRole("tab", { name: "Opportunity" }));
     const stageCard = screen.getByRole("heading", { name: "Pipeline stage" }).closest("section");
@@ -2157,7 +2158,7 @@ describe("local operating workbench", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       await user.click(screen.getByRole("link", { name: /Pipeline/ }));
       await user.click(screen.getByRole("tab", { name: "Privacy" }));
       const suppressionCard = screen
@@ -2190,7 +2191,7 @@ describe("local operating workbench", () => {
   it("saves authenticated local workspace settings", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: "Settings" }));
     await user.click(screen.getByRole("tab", { name: "Defaults" }));
     const retention = screen.getByRole("spinbutton", { name: "Retention review interval days" });
@@ -2208,7 +2209,7 @@ describe("local operating workbench", () => {
   it("stores Meta credentials through the encrypted provider settings flow", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: "Settings" }));
     await user.type(screen.getByRole("textbox", { name: "Meta App ID" }), "1596694465496867");
     await user.type(screen.getByLabelText("Meta App Secret"), "a-secure-meta-app-secret");
@@ -2256,7 +2257,7 @@ describe("local operating workbench", () => {
     window.__TAURI_INTERNALS__ = {};
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: "Settings" }));
     await user.click(screen.getByRole("button", { name: "Connect Instagram with Meta" }));
 
@@ -2265,8 +2266,8 @@ describe("local operating workbench", () => {
         "https://www.facebook.com/v25.0/dialog/oauth?client_id=test",
       ),
     );
-    expect(await screen.findByText("Instagram @etchnshine connected; messaging disabled"))
-      .toBeInTheDocument();
+    // The connection shows in Settings now that the footer status bar is gone (UX B1).
+    expect(await screen.findByText("@etchnshine")).toBeInTheDocument();
     expect(screen.queryByLabelText("Temporary Meta authorization address"))
       .not.toBeInTheDocument();
     delete window.__TAURI_INTERNALS__;
@@ -2275,7 +2276,7 @@ describe("local operating workbench", () => {
   it("uploads a Shopify listing CSV into the local catalogue", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
     await user.click(screen.getByRole("tab", { name: "Import catalogue" }));
     const file = new File(
@@ -2316,7 +2317,7 @@ describe("local operating workbench", () => {
     });
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
     await user.click(screen.getByRole("tab", { name: "Import catalogue" }));
 
@@ -2345,7 +2346,7 @@ describe("local operating workbench", () => {
   it("shows when the catalogue was last imported", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
     await user.click(screen.getByRole("tab", { name: "Import catalogue" }));
     expect(await screen.findByText(/Catalogue last imported/)).toBeInTheDocument();
@@ -2356,7 +2357,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.updateProvenFit).mockResolvedValue({ ...provenFit, status: "confirmed" });
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
     await user.click(screen.getByRole("tab", { name: /Knowledge/ }));
 
@@ -2380,7 +2381,7 @@ describe("local operating workbench", () => {
     });
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
     await user.click(screen.getByRole("tab", { name: /Knowledge/ }));
     await user.click(screen.getByText("Edit note"));
@@ -2401,7 +2402,7 @@ describe("local operating workbench", () => {
   it("lets the local AI model be chosen in Settings", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Settings/ }));
     await user.click(screen.getByRole("tab", { name: "Defaults" }));
 
@@ -2426,7 +2427,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.products).mockResolvedValue(catalogue);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
 
     const pagination = await screen.findByRole("navigation", { name: "products pagination" });
@@ -2453,7 +2454,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.leads).mockResolvedValue(pipelineLeads);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Pipeline/ }));
 
     const pagination = await screen.findByRole("navigation", { name: "pipeline leads pagination" });
@@ -2469,7 +2470,7 @@ describe("local operating workbench", () => {
   it("recalculates a deterministic score from the pipeline", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Pipeline/ }));
     await user.click(screen.getByRole("tab", { name: "Score & products" }));
     expect(screen.getByText("72/100")).toBeInTheDocument();
@@ -2481,7 +2482,7 @@ describe("local operating workbench", () => {
   it("records a weekly shortlist approval without sending outreach", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Weekly shortlist/ }));
     expect(screen.getByRole("heading", { name: /Luton Bakery Partnerships/ })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Approve" }));
@@ -2498,7 +2499,7 @@ describe("local operating workbench", () => {
   it("adds, edits and deletes a message template", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Templates/ }));
     expect(screen.getByRole("heading", { name: "Follow-up" })).toBeInTheDocument();
 
@@ -2564,7 +2565,7 @@ describe("local operating workbench", () => {
 
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       await user.click(screen.getByRole("link", { name: /Pipeline/ }));
       await user.click(screen.getByRole("tab", { name: "Contact" }));
       await user.selectOptions(screen.getByRole("combobox", { name: "Template" }), template.id);
@@ -2632,7 +2633,7 @@ describe("local operating workbench", () => {
     vi.mocked(api.templates).mockResolvedValue([template, familyTemplate]);
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Pipeline/ }));
     await user.click(screen.getByRole("tab", { name: "Contact" }));
     await user.selectOptions(
@@ -2653,7 +2654,7 @@ describe("local operating workbench", () => {
 
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       await user.click(screen.getByRole("link", { name: /Email drafts/ }));
       await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
 
@@ -2784,7 +2785,7 @@ describe("local operating workbench", () => {
     });
 
     render(<App />);
-    await screen.findByText("API connected");
+    await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Email drafts/ }));
     expect(screen.getByRole("heading", { name: "Email drafts" })).toBeInTheDocument();
     expect(screen.getByText("Assisted Zoho handoff")).toBeInTheDocument();
@@ -2936,7 +2937,7 @@ describe("local operating workbench", () => {
 
     try {
       render(<App />);
-      await screen.findByText("API connected");
+      await screen.findByText("Service connected");
       await user.click(screen.getByRole("link", { name: /Email drafts/ }));
       await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
       await user.click(screen.getByRole("button", { name: "Open in Zoho to send" }));

@@ -536,6 +536,20 @@ export function SettingsWorkspace({
             ) : null}
 
             {activeTask === "diagnostics" ? (
+            <>
+            <section className="records-panel">
+              <div className="subsection-heading">
+                <div><h3>How this app protects you</h3><p>Etch ’N’ Shine Lead generation · version 0.1.0</p></div>
+                <ShieldCheck size={19} aria-hidden="true" />
+              </div>
+              <ul className="protection-list">
+                <li><ShieldCheck size={16} aria-hidden="true" />Your leads, notes and drafts stay in a database on this computer.</li>
+                <li><ShieldCheck size={16} aria-hidden="true" />Nothing is sent automatically. You approve every email and send it yourself from Zoho.</li>
+                <li><ShieldCheck size={16} aria-hidden="true" />A business you suppress is never contacted or added again, even if a search finds it.</li>
+                <li><ShieldCheck size={16} aria-hidden="true" />Discovery only uses the connections you set up under Connections.</li>
+                <li><ShieldCheck size={16} aria-hidden="true" />The AI assistant runs on this computer. Cloud polish is off unless you turn it on, and then sends one draft at a time.</li>
+              </ul>
+            </section>
             <section className="records-panel">
               <div className="subsection-heading">
                 <div><h3>Diagnostics</h3><p>Authenticated local runtime information.</p></div>
@@ -562,6 +576,7 @@ export function SettingsWorkspace({
                 <LoadingState label="Loading diagnostics" />
               )}
             </section>
+            </>
             ) : null}
           </div>
           </TaskPanel>

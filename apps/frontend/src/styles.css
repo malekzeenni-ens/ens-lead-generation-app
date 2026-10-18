@@ -205,7 +205,7 @@ h3 {
   display: grid;
   width: 100%;
   height: 100vh;
-  grid-template-rows: 56px minmax(0, 1fr) 28px;
+  grid-template-rows: 56px minmax(0, 1fr);
   overflow: hidden;
   background: var(--ens-app-background);
 }
@@ -610,43 +610,6 @@ h3 {
   color: var(--ens-text-muted);
   font-size: var(--ens-text-2xs);
   text-align: center;
-}
-
-.sidebar-control {
-  align-items: flex-start;
-  gap: var(--ens-space-3);
-  margin-top: auto;
-  padding: var(--ens-space-3);
-  border: 1px solid var(--ens-border-subtle);
-  border-radius: var(--ens-radius-lg);
-  background: var(--ens-surface-1);
-}
-
-.sidebar-control svg {
-  flex: 0 0 auto;
-  color: var(--ens-success);
-}
-
-.sidebar-control strong {
-  font-size: var(--ens-text-md);
-}
-
-.sidebar-control p {
-  margin: var(--ens-space-1) 0 0;
-  color: var(--ens-text-muted);
-  font-size: var(--ens-text-xs);
-  line-height: 1.45;
-}
-
-.sidebar-footer {
-  gap: var(--ens-space-2);
-  padding: var(--ens-space-3);
-  color: var(--ens-text-muted);
-  font-size: var(--ens-text-xs);
-}
-
-.sidebar-footer small {
-  margin-left: auto;
 }
 
 .workspace-content {
@@ -1688,27 +1651,6 @@ td small {
   margin-top: 2px;
   color: var(--ens-text-muted);
   font-size: var(--ens-text-3xs);
-}
-
-.status-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ens-space-4);
-  padding: 0 var(--ens-space-4);
-  border-top: 1px solid var(--ens-border-subtle);
-  background: var(--ens-surface-header);
-  color: var(--ens-text-muted);
-  font-size: var(--ens-text-3xs);
-}
-
-.status-bar span {
-  gap: var(--ens-space-1);
-  min-width: 0;
-}
-
-.status-bar span:first-child svg {
-  color: var(--ens-success);
 }
 
 .dashboard-grid,
@@ -4312,6 +4254,74 @@ td small {
 
   .status-bar span:nth-child(2) {
     display: none;
+  }
+}
+
+/* Header service status (UX redesign B1): quiet when healthy, explicit when not. */
+.connection-status {
+  display: inline-flex;
+  min-height: var(--ens-control-height-md);
+  align-items: center;
+  gap: var(--ens-space-2);
+  padding: 0 var(--ens-space-2);
+  color: var(--ens-text-secondary);
+  font-size: var(--ens-type-xs);
+  font-weight: 600;
+}
+
+.connection-status__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ens-text-muted);
+}
+
+.connection-status--connected .connection-status__dot {
+  background: var(--ens-success);
+  box-shadow: 0 0 0 4px var(--ens-success-soft);
+}
+
+.connection-status--checking .connection-status__dot {
+  background: var(--ens-warning);
+  animation: ens-pulse 1.2s ease-in-out infinite;
+}
+
+.connection-status--unavailable {
+  padding: 0 var(--ens-space-3);
+  border: 1px solid var(--ens-error-border);
+  border-radius: var(--ens-radius-pill);
+  background: var(--ens-error-soft);
+  color: var(--ens-error);
+}
+
+.connection-status--unavailable .connection-status__dot {
+  background: var(--ens-error);
+}
+
+.protection-list {
+  display: grid;
+  gap: var(--ens-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.protection-list li {
+  display: flex;
+  gap: var(--ens-space-3);
+  color: var(--ens-text-secondary);
+  font-size: var(--ens-type-sm);
+}
+
+.protection-list svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--ens-success);
+}
+
+@keyframes ens-pulse {
+  50% {
+    opacity: 0.35;
   }
 }
 

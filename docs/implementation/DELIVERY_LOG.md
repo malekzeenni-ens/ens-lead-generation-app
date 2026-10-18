@@ -555,3 +555,29 @@ Work follows `REFINEMENT_PLAN.md` on branch `refinement/architecture-review`, on
 ### Upgrading the installed app
 
 - The operator's database moves from revision 0016 to 0019 on the next start. Before migrating, the app writes `ens-leads.pre-upgrade-0016_seed_outreach_templates-<time>.sqlite3` beside the database (see `BACKUP_AND_RESTORE.md`). Migration 0018 removes personal data from historic audit events, so keep that copy until the upgraded app has been checked, then delete it.
+
+## UX redesign (see `UX_REDESIGN_PLAN.md`)
+
+Branch `ux/redesign`. Visual checks run against a scratch database seeded with fictional businesses only; screenshots stay outside the repository.
+
+### A1 - Type scale, motion tokens and status pills
+
+- Six type steps (`--ens-type-xs` to `--ens-type-2xl`) replace eleven. The old names map onto them, so no component changed size by accident; `--ens-text-xl` and `--ens-text-2xl` were used but never defined, and now are.
+- Motion tokens (120, 200 and 300 ms, two easings) drop to zero when the operator's system asks for reduced motion.
+- Status badges became pills with a coloured dot, and pipeline classification badges get a tone from `classificationTone`. The white focus outline that framed the whole content area on every click is gone; keyboard focus on controls is unchanged.
+
+### A2 - Shared components
+
+- `Collapsible`, `Drawer` (focus kept inside, Escape closes, focus returns to the opener), `Toolbar` with filter chips and "Clear all", `StatusPill`, `SkeletonRows`, and a rows-per-page choice in `Pagination`.
+- `useRememberedState` keeps a screen's tab, page, filters and open sections for the session (sessionStorage, prefix `ens:view:`, in-memory fallback). Nothing personal is stored: only view settings.
+- Verification: 5 new component tests.
+
+### A3 - Motion
+
+- Pages and tabs fade in, toasts slide in, alerts reveal, a changed row flashes once, and clickable metric cards lift on hover. All of it uses the A1 tokens, so it switches off with reduced motion.
+
+### B1 - Header status, footer and sidebar card removed
+
+- The "API connected" badge became a quiet green dot, with a visible label only while connecting ("Connecting to service") or offline ("Service offline"). The footer bar and the sidebar "Controlled mode" card are gone, which returns about 120 px of height to the content.
+- What they told the operator now lives where it is looked for: Settings > Diagnostics opens with "How this app protects you" (local data, nothing sent automatically, suppression, discovery limits, local AI) and the version.
+- Verification: two shell tests updated to the new wording; 129 frontend tests pass (one timed out once while the dev server and browser shared the machine, and passes on its own in 2.4 s); TypeScript and ESLint pass.
