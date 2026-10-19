@@ -679,3 +679,12 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - Catalogue: products missing sales knowledge, or whose listing changed since, carry a badge. A Cards / By category switch (remembered) adds a view grouped into collapsible sections by the last part of the Shopify category ("Keychains", "Card Cases"), each counting the products that need knowledge. Editing a product moved from an inline disclosure to a wide drawer in both views and closes on a successful save.
 - Not done: grouping by the knowledge pack's own eight product groups, which the product list does not expose yet.
 - Verification: 1 new test (badge, grouped view with its knowledge count, edit in the drawer); the settings and Meta tests use the section list; 140 frontend tests pass; TypeScript and ESLint pass.
+
+Phase gate after D7: `npm run quality` passed (frontend 140, backend 271, Rust 3; lint, types and build).
+
+### B4 - Global search (Ctrl+K)
+
+- Ctrl+K (or Cmd+K), or the new Search box in the header, opens a search over what is already loaded: screens ("Go to"), quick actions (New campaign, Plan a campaign with AI, Ask AI, Leads needing review), leads, campaigns, products and templates, grouped by type with up to six results each. With nothing typed it shows screens and actions.
+- Keyboard first: arrows move, Enter opens, Esc closes and focus returns to where it was. It is a combobox over a listbox, so screen readers announce the active result. Choosing a lead opens it in Pipeline; a campaign, product or template opens its screen.
+- Nothing new is fetched and nothing is stored: it searches the data each screen already has.
+- Verification: 1 new test (Ctrl+K, grouped results, Enter opens the lead, header button, Esc closes); 141 frontend tests pass; TypeScript and ESLint pass.

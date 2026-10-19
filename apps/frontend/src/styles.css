@@ -5321,6 +5321,150 @@ kbd {
   }
 }
 
+/* Global search (UX redesign B4): Ctrl+K from anywhere. */
+.header-search {
+  display: inline-flex;
+  min-width: 220px;
+  min-height: var(--ens-control-height-md);
+  align-items: center;
+  gap: var(--ens-space-2);
+  padding: 0 var(--ens-space-2) 0 var(--ens-space-3);
+  border: 1px solid var(--ens-border-default);
+  border-radius: var(--ens-radius-md);
+  background: var(--ens-surface-1);
+  color: var(--ens-text-muted);
+  cursor: pointer;
+  font-size: var(--ens-type-sm);
+}
+
+.header-search span {
+  flex: 1;
+  text-align: left;
+}
+
+.header-search:hover {
+  border-color: var(--ens-border-strong);
+  color: var(--ens-text-primary);
+}
+
+.palette-layer {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+}
+
+.palette-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--ens-overlay);
+  animation: ens-fade-in var(--ens-motion-fast) var(--ens-ease-out);
+}
+
+.palette {
+  position: relative;
+  display: flex;
+  width: min(620px, calc(100vw - 32px));
+  max-height: 70vh;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ens-border-default);
+  border-radius: var(--ens-radius-lg);
+  background: var(--ens-surface-1);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 50%);
+  animation: ens-panel-in var(--ens-motion-base) var(--ens-ease-out);
+}
+
+.palette__search {
+  display: flex;
+  align-items: center;
+  gap: var(--ens-space-3);
+  padding: var(--ens-space-3) var(--ens-space-4);
+  border-bottom: 1px solid var(--ens-border-subtle);
+  color: var(--ens-text-muted);
+}
+
+.palette__search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ens-text-primary);
+  font-size: var(--ens-type-md);
+  outline: none;
+}
+
+.palette__results {
+  overflow-y: auto;
+  padding: var(--ens-space-2);
+}
+
+.palette__group {
+  margin: var(--ens-space-2) var(--ens-space-3) var(--ens-space-1);
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+  font-weight: 600;
+}
+
+.palette__option {
+  display: flex;
+  align-items: center;
+  gap: var(--ens-space-3);
+  padding: var(--ens-space-2) var(--ens-space-3);
+  border-radius: var(--ens-radius-sm);
+  cursor: pointer;
+  font-size: var(--ens-type-sm);
+}
+
+.palette__option small {
+  overflow: hidden;
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette__option svg {
+  margin-left: auto;
+  color: var(--ens-text-muted);
+}
+
+.palette__option--active {
+  background: var(--ens-surface-selected);
+  color: var(--ens-text-primary);
+}
+
+.palette__empty {
+  margin: var(--ens-space-6) 0;
+  color: var(--ens-text-muted);
+  text-align: center;
+}
+
+.palette__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--ens-space-1);
+  margin: 0;
+  padding: var(--ens-space-2) var(--ens-space-4);
+  border-top: 1px solid var(--ens-border-subtle);
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+}
+
+@media (max-width: 900px) {
+  .header-search {
+    min-width: 0;
+  }
+
+  .header-search span,
+  .header-search kbd {
+    display: none;
+  }
+}
+
 /* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */
 .section-heading__actions {
   display: flex;

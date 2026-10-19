@@ -983,6 +983,28 @@ describe("local operating workbench", () => {
     );
   });
 
+  it("searches screens and leads with Ctrl+K and opens the chosen result", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Service connected");
+
+    await user.keyboard("{Control>}k{/Control}");
+    const search = screen.getByRole("combobox", { name: /Search screens, leads/ });
+    expect(search).toHaveFocus();
+    expect(screen.getByRole("group", { name: "Go to" })).toBeInTheDocument();
+
+    await user.type(search, lead.business_name.slice(0, 8));
+    expect(within(screen.getByRole("group", { name: "Leads" })).getByText(lead.business_name)).toBeInTheDocument();
+    await user.keyboard("{Enter}");
+    expect(screen.queryByRole("dialog", { name: "Search the app" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pipeline", level: 1 })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Search/ }));
+    await user.type(screen.getByRole("combobox", { name: /Search screens, leads/ }), "templ");
+    await user.keyboard("{ArrowDown}{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Search the app" })).not.toBeInTheDocument();
+  });
+
   it("opens the AI assistant from a floating button on any screen and keeps it", async () => {
     const user = userEvent.setup();
     render(<App />);

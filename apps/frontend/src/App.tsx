@@ -10,6 +10,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   RefreshCw,
+  Search,
   Settings,
   ShieldCheck,
   Users,
@@ -52,6 +53,7 @@ import {
 } from "./api";
 import { AssistantLauncher } from "./components/AssistantLauncher";
 import { CampaignAssistantTab } from "./components/CampaignAssistantTab";
+import { CommandPalette, type PaletteItem } from "./components/CommandPalette";
 import { CatalogueWorkspace } from "./components/CatalogueWorkspace";
 import { CampaignWorkspace } from "./components/CampaignWorkspace";
 import { ConnectionBadge, type HealthState, NavigationItem } from "./components/DesignSystem";
@@ -399,6 +401,19 @@ function Workbench() {
   );
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Ctrl+K (Cmd+K on a Mac keyboard) opens search from anywhere, including inside fields.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent): void {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((current) => !current);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const [assistantNeedsSetup, setAssistantNeedsSetup] = useState(false);
   const [assistantRequest, setAssistantRequest] = useState<{
     context: AssistantContextSelection;
@@ -1536,6 +1551,68 @@ function Workbench() {
     ),
   } satisfies Record<WorkspaceSection, React.ReactNode>;
 
+  function paletteItems(): PaletteItem[] {
+    const screens: [WorkspaceSection, string][] = [
+      ["overview", "Today"],
+      ["campaigns", "Campaigns"],
+      ["leads", "All leads"],
+      ["shortlist", "Weekly shortlist"],
+      ["pipeline", "Pipeline"],
+      ["drafts", "Email drafts"],
+      ["catalogue", "Catalogue"],
+      ["templates", "Templates"],
+      ["settings", "Settings"],
+    ];
+    return [
+      ...screens.map(([section, label]) => ({
+        id: `go-${section}`,
+        group: "Go to",
+        label,
+        run: () => {
+          if (section === "campaigns") setCampaignLandingTask("campaigns");
+          setActiveSection(section);
+        },
+      })),
+      { id: "new-campaign", group: "Actions", label: "New campaign", run: actions.goToCreateCampaign },
+      { id: "plan-campaign", group: "Actions", label: "Plan a campaign with AI", run: actions.planCampaignWithAssistant },
+      {
+        id: "ask-ai",
+        group: "Actions",
+        label: "Ask AI",
+        hint: "Open the assistant",
+        run: () => setAssistantOpen(true),
+      },
+      { id: "review-leads", group: "Actions", label: "Leads needing review", run: actions.goToLeadsNeedingReview },
+      ...leads.map((lead) => ({
+        id: `lead-${lead.id}`,
+        group: "Leads",
+        label: lead.business_name,
+        hint: lead.location,
+        run: () => manageLead(lead.id),
+      })),
+      ...campaigns.map((campaign) => ({
+        id: `campaign-${campaign.id}`,
+        group: "Campaigns",
+        label: campaign.name,
+        hint: campaign.primary_location,
+        run: actions.goToCampaigns,
+      })),
+      ...products.map((product) => ({
+        id: `product-${product.id}`,
+        group: "Products",
+        label: product.name,
+        hint: product.category.split(">").pop()?.trim(),
+        run: actions.goToCatalogue,
+      })),
+      ...templates.map((template) => ({
+        id: `template-${template.id}`,
+        group: "Templates",
+        label: template.topic,
+        run: () => setActiveSection("templates"),
+      })),
+    ];
+  }
+
   return (
     <div className="application-frame">
       <a className="skip-link" href="#main-content">Skip to main content</a>
@@ -1549,6 +1626,16 @@ function Workbench() {
           <span>Workspace</span><strong>{SECTION_LABELS[activeSection]}</strong>
         </div>
         <div className="header-actions">
+          <button
+            className="header-search"
+            type="button"
+            aria-keyshortcuts="Control+K"
+            onClick={() => setPaletteOpen(true)}
+          >
+            <Search size={16} aria-hidden="true" />
+            <span>Search</span>
+            <kbd>Ctrl K</kbd>
+          </button>
           <button
             className="secondary-action"
             type="button"
@@ -1655,6 +1742,10 @@ function Workbench() {
           </WorkspaceActionsContext.Provider>
         </main>
       </div>
+
+      {paletteOpen ? (
+        <CommandPalette onClose={() => setPaletteOpen(false)} items={paletteItems()} />
+      ) : null}
 
       {/* Outside <main> so page layout rules and its busy state do not apply to it. */}
       <WorkspaceActionsContext.Provider value={actions}>
