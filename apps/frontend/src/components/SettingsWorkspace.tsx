@@ -1,19 +1,27 @@
 import {
   ArchiveRestore,
   AtSign,
+  Bot,
   Database,
   Download,
   ExternalLink,
   FileCheck2,
   HardDrive,
+  Info,
   KeyRound,
+  MailCheck,
+  MapPin,
+  PlugZap,
   Save,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
+  type LucideIcon,
 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import type {
+  AutomationCapabilities,
   BackupResult,
   Diagnostics,
   MetaConnection,
@@ -29,9 +37,28 @@ import {
   LoadingState,
   PageHeader,
   StatGrid,
-  TaskPanel,
-  TaskTabs,
+  StatusPill,
+  type StatusTone,
 } from "./DesignSystem";
+
+type SettingsSection = "general" | "outreach" | "ai" | "connections" | "data" | "about";
+
+const SECTIONS: { id: SettingsSection; label: string; icon: LucideIcon }[] = [
+  { id: "general", label: "General", icon: SlidersHorizontal },
+  { id: "outreach", label: "Outreach", icon: MailCheck },
+  { id: "ai", label: "AI and models", icon: Bot },
+  { id: "connections", label: "Connections", icon: PlugZap },
+  { id: "data", label: "Data and privacy", icon: Database },
+  { id: "about", label: "About", icon: Info },
+];
+
+interface ConnectionCard {
+  name: string;
+  icon: LucideIcon;
+  tone: StatusTone;
+  status: string;
+  detail: string;
+}
 
 interface SettingsWorkspaceProps {
   settings: WorkspaceSettings | null;
@@ -39,6 +66,7 @@ interface SettingsWorkspaceProps {
   metaConnection: MetaConnection | null;
   metaAuthorizationUrl: string | null;
   cloudPolishStatus: CloudPolishStatus | null;
+  capabilities?: AutomationCapabilities | null;
 }
 
 function formValue(form: FormData, name: string): string {
@@ -68,6 +96,7 @@ export function SettingsWorkspace({
   metaConnection,
   metaAuthorizationUrl,
   cloudPolishStatus,
+  capabilities = null,
 }: SettingsWorkspaceProps) {
   const {
     loading,
@@ -83,7 +112,40 @@ export function SettingsWorkspace({
     configureCloudPolish: onConfigureCloudPolish,
     removeCloudPolish: onRemoveCloudPolish,
   } = useWorkspaceActions();
-  const [activeTask, setActiveTask] = useRememberedState("settings:tab", "connections");
+  const [rememberedSection, setActiveTask] = useRememberedState<string>("settings:section", "general");
+  const activeTask: SettingsSection = SECTIONS.some((section) => section.id === rememberedSection)
+    ? (rememberedSection as SettingsSection)
+    : "general";
+
+  const connectionCards: ConnectionCard[] = [
+    {
+      name: "Instagram via Meta",
+      icon: AtSign,
+      ...(metaConnection?.connected
+        ? { tone: "success" as const, status: "Connected", detail: metaConnection.selected_account ? `@${metaConnection.selected_account.instagram_username}` : "Choose an account below" }
+        : metaConnection?.error_message || metaConnection?.status === "authorization_pending"
+          ? { tone: "warning" as const, status: "Needs attention", detail: metaConnection.error_message ?? "Waiting for you to finish in the browser" }
+          : metaConnection?.configured
+            ? { tone: "warning" as const, status: "Needs attention", detail: "Credentials saved; connect to finish" }
+            : { tone: "neutral" as const, status: "Not set up", detail: "Find and refresh Instagram leads" }),
+    },
+    {
+      name: "Google Places",
+      icon: MapPin,
+      ...(capabilities?.google_places_configured
+        ? { tone: "success" as const, status: "Connected", detail: `Up to ${capabilities.maximum_results_per_campaign} results per run` }
+        : { tone: "neutral" as const, status: "Not set up", detail: "Set ENS_GOOGLE_PLACES_API_KEY for the service" }),
+    },
+    {
+      name: "Cloud draft polish",
+      icon: KeyRound,
+      ...(cloudPolishStatus?.configured && cloudPolishStatus.enabled
+        ? { tone: "success" as const, status: "Connected", detail: "On · one draft at a time" }
+        : cloudPolishStatus?.configured
+          ? { tone: "neutral" as const, status: "Saved, off", detail: "Turn on under AI and models" }
+          : { tone: "neutral" as const, status: "Not set up", detail: "Optional; set up under AI and models" }),
+    },
+  ];
   const [backup, setBackup] = useState<BackupResult | null>(null);
   const [verification, setVerification] = useState<VerificationResult | null>(null);
 
@@ -95,7 +157,19 @@ export function SettingsWorkspace({
       follow_up_window_days: Number(formValue(form, "follow-up-window")),
       default_campaign_radius_miles: Number(formValue(form, "default-radius")),
       default_weekly_shortlist_size: Number(formValue(form, "default-shortlist")),
-      weekly_outreach_global_limit: Number(formValue(form, "weekly-outreach-limit")),
+    });
+  }
+
+  async function saveOutreachSettings(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await onSave({ weekly_outreach_global_limit: Number(formValue(form, "weekly-outreach-limit")) });
+  }
+
+  async function saveAiSettings(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await onSave({
       local_campaign_assistant_enabled: form.has("local-campaign-assistant-enabled"),
       protect_design_software_resources: form.has("protect-design-software-resources"),
       local_ai_model: formValue(form, "local-ai-model"),
@@ -154,28 +228,47 @@ export function SettingsWorkspace({
         description="Defaults, connections, exports and app health."
       />
 
-      <TaskTabs
-        id="settings-tasks"
-        label="Settings tasks"
-        activeId={activeTask}
-        onChange={setActiveTask}
-        items={[
-          { id: "connections", label: "Connections" },
-          { id: "defaults", label: "Defaults" },
-          { id: "data", label: "Data & backup" },
-          { id: "diagnostics", label: "Diagnostics" },
-        ]}
-      />
+      <div className="settings-layout">
+      <nav className="settings-nav" aria-label="Settings sections">
+        {SECTIONS.map((section) => {
+          const Icon = section.icon;
+          return (
+            <button
+              key={section.id}
+              type="button"
+              aria-current={activeTask === section.id ? "page" : undefined}
+              onClick={() => setActiveTask(section.id)}
+            >
+              <Icon size={17} aria-hidden="true" /> {section.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      <section className="workspace-section" aria-label="Settings">
+      <section className="workspace-section settings-content" aria-label={SECTIONS.find((section) => section.id === activeTask)?.label ?? "Settings"}>
 
         {loading || !settings ? (
           <div className="records-panel"><LoadingState label="Loading settings" /></div>
         ) : (
-          <TaskPanel id="settings-tasks" tabId={activeTask}>
+          <div key={activeTask} className="page-enter">
           <div className={`settings-grid${activeTask === "data" ? "" : " settings-grid--single"}`}>
             {activeTask === "connections" ? (
             <>
+            <ul className="connection-cards" aria-label="Connection status">
+              {connectionCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <li key={card.name} className="connection-card">
+                    <span className="connection-card__icon" aria-hidden="true"><Icon size={18} /></span>
+                    <div>
+                      <strong>{card.name}</strong>
+                      <small>{card.detail}</small>
+                    </div>
+                    <StatusPill tone={card.tone}>{card.status}</StatusPill>
+                  </li>
+                );
+              })}
+            </ul>
             <section className="form-panel settings-grid__wide" aria-labelledby="meta-settings-heading">
               <div className="subsection-heading">
                 <div>
@@ -350,43 +443,13 @@ export function SettingsWorkspace({
                 </div>
               )}
             </section>
-            <section className="form-panel settings-grid__wide" aria-labelledby="cloud-polish-heading">
-              <div className="subsection-heading">
-                <div><h3 id="cloud-polish-heading">Cloud draft polish</h3><p>Optional one draft at a time rewrite through Anthropic.</p></div>
-                <KeyRound size={20} aria-hidden="true" />
-              </div>
-              <p>This sends the current draft and that lead’s details to Anthropic. Each polish costs a fraction of a penny. The key is stored in the protected credential vault and is never shown again.</p>
-              <p>{cloudPolishStatus?.configured ? "An API key is saved." : "No API key is saved."}</p>
-              <form className="form-grid" onSubmit={(event) => void configureCloudPolish(event)}>
-                <label>Anthropic API key (leave blank to keep the saved key)
-                  <input type="password" name="cloud-api-key" autoComplete="new-password" />
-                </label>
-                <label>Cloud model
-                  <select name="cloud-polish-model" defaultValue={settings.cloud_polish_model || "claude-sonnet-5-5"}>
-                    <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (recommended)</option>
-                    <option value="claude-haiku-5-5">Claude Haiku 5.5 (lower cost)</option>
-                    {settings.cloud_polish_model === "claude-sonnet-5" ? (
-                      <option value="claude-sonnet-5">Claude Sonnet 5 (previous, still saved)</option>
-                    ) : null}
-                    {settings.cloud_polish_model === "claude-haiku-4-5" ? (
-                      <option value="claude-haiku-4-5">Claude Haiku 4.5 (previous, still saved)</option>
-                    ) : null}
-                  </select>
-                </label>
-                <label className="checkbox-row"><input type="checkbox" name="cloud-polish-enabled" defaultChecked={settings.cloud_polish_enabled} /> Enable cloud polish</label>
-                <div className="form-actions">
-                  <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save cloud polish settings</button>
-                  {cloudPolishStatus?.configured ? <button className="tertiary-action" type="button" disabled={busy} onClick={() => void onRemoveCloudPolish()}>Remove saved key</button> : null}
-                </div>
-              </form>
-            </section>
             </>
             ) : null}
 
-            {activeTask === "defaults" ? (
+            {activeTask === "general" ? (
             <section className="form-panel">
               <div className="subsection-heading">
-                <div><h3>Operating defaults</h3><p>Applied to new work and dashboard windows.</p></div>
+                <div><h3>General</h3><p>Defaults for new campaigns, and how far ahead Today looks.</p></div>
                 <Settings size={19} aria-hidden="true" />
               </div>
               <form className="form-grid" onSubmit={(event) => void saveSettings(event)}>
@@ -406,6 +469,18 @@ export function SettingsWorkspace({
                     <input name="default-shortlist" type="number" min="1" max="50" defaultValue={settings.default_weekly_shortlist_size} required />
                   </label>
                 </div>
+                <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save settings</button>
+              </form>
+            </section>
+            ) : null}
+
+            {activeTask === "outreach" ? (
+            <section className="form-panel">
+              <div className="subsection-heading">
+                <div><h3>Outreach</h3><p>How much weekly automation may prepare. Every email still waits for your approval and is sent by you from Zoho.</p></div>
+                <MailCheck size={19} aria-hidden="true" />
+              </div>
+              <form className="form-grid" onSubmit={(event) => void saveOutreachSettings(event)}>
                 <label>
                   <span className="field-label-with-help">
                     Maximum automatic drafts per week
@@ -418,6 +493,19 @@ export function SettingsWorkspace({
                   <input name="weekly-outreach-limit" type="number" min="1" max="100" defaultValue={settings.weekly_outreach_global_limit} required />
                   <small className="field-hint">Start with 2–3 drafts while testing, then increase it when the review workload feels comfortable.</small>
                 </label>
+                <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save outreach settings</button>
+              </form>
+            </section>
+            ) : null}
+
+            {activeTask === "ai" ? (
+            <>
+            <section className="form-panel">
+              <div className="subsection-heading">
+                <div><h3>Local AI</h3><p>The assistant runs on this computer through Ollama.</p></div>
+                <Bot size={19} aria-hidden="true" />
+              </div>
+              <form className="form-grid" onSubmit={(event) => void saveAiSettings(event)}>
                 <label className="choice-row">
                   <input
                     name="local-campaign-assistant-enabled"
@@ -456,9 +544,40 @@ export function SettingsWorkspace({
                     slowly. The small model is always used while LightBurn or xTool is running.
                   </small>
                 </label>
-                <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save settings</button>
+                <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save AI settings</button>
               </form>
             </section>
+            <section className="form-panel settings-grid__wide" aria-labelledby="cloud-polish-heading">
+              <div className="subsection-heading">
+                <div><h3 id="cloud-polish-heading">Cloud draft polish</h3><p>Optional one draft at a time rewrite through Anthropic.</p></div>
+                <KeyRound size={20} aria-hidden="true" />
+              </div>
+              <p>This sends the current draft and that lead’s details to Anthropic. Each polish costs a fraction of a penny. The key is stored in the protected credential vault and is never shown again.</p>
+              <p>{cloudPolishStatus?.configured ? "An API key is saved." : "No API key is saved."}</p>
+              <form className="form-grid" onSubmit={(event) => void configureCloudPolish(event)}>
+                <label>Anthropic API key (leave blank to keep the saved key)
+                  <input type="password" name="cloud-api-key" autoComplete="new-password" />
+                </label>
+                <label>Cloud model
+                  <select name="cloud-polish-model" defaultValue={settings.cloud_polish_model || "claude-sonnet-5-5"}>
+                    <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (recommended)</option>
+                    <option value="claude-haiku-5-5">Claude Haiku 5.5 (lower cost)</option>
+                    {settings.cloud_polish_model === "claude-sonnet-5" ? (
+                      <option value="claude-sonnet-5">Claude Sonnet 5 (previous, still saved)</option>
+                    ) : null}
+                    {settings.cloud_polish_model === "claude-haiku-4-5" ? (
+                      <option value="claude-haiku-4-5">Claude Haiku 4.5 (previous, still saved)</option>
+                    ) : null}
+                  </select>
+                </label>
+                <label className="checkbox-row"><input type="checkbox" name="cloud-polish-enabled" defaultChecked={settings.cloud_polish_enabled} /> Enable cloud polish</label>
+                <div className="form-actions">
+                  <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save cloud polish settings</button>
+                  {cloudPolishStatus?.configured ? <button className="tertiary-action" type="button" disabled={busy} onClick={() => void onRemoveCloudPolish()}>Remove saved key</button> : null}
+                </div>
+              </form>
+            </section>
+            </>
             ) : null}
 
             {activeTask === "data" ? (
@@ -511,7 +630,7 @@ export function SettingsWorkspace({
             </section>
             ) : null}
 
-            {activeTask === "diagnostics" ? (
+            {activeTask === "about" ? (
             <>
             <section className="records-panel">
               <div className="subsection-heading">
@@ -523,6 +642,7 @@ export function SettingsWorkspace({
                 <li><ShieldCheck size={16} aria-hidden="true" />Nothing is sent automatically. You approve every email and send it yourself from Zoho.</li>
                 <li><ShieldCheck size={16} aria-hidden="true" />A business you suppress is never contacted or added again, even if a search finds it.</li>
                 <li><ShieldCheck size={16} aria-hidden="true" />Discovery only uses the connections you set up under Connections.</li>
+                <li><ShieldCheck size={16} aria-hidden="true" />Exports and backups are written only where you choose, under Data and privacy.</li>
                 <li><ShieldCheck size={16} aria-hidden="true" />The AI assistant runs on this computer. Cloud polish is off unless you turn it on, and then sends one draft at a time.</li>
               </ul>
             </section>
@@ -555,9 +675,10 @@ export function SettingsWorkspace({
             </>
             ) : null}
           </div>
-          </TaskPanel>
+          </div>
         )}
       </section>
+      </div>
     </>
   );
 }

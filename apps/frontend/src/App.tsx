@@ -1531,6 +1531,7 @@ function Workbench() {
         metaConnection={metaConnection}
         cloudPolishStatus={cloudPolishStatus}
         metaAuthorizationUrl={metaAuthorizationUrl}
+        capabilities={automationCapabilities}
       />
     ),
   } satisfies Record<WorkspaceSection, React.ReactNode>;

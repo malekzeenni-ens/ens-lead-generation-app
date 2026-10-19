@@ -670,3 +670,12 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - Accept and Skip are the two buttons on each card (the existing "approved" and "dismissed" actions); Defer and Replace moved into its More menu. The builder form is a collapsible section, open only when there is no shortlist yet.
 - Not done: an undo toast. The backend has no action that reopens a decided shortlist entry, so there is nothing to undo with; adding one is a backend change for later.
 - Verification: the shortlist test now checks the reason chips, Accept, and Defer through the More menu; 139 frontend tests pass; TypeScript and ESLint pass.
+
+### D7 - Catalogue and Settings
+
+- Settings has a section list beside the content instead of tabs: General (campaign defaults and the Today window), Outreach (the weekly draft limit, with a reminder that emails are approved and sent by the operator), AI and models (local assistant, model, LightBurn/xTool protection, and cloud polish), Connections, Data and privacy (export and backup) and About (how the app protects you, version, diagnostics). The section is remembered for the session; General is the default.
+- The old single defaults form is now three small forms. The settings endpoint already accepts partial updates, so each saves only its own fields.
+- Connections opens with a status card per connection: Instagram via Meta, Google Places (now passed the automation capabilities) and Cloud draft polish, each "Connected", "Needs attention" (with the reason) or "Not set up".
+- Catalogue: products missing sales knowledge, or whose listing changed since, carry a badge. A Cards / By category switch (remembered) adds a view grouped into collapsible sections by the last part of the Shopify category ("Keychains", "Card Cases"), each counting the products that need knowledge. Editing a product moved from an inline disclosure to a wide drawer in both views and closes on a successful save.
+- Not done: grouping by the knowledge pack's own eight product groups, which the product list does not expose yet.
+- Verification: 1 new test (badge, grouped view with its knowledge count, edit in the drawer); the settings and Meta tests use the section list; 140 frontend tests pass; TypeScript and ESLint pass.

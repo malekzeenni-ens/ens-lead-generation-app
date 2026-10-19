@@ -5176,6 +5176,151 @@ kbd {
   align-items: center;
 }
 
+/* Settings (UX redesign D7): a section list beside the content, and connection status cards. */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: var(--ens-space-5);
+  align-items: start;
+}
+
+.settings-nav {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.settings-nav button {
+  display: flex;
+  min-height: var(--ens-control-height-md);
+  align-items: center;
+  gap: var(--ens-space-3);
+  padding: 0 var(--ens-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--ens-radius-md);
+  background: transparent;
+  color: var(--ens-text-secondary);
+  cursor: pointer;
+  font-size: var(--ens-type-sm);
+  font-weight: 600;
+  text-align: left;
+}
+
+.settings-nav button:hover {
+  background: var(--ens-surface-hover);
+  color: var(--ens-text-primary);
+}
+
+.settings-nav button[aria-current="page"] {
+  border-color: var(--ens-border-subtle);
+  background: var(--ens-surface-selected);
+  color: var(--ens-text-primary);
+}
+
+.settings-nav button[aria-current="page"] svg {
+  color: var(--ens-text-accent);
+}
+
+.connection-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--ens-space-3);
+  margin: 0 0 var(--ens-space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.connection-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: var(--ens-space-2) var(--ens-space-3);
+  padding: var(--ens-space-4);
+  border: 1px solid var(--ens-border-subtle);
+  border-radius: var(--ens-radius-lg);
+  background: var(--ens-surface-1);
+}
+
+.connection-card__icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: var(--ens-radius-md);
+  background: var(--ens-surface-2);
+  color: var(--ens-text-accent);
+}
+
+.connection-card > div {
+  display: grid;
+  gap: 2px;
+}
+
+.connection-card small {
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+}
+
+.connection-card .status-pill {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.catalogue-groups {
+  display: grid;
+}
+
+.catalogue-rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.catalogue-rows li {
+  display: flex;
+  align-items: center;
+  gap: var(--ens-space-3);
+  padding: var(--ens-space-2) 0;
+  border-top: 1px solid var(--ens-border-subtle);
+}
+
+.catalogue-rows__name {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.catalogue-rows__name strong {
+  overflow: hidden;
+  font-size: var(--ens-type-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalogue-rows__name small {
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+}
+
+.filter-bar .view-switch {
+  flex: 0 0 auto;
+  justify-self: start;
+}
+
+@media (max-width: 900px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-nav {
+    position: static;
+    display: flex;
+    overflow-x: auto;
+  }
+}
+
 /* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */
 .section-heading__actions {
   display: flex;

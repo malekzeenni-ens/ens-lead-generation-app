@@ -2320,7 +2320,7 @@ describe("local operating workbench", () => {
     render(<App />);
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: "Settings" }));
-    await user.click(screen.getByRole("tab", { name: "Defaults" }));
+    await user.click(screen.getByRole("button", { name: "General" }));
     const retention = screen.getByRole("spinbutton", { name: "Retention review interval days" });
     await user.clear(retention);
     await user.type(retention, "730");
@@ -2338,6 +2338,8 @@ describe("local operating workbench", () => {
     render(<App />);
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: "Settings" }));
+    await user.click(screen.getByRole("button", { name: "Connections" }));
+    expect(within(screen.getByRole("list", { name: "Connection status" })).getByText("Instagram via Meta")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox", { name: "Meta App ID" }), "1596694465496867");
     await user.type(screen.getByLabelText("Meta App Secret"), "a-secure-meta-app-secret");
     await user.click(screen.getByRole("button", { name: "Save encrypted credentials" }));
@@ -2386,6 +2388,7 @@ describe("local operating workbench", () => {
     render(<App />);
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: "Settings" }));
+    await user.click(screen.getByRole("button", { name: "Connections" }));
     await user.click(screen.getByRole("button", { name: "Connect Instagram with Meta" }));
 
     await waitFor(() =>
@@ -2394,7 +2397,7 @@ describe("local operating workbench", () => {
       ),
     );
     // The connection shows in Settings now that the footer status bar is gone (UX B1).
-    expect(await screen.findByText("@etchnshine")).toBeInTheDocument();
+    expect(await within(screen.getByRole("list", { name: "Connection status" })).findByText("@etchnshine")).toBeInTheDocument();
     expect(screen.queryByLabelText("Temporary Meta authorization address"))
       .not.toBeInTheDocument();
     delete window.__TAURI_INTERNALS__;
@@ -2531,10 +2534,10 @@ describe("local operating workbench", () => {
     render(<App />);
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Settings/ }));
-    await user.click(screen.getByRole("tab", { name: "Defaults" }));
+    await user.click(screen.getByRole("button", { name: "AI and models" }));
 
     await user.selectOptions(screen.getByLabelText(/Local AI model/), "llama3.1:8b");
-    fireEvent.submit(screen.getByRole("button", { name: /Save settings/ }).closest("form")!);
+    fireEvent.submit(screen.getByRole("button", { name: /Save AI settings/ }).closest("form")!);
 
     await waitFor(() =>
       expect(api.updateSettings).toHaveBeenCalledWith(
@@ -2569,6 +2572,28 @@ describe("local operating workbench", () => {
     await user.type(screen.getByRole("textbox", { name: "Search catalogue" }), "Product 01");
     expect(await screen.findByRole("heading", { name: "Catalogue Product 01" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "products pagination" })).not.toBeInTheDocument();
+  });
+
+  it("groups the catalogue by category, flags missing sales knowledge and edits in a drawer", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.products).mockResolvedValue([
+      { ...product, id: "known-product", name: "Known Topper", enrichment_source: "seed" },
+      { ...product, id: "bare-product", name: "Bare Topper", enrichment_source: "none" },
+    ]);
+    vi.mocked(api.updateProduct).mockResolvedValue({ ...product, id: "bare-product", name: "Bare Topper" });
+    render(<App />);
+    await screen.findByText("Service connected");
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    expect(await screen.findByText("Needs sales knowledge")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /By category/ }));
+    const group = screen.getByRole("button", { name: new RegExp(`^${product.category}`) });
+    expect(group).toHaveTextContent("1 need knowledge");
+    await user.click(group);
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[1]!);
+    const drawer = screen.getByRole("dialog", { name: "Edit Bare Topper" });
+    await user.click(within(drawer).getByRole("button", { name: /Save product/ }));
+    await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith("bare-product", expect.anything()));
   });
 
   it("remembers a list's page, search and rows per page when switching screens", async () => {

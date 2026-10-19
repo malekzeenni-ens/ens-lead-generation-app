@@ -1,7 +1,10 @@
 import {
   BookOpen,
+  Edit3,
   FileSpreadsheet,
+  LayoutGrid,
   Layers,
+  ListTree,
   PackagePlus,
   Save,
   Search,
@@ -29,15 +32,25 @@ import type {
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import { useRememberedState } from "../remembered";
 import {
+  Collapsible,
   DangerConfirm,
+  Drawer,
   EmptyState,
   LoadingState,
   PageHeader,
   Pagination,
   SectionHeading,
+  StatusPill,
   TaskPanel,
   TaskTabs,
 } from "./DesignSystem";
+
+/** Missing or outdated sales knowledge, which the assistant and emails rely on. */
+function knowledgeGap(product: Product): string | null {
+  if (!["manual", "seed", "ai"].includes(product.enrichment_source)) return "Needs sales knowledge";
+  if (product.stale_enrichment) return "Listing changed";
+  return null;
+}
 
 interface CatalogueWorkspaceProps {
   products: Product[];
@@ -190,6 +203,8 @@ export function CatalogueWorkspace({
   } = useWorkspaceActions();
   const [activeTask, setActiveTask] = useRememberedState("catalogue:tab", "products");
   const [query, setQuery] = useRememberedState("catalogue:query", "");
+  const [catalogueView, setCatalogueView] = useRememberedState<"cards" | "groups">("catalogue:view", "cards");
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ShopifyImportResult | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -225,6 +240,16 @@ export function CatalogueWorkspace({
         .includes(search),
     );
   }, [products, query]);
+  const editingProduct = products.find((product) => product.id === editingProductId) ?? null;
+  const groups = useMemo(() => {
+    const byCategory = new Map<string, Product[]>();
+    for (const product of filtered) {
+      // Shopify categories are taxonomy paths; the last part names the kind of product.
+      const key = product.category.split(">").pop()?.trim() || "Uncategorised";
+      byCategory.set(key, [...(byCategory.get(key) ?? []), product]);
+    }
+    return [...byCategory.entries()].sort(([left], [right]) => left.localeCompare(right));
+  }, [filtered]);
   const productPages = usePagination(filtered, 10, query, "catalogue-products");
   const issuePages = usePagination(
     importResult?.issues ?? [],
@@ -910,6 +935,14 @@ export function CatalogueWorkspace({
               placeholder="Search products or categories"
             />
           </label>
+          <div className="view-switch" role="group" aria-label="Catalogue view">
+            <button type="button" aria-pressed={catalogueView === "cards"} onClick={() => setCatalogueView("cards")}>
+              <LayoutGrid size={16} aria-hidden="true" /> Cards
+            </button>
+            <button type="button" aria-pressed={catalogueView === "groups"} onClick={() => setCatalogueView("groups")}>
+              <ListTree size={16} aria-hidden="true" /> By category
+            </button>
+          </div>
         </div>
         {loading ? (
           <LoadingState label="Loading product catalogue" />
@@ -918,6 +951,37 @@ export function CatalogueWorkspace({
             title="No catalogue products"
             description="Upload a Shopify product export or add the first product manually."
           />
+        ) : catalogueView === "groups" ? (
+          <div className="catalogue-groups">
+            {groups.map(([category, items]) => {
+              const gaps = items.filter((product) => knowledgeGap(product)).length;
+              return (
+                <Collapsible
+                  key={category}
+                  rememberKey={`catalogue-group-${category}`}
+                  title={category}
+                  summary={`${items.length} ${items.length === 1 ? "product" : "products"}${gaps ? ` · ${gaps} need knowledge` : ""}`}
+                  defaultOpen={false}
+                >
+                  <ul className="catalogue-rows">
+                    {items.map((product) => (
+                      <li key={product.id}>
+                        <span className="catalogue-rows__name">
+                          <strong>{product.name}</strong>
+                          <small>{product.variant_count} {product.variant_count === 1 ? "variant" : "variants"}</small>
+                        </span>
+                        {knowledgeGap(product) ? <StatusPill tone="warning">{knowledgeGap(product)}</StatusPill> : <StatusPill tone="success">Ready</StatusPill>}
+                        {product.active ? null : <StatusPill>Inactive</StatusPill>}
+                        <button type="button" className="tertiary-action" onClick={() => setEditingProductId(product.id)}>
+                          <Edit3 size={15} aria-hidden="true" /> Edit
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </Collapsible>
+              );
+            })}
+          </div>
         ) : (
           <>
             <div className="catalogue-grid">
@@ -932,6 +996,7 @@ export function CatalogueWorkspace({
                     {product.active ? "Active" : "Inactive"}
                   </span>
                 </div>
+                {knowledgeGap(product) ? <StatusPill tone="warning">{knowledgeGap(product)}</StatusPill> : null}
                 <p>{product.description || "No description supplied."}</p>
                 <dl className="record-details">
                   <div><dt>Pricing</dt><dd>{product.pricing_guidance ?? "Not set"}</dd></div>
@@ -955,13 +1020,42 @@ export function CatalogueWorkspace({
                     <div><dt>Business buyers</dt><dd>{product.bulk_ready ? "Suits bulk runs" : "Suits business orders"}</dd></div>
                   ) : null}
                 </dl>
-                <details>
-                  <summary>Edit product</summary>
+                <button type="button" className="tertiary-action" onClick={() => setEditingProductId(product.id)}>
+                  <Edit3 size={15} aria-hidden="true" /> Edit product
+                </button>
+              </article>
+            ))}
+            </div>
+            <Pagination
+              page={productPages.page}
+              pageCount={productPages.pageCount}
+              pageSize={productPages.pageSize}
+              totalItems={productPages.totalItems}
+              itemLabel="products"
+              onPageChange={productPages.setPage}
+              onPageSizeChange={productPages.setPageSize}
+            />
+          </>
+        )}
+      </section>
+      <Drawer
+        open={editingProduct !== null}
+        wide
+        title={editingProduct ? `Edit ${editingProduct.name}` : "Edit product"}
+        description="Edited wording is yours: no import or refresh overwrites it."
+        onClose={() => setEditingProductId(null)}
+      >
+        {editingProduct
+          ? (() => {
+              const product = editingProduct;
+              return (
                   <form
                     className="stacked-form compact-form"
                     onSubmit={(event) => {
                       event.preventDefault();
-                      void onUpdate(product.id, productFromForm(new FormData(event.currentTarget)));
+                      void onUpdate(product.id, productFromForm(new FormData(event.currentTarget))).then((saved) => {
+                        if (saved) setEditingProductId(null);
+                      });
                     }}
                   >
                     <label>Name<input name="name" required defaultValue={product.name} /></label>
@@ -984,22 +1078,10 @@ export function CatalogueWorkspace({
                       <Save size={16} aria-hidden="true" /> Save product
                     </button>
                   </form>
-                </details>
-              </article>
-            ))}
-            </div>
-            <Pagination
-              page={productPages.page}
-              pageCount={productPages.pageCount}
-              pageSize={productPages.pageSize}
-              totalItems={productPages.totalItems}
-              itemLabel="products"
-              onPageChange={productPages.setPage}
-              onPageSizeChange={productPages.setPageSize}
-            />
-          </>
-        )}
-      </section>
+              );
+            })()
+          : null}
+      </Drawer>
       </TaskPanel>
       ) : null}
     </>
