@@ -5005,6 +5005,60 @@ kbd {
   outline-offset: 2px;
 }
 
+/* Campaigns (UX redesign D5): status groups, a "More" menu and editing in a drawer. */
+.records-panel > .collapsible {
+  border: 0;
+  border-top: 1px solid var(--ens-border-subtle);
+  border-radius: 0;
+  background: none;
+}
+
+.records-panel > .collapsible + .collapsible {
+  margin-top: 0;
+}
+
+.campaign-group .record-list {
+  margin-top: var(--ens-space-2);
+}
+
+.more-menu {
+  position: relative;
+}
+
+.more-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.more-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.more-menu__items {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  right: 0;
+  display: grid;
+  min-width: 200px;
+  gap: 2px;
+  padding: var(--ens-space-2);
+  border: 1px solid var(--ens-border-default);
+  border-radius: var(--ens-radius-md);
+  background: var(--ens-surface-1);
+  box-shadow: var(--ens-shadow-raised);
+  animation: ens-reveal var(--ens-motion-fast) var(--ens-ease-out);
+}
+
+.more-menu__items > button {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.campaign-edit-form {
+  max-width: none;
+}
+
 /* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */
 .section-heading__actions {
   display: flex;

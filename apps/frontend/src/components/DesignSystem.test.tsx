@@ -4,7 +4,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { usePagination } from "../pagination";
-import { Collapsible, Drawer, Pagination, StatusPill, Toolbar } from "./DesignSystem";
+import { Collapsible, Drawer, MoreMenu, Pagination, StatusPill, Toolbar } from "./DesignSystem";
 
 describe("Collapsible", () => {
   it("expands, collapses, shows a summary while closed and remembers its state", async () => {
@@ -146,5 +146,28 @@ describe("StatusPill and Toolbar", () => {
     await user.click(screen.getByRole("button", { name: "Clear all" }));
     expect(clearAll).toHaveBeenCalled();
     expect(screen.getByText("Showing 1–10 of 42")).toBeInTheDocument();
+  });
+});
+
+describe("MoreMenu", () => {
+  it("opens, runs an action and closes, and closes on Escape", async () => {
+    const user = userEvent.setup();
+    const archive = vi.fn();
+    const { container } = render(
+      <MoreMenu label="More actions for Luton">
+        <button type="button" onClick={archive}>Archive</button>
+      </MoreMenu>,
+    );
+    const details = container.querySelector("details");
+    await user.click(screen.getByLabelText("More actions for Luton"));
+    expect(details).toHaveAttribute("open");
+    await user.click(screen.getByRole("button", { name: "Archive" }));
+    expect(archive).toHaveBeenCalled();
+    expect(details).not.toHaveAttribute("open");
+
+    await user.click(screen.getByLabelText("More actions for Luton"));
+    expect(details).toHaveAttribute("open");
+    await user.keyboard("{Escape}");
+    expect(details).not.toHaveAttribute("open");
   });
 });

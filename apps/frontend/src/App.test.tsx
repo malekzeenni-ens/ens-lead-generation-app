@@ -1776,18 +1776,19 @@ describe("local operating workbench", () => {
     const campaignRecord = screen.getByRole("heading", { name: campaign.name }).closest("article");
     if (!campaignRecord) throw new Error("Campaign record is missing.");
     await user.click(within(campaignRecord).getByRole("button", { name: "Edit" }));
+    const editor = screen.getByRole("dialog", { name: `Edit ${campaign.name}` });
 
-    const minimumScore = within(campaignRecord).getByRole("spinbutton", {
+    const minimumScore = within(editor).getByRole("spinbutton", {
       name: "Minimum shortlist score",
     });
     await user.clear(minimumScore);
     await user.type(minimumScore, "70");
-    const productCategories = within(campaignRecord).getByRole("textbox", {
+    const productCategories = within(editor).getByRole("textbox", {
       name: "Product categories",
     });
     await user.clear(productCategories);
     await user.type(productCategories, "Cake toppers, Wedding signage, cake toppers");
-    await user.click(within(campaignRecord).getByRole("button", { name: "Save campaign" }));
+    await user.click(within(editor).getByRole("button", { name: "Save campaign" }));
 
     await waitFor(() =>
       expect(api.updateCampaign).toHaveBeenCalledWith(
@@ -1813,23 +1814,24 @@ describe("local operating workbench", () => {
       if (!campaignRecord) throw new Error("Campaign record is missing.");
       await user.click(within(campaignRecord).getByRole("button", { name: "Edit" }));
 
-      expect(within(campaignRecord).getByText("Before you enable weekly outreach")).toBeInTheDocument();
+      const editor = screen.getByRole("dialog", { name: `Edit ${campaign.name}` });
+      expect(within(editor).getByText("Before you enable weekly outreach")).toBeInTheDocument();
       await user.selectOptions(
-        within(campaignRecord).getByRole("combobox", { name: "Weekly email template" }),
+        within(editor).getByRole("combobox", { name: "Weekly email template" }),
         template.id,
       );
       await user.click(
-        within(campaignRecord).getByRole("checkbox", {
+        within(editor).getByRole("checkbox", {
           name: /Prepare outreach automatically each week/,
         }),
       );
 
       confirm.mockReturnValueOnce(false);
-      await user.click(within(campaignRecord).getByRole("button", { name: "Save campaign" }));
+      await user.click(within(editor).getByRole("button", { name: "Save campaign" }));
       expect(api.updateCampaign).not.toHaveBeenCalled();
 
       confirm.mockReturnValueOnce(true);
-      await user.click(within(campaignRecord).getByRole("button", { name: "Save campaign" }));
+      await user.click(within(editor).getByRole("button", { name: "Save campaign" }));
       await waitFor(() =>
         expect(api.updateCampaign).toHaveBeenCalledWith(
           campaign.id,
@@ -1901,7 +1903,7 @@ describe("local operating workbench", () => {
       await user.click(screen.getByRole("link", { name: /Campaigns/ }));
 
       expect(screen.queryByRole("heading", { name: archivedCampaign.name })).not.toBeInTheDocument();
-      await user.click(screen.getByRole("button", { name: "Show archived (1)" }));
+      await user.click(screen.getByRole("button", { name: /^Archived/ }));
       const archivedRecord = screen
         .getByRole("heading", { name: archivedCampaign.name })
         .closest("article");

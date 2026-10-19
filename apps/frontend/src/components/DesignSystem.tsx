@@ -6,6 +6,7 @@ import {
   Inbox,
   Info,
   LoaderCircle,
+  MoreHorizontal,
   Trash2,
   X,
   type LucideIcon,
@@ -751,5 +752,49 @@ export function SkeletonRows({ rows = 5, label }: SkeletonRowsProps) {
         </div>
       ))}
     </div>
+  );
+}
+
+interface MoreMenuProps {
+  /** Accessible name of the trigger, e.g. "More actions for Luton Bakeries". */
+  label: string;
+  children: ReactNode;
+}
+
+/** Secondary actions behind one button. Closes on Escape, on a click outside, and after an action. */
+export function MoreMenu({ label, children }: MoreMenuProps) {
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function close(event: Event): void {
+      if (event instanceof KeyboardEvent ? event.key === "Escape" : !menuRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        if (event instanceof KeyboardEvent) menuRef.current?.querySelector("summary")?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
+  return (
+    <details
+      ref={menuRef}
+      className="more-menu"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="tertiary-action" aria-label={label}>
+        <MoreHorizontal size={16} aria-hidden="true" /> More
+      </summary>
+      <div className="more-menu__items" onClick={() => setOpen(false)}>
+        {children}
+      </div>
+    </details>
   );
 }

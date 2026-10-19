@@ -647,3 +647,11 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - The review tab already had the queue beside the editor; it now shows progress ("2 of 12 reviewed" with a bar) and keyboard shortcuts while the queue has focus: J or Down for the next draft, K or Up for the previous, A to approve the draft on screen, E to jump to its subject, ? to show or hide the list. A "Shortcuts" button shows the same list.
 - Shortcuts never fire while typing (text fields, text areas, selects) or with Ctrl, Alt or Cmd held. A uses the same approval call as "Approve selected" and asks first, with the same "Nothing will be sent automatically" wording; it does nothing for a draft that is not awaiting review.
 - Verification: 1 new test (J/K move, ? shows help, E focuses the subject, typing "a" there does nothing, A confirms then approves); 137 frontend tests pass; TypeScript and ESLint pass.
+
+### D5 (part 1) - Campaign groups, a "More" menu and editing in a drawer
+
+- Campaigns are grouped into collapsible Active, Paused and Archived sections, each with its count and its own pages (remembered per group). Archived starts closed and replaces the "Show archived" toggle; search covers all three.
+- Each card keeps its run buttons, Ask AI, Edit and Pause/Resume in view; Archive, Duplicate and Delete moved into a shared `MoreMenu`, which closes on Escape, on a click outside and after an action. Every confirmation is unchanged.
+- Edit opens the full campaign form in a wide drawer instead of expanding inside the card, with the same validation, weekly-outreach confirmation and save.
+- Not done here: "last run" and "this week's leads" on each card need per-campaign figures the screen does not load yet.
+- Verification: 1 new component test (More menu); the edit, weekly-enable and archive tests now use the drawer and the Archived section; 138 frontend tests pass; TypeScript and ESLint pass.

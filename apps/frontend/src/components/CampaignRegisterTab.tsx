@@ -24,9 +24,12 @@ import type {
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import { formList, formValue } from "./campaignShared";
 import {
+  Collapsible,
+  Drawer,
   EmptyState,
   GuidanceNote,
   LoadingState,
+  MoreMenu,
   Pagination,
 } from "./DesignSystem";
 import type { CampaignUpdate } from "../api";
@@ -61,24 +64,259 @@ export function CampaignRegisterTab({
   const [query, setQuery] = useRememberedState("campaigns:query", "");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
-  const [showArchived, setShowArchived] = useRememberedState("campaigns:archived", false);
-  const archivedCount = campaigns.filter((campaign) => campaign.status === "inactive").length;
-  const currentCampaignCount = campaigns.length - archivedCount;
   const filteredCampaigns = useMemo(() => {
     const search = query.toLocaleLowerCase();
-    return campaigns.filter(
-      (campaign) =>
-        (showArchived || campaign.status !== "inactive") &&
-        [campaign.name, campaign.segment, campaign.primary_location].some((value) =>
-          value.toLocaleLowerCase().includes(search),
-        ),
+    return campaigns.filter((campaign) =>
+      [campaign.name, campaign.segment, campaign.primary_location].some((value) =>
+        value.toLocaleLowerCase().includes(search),
+      ),
     );
-  }, [campaigns, query, showArchived]);
-  const campaignPages = usePagination(filteredCampaigns, 6, `${query}:${showArchived}`, "campaigns");
+  }, [campaigns, query]);
+  const activePages = usePagination(
+    filteredCampaigns.filter((campaign) => campaign.status === "active"),
+    6,
+    query,
+    "campaigns-active",
+  );
+  const pausedPages = usePagination(
+    filteredCampaigns.filter((campaign) => campaign.status === "paused"),
+    6,
+    query,
+    "campaigns-paused",
+  );
+  const archivedPages = usePagination(
+    filteredCampaigns.filter((campaign) => campaign.status === "inactive"),
+    6,
+    query,
+    "campaigns-archived",
+  );
+  const editingCampaign = campaigns.find((campaign) => campaign.id === editingId) ?? null;
   const runningCampaignIds = new Set(
     campaignRuns
       .filter((run) => ["queued", "running"].includes(run.status))
       .map((run) => run.campaign_id),
+  );
+
+  const renderCampaign = (campaign: Campaign) => (
+                <article key={campaign.id} className="campaign-record campaign-record--managed">
+                  <div className="record-copy">
+                    <div className="record-title-row">
+                      <h3>{campaign.name}</h3>
+                      <span
+                        className={`status-badge${
+                          campaign.status === "active"
+                            ? " status-badge--success"
+                            : campaign.status === "paused"
+                              ? " status-badge--warning"
+                              : ""
+                        }`}
+                      >
+                        {campaign.status === "inactive"
+                          ? "Archived"
+                          : campaign.status === "active"
+                            ? "Active"
+                            : "Paused"}
+                      </span>
+                    </div>
+                    <p>{campaign.segment}</p>
+                    <dl>
+                      <div><dt>Location</dt><dd>{campaign.primary_location}</dd></div>
+                      <div><dt>Radius</dt><dd>{campaign.radius_miles} miles</dd></div>
+                      <div><dt>Weekly</dt><dd>{campaign.weekly_shortlist_size} leads</dd></div>
+                      <div><dt>Minimum score</dt><dd>{campaign.minimum_score_threshold}/100</dd></div>
+                    </dl>
+                    <p className="campaign-categories">
+                      {campaign.product_family_id ? (
+                        <>
+                          <strong>Product family:</strong>{" "}
+                          {productFamilies.find((family) => family.id === campaign.product_family_id)
+                            ?.name ?? "Assigned family no longer exists"}
+                        </>
+                      ) : (
+                        <>
+                          <strong>Product categories:</strong>{" "}
+                          {campaign.product_categories.length > 0
+                            ? campaign.product_categories.join(", ")
+                            : "Any segment-matched active product"}
+                        </>
+                      )}
+                    </p>
+                    <p className="campaign-categories">
+                      <strong>Weekly outreach:</strong>{" "}
+                      {campaign.weekly_outreach_enabled
+                        ? `${templates.find((template) => template.id === campaign.weekly_outreach_template_id)?.topic ?? "Template missing"} · ${campaign.weekly_outreach_provider.replaceAll("_", " ")}${campaign.status === "inactive" ? " · stopped while archived" : ""}`
+                        : "Manual only"}
+                    </p>
+                    <div className="record-actions">
+                      {campaign.status !== "inactive" ? (
+                        <div className="record-actions__group" aria-label="Execution actions">
+                        {campaign.discovery_sources.includes("google_places") ? (
+                          <button
+                            className="secondary-action"
+                            type="button"
+                            disabled={
+                              busy ||
+                              campaign.status !== "active" ||
+                              runningCampaignIds.has(campaign.id) ||
+                              !capabilities?.google_places_configured
+                            }
+                            onClick={() => void onRunCampaign(campaign.id, "google_places")}
+                          >
+                            <RefreshCw size={16} aria-hidden="true" /> Run Google Places
+                          </button>
+                        ) : null}
+                        {campaign.discovery_sources.includes("instagram") ? (
+                          <button
+                            className="secondary-action"
+                            type="button"
+                            disabled={
+                              busy ||
+                              campaign.status !== "active" ||
+                              runningCampaignIds.has(campaign.id) ||
+                              !capabilities?.instagram_connected
+                            }
+                            onClick={() => void onRunCampaign(campaign.id, "instagram")}
+                          >
+                            <RefreshCw size={16} aria-hidden="true" /> Refresh Instagram profiles
+                          </button>
+                        ) : null}
+                        {campaign.discovery_sources.includes("public_registries") ? (
+                          <button
+                            className="secondary-action"
+                            type="button"
+                            disabled={
+                              busy ||
+                              campaign.status !== "active" ||
+                              runningCampaignIds.has(campaign.id) ||
+                              !capabilities?.instagram_connected
+                            }
+                            onClick={() => void onRunCampaign(campaign.id, "public_registries")}
+                          >
+                            <RefreshCw size={16} aria-hidden="true" /> Run public registries
+                          </button>
+                        ) : null}
+                        <button
+                          className="secondary-action"
+                          type="button"
+                          disabled={
+                            busy || campaign.status !== "active" || runningCampaignIds.has(campaign.id)
+                          }
+                          onClick={() => void onRunCampaign(campaign.id, "scoring")}
+                        >
+                          <RefreshCw size={16} aria-hidden="true" />
+                          {runningCampaignIds.has(campaign.id)
+                            ? "Run in progress"
+                            : "Refresh scoring only"}
+                        </button>
+                        </div>
+                      ) : null}
+                      <div className="record-actions__group" aria-label="Management actions">
+                        <button
+                          className="tertiary-action"
+                          type="button"
+                          onClick={() =>
+                            askAssistant({ kind: "campaign", id: campaign.id })
+                          }
+                        >
+                          <Sparkles size={16} aria-hidden="true" /> Ask AI
+                        </button>
+                        <button
+                          className="tertiary-action"
+                          type="button"
+                          onClick={() => setEditingId(campaign.id)}
+                        >
+                          <Edit3 size={16} aria-hidden="true" /> Edit
+                        </button>
+                        {campaign.status === "inactive" ? (
+                          <button
+                            className="tertiary-action"
+                            type="button"
+                            disabled={busy}
+                            title="Restore this campaign as Paused so you can review it before restarting"
+                            onClick={() => void onUpdate(campaign.id, { status: "paused" })}
+                          >
+                            <ArchiveRestore size={16} aria-hidden="true" /> Unarchive
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className="tertiary-action"
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void onUpdate(campaign.id, {
+                                  status: campaign.status === "active" ? "paused" : "active",
+                                })
+                              }
+                            >
+                              {campaign.status === "active" ? (
+                                <Pause size={16} aria-hidden="true" />
+                              ) : (
+                                <Play size={16} aria-hidden="true" />
+                              )}
+                              {campaign.status === "active" ? "Pause" : "Resume"}
+                            </button>
+                          </>
+                        )}
+                        <MoreMenu label={`More actions for ${campaign.name}`}>
+                            {campaign.status !== "inactive" ? (
+                            <button
+                              className="tertiary-action"
+                              type="button"
+                              disabled={busy || runningCampaignIds.has(campaign.id)}
+                              title={
+                                runningCampaignIds.has(campaign.id)
+                                  ? "Wait for the active run to finish or cancel it before archiving"
+                                  : "Hide this campaign and stop its automation without deleting anything"
+                              }
+                              onClick={() => confirmCampaignArchive(campaign)}
+                            >
+                              <Archive size={16} aria-hidden="true" /> Archive
+                            </button>
+                            ) : null}
+                        <button
+                          className="tertiary-action"
+                          type="button"
+                          onClick={() =>
+                            setDuplicatingId(duplicatingId === campaign.id ? null : campaign.id)
+                          }
+                        >
+                          <Copy size={16} aria-hidden="true" /> Duplicate
+                        </button>
+                        <button
+                          className="danger-action"
+                          type="button"
+                          disabled={busy || runningCampaignIds.has(campaign.id)}
+                          title={
+                            runningCampaignIds.has(campaign.id)
+                              ? "Wait for the active run to finish or cancel it before deletion"
+                              : "Permanently delete this campaign and its exclusively linked leads"
+                          }
+                          onClick={() => confirmCampaignDeletion(campaign)}
+                        >
+                          <Trash2 size={16} aria-hidden="true" /> Delete campaign
+                        </button>
+                        </MoreMenu>
+                      </div>
+                    </div>
+
+
+                    {duplicatingId === campaign.id ? (
+                      <form
+                        className="inline-editor inline-editor--row"
+                        onSubmit={(event) => void duplicateCampaign(event, campaign.id)}
+                      >
+                        <label>
+                          New campaign name
+                          <input name="duplicate-name" defaultValue={`${campaign.name} copy`} required />
+                        </label>
+                        <button className="primary-action" type="submit" disabled={busy}>
+                          Create paused copy
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
+                </article>
   );
 
   async function updateCampaign(
@@ -224,17 +462,6 @@ export function CampaignRegisterTab({
                   placeholder="Search campaigns"
                 />
               </label>
-              {archivedCount > 0 ? (
-                <button
-                  className="tertiary-action"
-                  type="button"
-                  aria-pressed={showArchived}
-                  onClick={() => setShowArchived((current) => !current)}
-                >
-                  <Archive size={16} aria-hidden="true" />
-                  {showArchived ? "Hide archived" : `Show archived (${archivedCount})`}
-                </button>
-              ) : null}
             </div>
           </div>
 
@@ -242,226 +469,63 @@ export function CampaignRegisterTab({
             <LoadingState label="Loading campaigns" />
           ) : filteredCampaigns.length === 0 ? (
             <EmptyState
-              title={
-                campaigns.length === 0
-                  ? "No campaigns yet"
-                  : currentCampaignCount === 0 && !showArchived && !query
-                    ? "No current campaigns"
-                    : "No campaigns match"
-              }
+              title={campaigns.length === 0 ? "No campaigns yet" : "No campaigns match"}
               description={
                 campaigns.length === 0
                   ? "Create a focused campaign to unlock manual lead entry."
-                  : currentCampaignCount === 0 && !showArchived && !query
-                    ? `${archivedCount} archived campaign${archivedCount === 1 ? " is" : "s are"} safely stored. Use Show archived to view or restore them.`
-                    : "Try a broader campaign, segment or location search."
+                  : "Try a broader campaign, segment or location search."
               }
             />
           ) : (
             <>
-              <div className="record-list">
-              {campaignPages.items.map((campaign) => (
-                <article key={campaign.id} className="campaign-record campaign-record--managed">
-                  <div className="record-copy">
-                    <div className="record-title-row">
-                      <h3>{campaign.name}</h3>
-                      <span
-                        className={`status-badge${
-                          campaign.status === "active"
-                            ? " status-badge--success"
-                            : campaign.status === "paused"
-                              ? " status-badge--warning"
-                              : ""
-                        }`}
-                      >
-                        {campaign.status === "inactive"
-                          ? "Archived"
-                          : campaign.status === "active"
-                            ? "Active"
-                            : "Paused"}
-                      </span>
-                    </div>
-                    <p>{campaign.segment}</p>
-                    <dl>
-                      <div><dt>Location</dt><dd>{campaign.primary_location}</dd></div>
-                      <div><dt>Radius</dt><dd>{campaign.radius_miles} miles</dd></div>
-                      <div><dt>Weekly</dt><dd>{campaign.weekly_shortlist_size} leads</dd></div>
-                      <div><dt>Minimum score</dt><dd>{campaign.minimum_score_threshold}/100</dd></div>
-                    </dl>
-                    <p className="campaign-categories">
-                      {campaign.product_family_id ? (
-                        <>
-                          <strong>Product family:</strong>{" "}
-                          {productFamilies.find((family) => family.id === campaign.product_family_id)
-                            ?.name ?? "Assigned family no longer exists"}
-                        </>
-                      ) : (
-                        <>
-                          <strong>Product categories:</strong>{" "}
-                          {campaign.product_categories.length > 0
-                            ? campaign.product_categories.join(", ")
-                            : "Any segment-matched active product"}
-                        </>
-                      )}
-                    </p>
-                    <p className="campaign-categories">
-                      <strong>Weekly outreach:</strong>{" "}
-                      {campaign.weekly_outreach_enabled
-                        ? `${templates.find((template) => template.id === campaign.weekly_outreach_template_id)?.topic ?? "Template missing"} · ${campaign.weekly_outreach_provider.replaceAll("_", " ")}${campaign.status === "inactive" ? " · stopped while archived" : ""}`
-                        : "Manual only"}
-                    </p>
-                    <div className="record-actions">
-                      {campaign.status !== "inactive" ? (
-                        <div className="record-actions__group" aria-label="Execution actions">
-                        {campaign.discovery_sources.includes("google_places") ? (
-                          <button
-                            className="secondary-action"
-                            type="button"
-                            disabled={
-                              busy ||
-                              campaign.status !== "active" ||
-                              runningCampaignIds.has(campaign.id) ||
-                              !capabilities?.google_places_configured
-                            }
-                            onClick={() => void onRunCampaign(campaign.id, "google_places")}
-                          >
-                            <RefreshCw size={16} aria-hidden="true" /> Run Google Places
-                          </button>
-                        ) : null}
-                        {campaign.discovery_sources.includes("instagram") ? (
-                          <button
-                            className="secondary-action"
-                            type="button"
-                            disabled={
-                              busy ||
-                              campaign.status !== "active" ||
-                              runningCampaignIds.has(campaign.id) ||
-                              !capabilities?.instagram_connected
-                            }
-                            onClick={() => void onRunCampaign(campaign.id, "instagram")}
-                          >
-                            <RefreshCw size={16} aria-hidden="true" /> Refresh Instagram profiles
-                          </button>
-                        ) : null}
-                        {campaign.discovery_sources.includes("public_registries") ? (
-                          <button
-                            className="secondary-action"
-                            type="button"
-                            disabled={
-                              busy ||
-                              campaign.status !== "active" ||
-                              runningCampaignIds.has(campaign.id) ||
-                              !capabilities?.instagram_connected
-                            }
-                            onClick={() => void onRunCampaign(campaign.id, "public_registries")}
-                          >
-                            <RefreshCw size={16} aria-hidden="true" /> Run public registries
-                          </button>
-                        ) : null}
-                        <button
-                          className="secondary-action"
-                          type="button"
-                          disabled={
-                            busy || campaign.status !== "active" || runningCampaignIds.has(campaign.id)
-                          }
-                          onClick={() => void onRunCampaign(campaign.id, "scoring")}
-                        >
-                          <RefreshCw size={16} aria-hidden="true" />
-                          {runningCampaignIds.has(campaign.id)
-                            ? "Run in progress"
-                            : "Refresh scoring only"}
-                        </button>
-                        </div>
-                      ) : null}
-                      <div className="record-actions__group" aria-label="Management actions">
-                        <button
-                          className="tertiary-action"
-                          type="button"
-                          onClick={() =>
-                            askAssistant({ kind: "campaign", id: campaign.id })
-                          }
-                        >
-                          <Sparkles size={16} aria-hidden="true" /> Ask AI
-                        </button>
-                        <button
-                          className="tertiary-action"
-                          type="button"
-                          onClick={() => setEditingId(editingId === campaign.id ? null : campaign.id)}
-                        >
-                          <Edit3 size={16} aria-hidden="true" /> Edit
-                        </button>
-                        {campaign.status === "inactive" ? (
-                          <button
-                            className="tertiary-action"
-                            type="button"
-                            disabled={busy}
-                            title="Restore this campaign as Paused so you can review it before restarting"
-                            onClick={() => void onUpdate(campaign.id, { status: "paused" })}
-                          >
-                            <ArchiveRestore size={16} aria-hidden="true" /> Unarchive
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              className="tertiary-action"
-                              type="button"
-                              disabled={busy}
-                              onClick={() =>
-                                void onUpdate(campaign.id, {
-                                  status: campaign.status === "active" ? "paused" : "active",
-                                })
-                              }
-                            >
-                              {campaign.status === "active" ? (
-                                <Pause size={16} aria-hidden="true" />
-                              ) : (
-                                <Play size={16} aria-hidden="true" />
-                              )}
-                              {campaign.status === "active" ? "Pause" : "Resume"}
-                            </button>
-                            <button
-                              className="tertiary-action"
-                              type="button"
-                              disabled={busy || runningCampaignIds.has(campaign.id)}
-                              title={
-                                runningCampaignIds.has(campaign.id)
-                                  ? "Wait for the active run to finish or cancel it before archiving"
-                                  : "Hide this campaign and stop its automation without deleting anything"
-                              }
-                              onClick={() => confirmCampaignArchive(campaign)}
-                            >
-                              <Archive size={16} aria-hidden="true" /> Archive
-                            </button>
-                          </>
-                        )}
-                        <button
-                          className="tertiary-action"
-                          type="button"
-                          onClick={() =>
-                            setDuplicatingId(duplicatingId === campaign.id ? null : campaign.id)
-                          }
-                        >
-                          <Copy size={16} aria-hidden="true" /> Duplicate
-                        </button>
-                        <button
-                          className="danger-action"
-                          type="button"
-                          disabled={busy || runningCampaignIds.has(campaign.id)}
-                          title={
-                            runningCampaignIds.has(campaign.id)
-                              ? "Wait for the active run to finish or cancel it before deletion"
-                              : "Permanently delete this campaign and its exclusively linked leads"
-                          }
-                          onClick={() => confirmCampaignDeletion(campaign)}
-                        >
-                          <Trash2 size={16} aria-hidden="true" /> Delete campaign
-                        </button>
-                      </div>
-                    </div>
+              {[
+                { key: "active", title: "Active", pages: activePages, open: true },
+                { key: "paused", title: "Paused", pages: pausedPages, open: true },
+                { key: "archived", title: "Archived", pages: archivedPages, open: false },
+              ]
+                .filter((group) => group.pages.totalItems > 0)
+                .map((group) => (
+                  <Collapsible
+                    key={group.key}
+                    rememberKey={`campaigns-${group.key}`}
+                    title={group.title}
+                    summary={`${group.pages.totalItems} ${group.pages.totalItems === 1 ? "campaign" : "campaigns"}`}
+                    defaultOpen={group.open}
+                    className="campaign-group"
+                  >
+                    {group.key === "archived" ? (
+                      <p className="supporting-copy">Archived campaigns keep their leads and history but never run.</p>
+                    ) : null}
+                    <div className="record-list">{group.pages.items.map(renderCampaign)}</div>
+                    <Pagination
+                      page={group.pages.page}
+                      pageCount={group.pages.pageCount}
+                      pageSize={group.pages.pageSize}
+                      totalItems={group.pages.totalItems}
+                      itemLabel={`${group.title.toLocaleLowerCase()} campaigns`}
+                      onPageChange={group.pages.setPage}
+                    />
+                  </Collapsible>
+                ))}
+            </>
+          )}
+        </div>
+      </div>
 
-                    {editingId === campaign.id ? (
+      <Drawer
+        open={editingCampaign !== null}
+        wide
+        title={editingCampaign ? `Edit ${editingCampaign.name}` : "Edit campaign"}
+        description="Changes apply to the next run. Turning on weekly outreach asks for confirmation."
+        onClose={() => setEditingId(null)}
+      >
+        {editingCampaign
+          ? (() => {
+              const campaign = editingCampaign;
+              return (
                       <form
-                        className="inline-editor inline-editor--capped"
+                        id="campaign-edit-form"
+                        className="form-grid campaign-edit-form"
                         onSubmit={(event) => void updateCampaign(event, campaign.id)}
                       >
                         <label>Name<input name="edit-name" defaultValue={campaign.name} required /></label>
@@ -626,38 +690,10 @@ export function CampaignRegisterTab({
                         <label>Description<textarea name="edit-description" rows={2} defaultValue={campaign.description ?? ""} /></label>
                         <button className="primary-action" type="submit" disabled={busy}>Save campaign</button>
                       </form>
-                    ) : null}
-
-                    {duplicatingId === campaign.id ? (
-                      <form
-                        className="inline-editor inline-editor--row"
-                        onSubmit={(event) => void duplicateCampaign(event, campaign.id)}
-                      >
-                        <label>
-                          New campaign name
-                          <input name="duplicate-name" defaultValue={`${campaign.name} copy`} required />
-                        </label>
-                        <button className="primary-action" type="submit" disabled={busy}>
-                          Create paused copy
-                        </button>
-                      </form>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
-              </div>
-              <Pagination
-                page={campaignPages.page}
-                pageCount={campaignPages.pageCount}
-                pageSize={campaignPages.pageSize}
-                totalItems={campaignPages.totalItems}
-                itemLabel="campaigns"
-                onPageChange={campaignPages.setPage}
-              />
-            </>
-          )}
-        </div>
-      </div>
+              );
+            })()
+          : null}
+      </Drawer>
     </section>
   );
 }
