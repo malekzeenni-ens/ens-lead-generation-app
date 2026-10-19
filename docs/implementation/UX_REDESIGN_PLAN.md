@@ -180,3 +180,17 @@ Global search comes after the screens are settled, so it can link to their final
 | Motion feels slow | Durations are 120–300 ms, nothing animates while typing, and reduced motion turns it off |
 | Keyboard shortcuts fire while typing | Shortcuts are only active when focus is on the queue, never in inputs, text areas or selects |
 | Light theme contrast | Checked against WCAG AA before release; dark stays the default if the system has no preference |
+
+## 10. Status
+
+Delivered on branch `ux/redesign`, one commit per item, in the order of section 8; each is recorded in `DELIVERY_LOG.md`. Phase gates (`npm run quality`) passed after Phase B and Phase D, and at the end.
+
+Deliberately left for later, each noted in the delivery log with its reason:
+
+- Shortlist undo: the backend has no action that reopens a decided entry.
+- Campaign cards' "last run" and "this week's leads": the screen does not load per-campaign figures yet.
+- Catalogue groups by the knowledge pack's eight product groups: not exposed on the product list yet; grouping uses the Shopify category instead.
+- Stage names in sentence case ("Ready to contact" instead of "Ready To Contact") across every screen.
+- Pipeline: folding Privacy into a collapsed section of the lead.
+- A "Weekly outreach" step in New campaign: the create form has never had those fields; they stay in Edit.
+

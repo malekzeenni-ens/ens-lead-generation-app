@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Redesigned the interface for daily use (see `docs/implementation/UX_REDESIGN_PLAN.md` and the delivery log). The first screen is now **Today**: what needs you, most urgent first, each with one button to the right place. The sidebar is grouped into Find, Work and Set up, shows gold badges only for work waiting on you, and collapses to icons. The **AI assistant** is a floating "Ask AI" button on every screen instead of a separate page, and every "Ask AI" opens it with that record selected. **Ctrl+K** searches screens, leads, campaigns, products and templates. All leads gained saved views, filter chips and a preview drawer; Pipeline a board view with recorded stage moves; Email drafts review progress and keyboard shortcuts; Campaigns status groups, an edit drawer and a stepped New campaign form; the shortlist accept/skip cards with the reasons for each score; Catalogue a by-category view with sales-knowledge badges; Settings a section list with connection status cards and Appearance (light theme, compact density). Lists remember their filters and page for the session, headings use plain wording, and motion is subtle and switches off with reduced motion. No backend or data changes.
 - Initialised the controlled MVP implementation from the approved documentation baseline.
 - Added architecture decisions, implementation controls, traceability, security/compliance records, and operations/testing runbooks.
 - Added the Tauri/React/FastAPI/SQLite local operating slice for campaigns and evidence-backed manual leads.
