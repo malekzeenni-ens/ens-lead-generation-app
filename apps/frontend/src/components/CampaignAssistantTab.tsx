@@ -26,7 +26,7 @@ import type {
 } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import { formList, formValue } from "./campaignShared";
-import { LoadingState, SectionHeading } from "./DesignSystem";
+import { LoadingState } from "./DesignSystem";
 import { GeneralAssistantPanel } from "./GeneralAssistantPanel";
 
 interface CampaignAssistantTabProps {
@@ -38,6 +38,11 @@ interface CampaignAssistantTabProps {
   batches: OutreachBatch[];
   shortlists: Shortlist[];
   initialContext: AssistantContextSelection;
+  /** Which mode to show; re-applied whenever `requestKey` changes. */
+  requestedMode?: "general" | "campaign";
+  requestKey?: number;
+  /** Reports whether the local model is ready, for the launcher's warning dot. */
+  onReadyChange?: (ready: boolean) => void;
 }
 
 function errorMessage(error: unknown): string {
@@ -61,12 +66,15 @@ export function CampaignAssistantTab({
   batches,
   shortlists,
   initialContext,
+  requestedMode = "general",
+  requestKey = 0,
+  onReadyChange,
 }: CampaignAssistantTabProps) {
   const { busy: workspaceBusy, approveCampaignDraft } = useWorkspaceActions();
   const [status, setStatus] = useState<CampaignAssistantStatus | null>(null);
   const [draft, setDraft] = useState<CampaignDraft | null>(null);
   const [instruction, setInstruction] = useState("");
-  const [assistantMode, setAssistantMode] = useState<"general" | "campaign">("general");
+  const [assistantMode, setAssistantMode] = useState<"general" | "campaign">(requestedMode);
   const [working, setWorking] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +107,15 @@ export function CampaignAssistantTab({
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    setAssistantMode(requestedMode);
+  }, [requestedMode, requestKey]);
+
+  const ready = status?.ready;
+  useEffect(() => {
+    if (ready !== undefined) onReadyChange?.(ready);
+  }, [ready, onReadyChange]);
 
   const pendingOverride = useMemo(
     () => draft?.overrides.find((item) => item.status === "pending") ?? null,
@@ -218,15 +235,7 @@ export function CampaignAssistantTab({
   if (loading) return <LoadingState label="Loading local AI assistant" />;
 
   return (
-    <section className="workspace-section" aria-labelledby="campaign-assistant-heading">
-      <SectionHeading
-        id="campaign-assistant-heading"
-        eyebrow="Private local AI"
-        title="Ask, plan and create with Llama 3.2"
-        description="Ask about this app and its live local workspace, create useful working documents, or prepare a paused campaign draft."
-        icon={Sparkles}
-      />
-
+    <section className="workspace-section assistant-surface" aria-label="Local AI assistant">
       <div className="assistant-status" role="status">
         <Cpu size={18} aria-hidden="true" />
         <div>
@@ -284,6 +293,7 @@ export function CampaignAssistantTab({
             batches={batches}
             shortlists={shortlists}
             initialContext={initialContext}
+            contextKey={requestKey}
             onCampaignDraft={(nextDraft) => {
               setDraft(nextDraft);
               setAssistantMode("campaign");

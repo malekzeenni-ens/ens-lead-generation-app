@@ -4400,6 +4400,215 @@ td small {
   }
 }
 
+/* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */
+.section-heading__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--ens-space-2);
+  margin-left: auto;
+}
+
+.assistant-launcher {
+  position: fixed;
+  z-index: 50;
+  right: var(--ens-space-6);
+  bottom: var(--ens-space-6);
+  display: inline-flex;
+  height: 56px;
+  min-width: 56px;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--ens-radius-pill);
+  background: var(--ens-action-primary);
+  color: var(--ens-text-on-accent);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 38%), 0 0 0 1px rgb(221 191 147 / 35%);
+  cursor: pointer;
+  font-size: var(--ens-type-sm);
+  font-weight: 700;
+  animation: ens-launcher-in var(--ens-motion-slow) var(--ens-ease-out);
+  transition:
+    transform var(--ens-motion-fast) var(--ens-ease-out),
+    box-shadow var(--ens-motion-fast) var(--ens-ease-out);
+}
+
+.assistant-launcher:hover,
+.assistant-launcher:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 45%), 0 0 0 1px rgb(221 191 147 / 55%);
+}
+
+.assistant-launcher:focus-visible {
+  outline: 2px solid var(--ens-text-primary);
+  outline-offset: 3px;
+}
+
+.assistant-launcher__label {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    max-width var(--ens-motion-base) var(--ens-ease-out),
+    margin var(--ens-motion-base) var(--ens-ease-out);
+}
+
+.assistant-launcher:hover .assistant-launcher__label,
+.assistant-launcher:focus-visible .assistant-launcher__label {
+  max-width: 80px;
+  margin-left: var(--ens-space-2);
+}
+
+.assistant-launcher__dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ens-app-background);
+  border-radius: 50%;
+  background: var(--ens-warning);
+}
+
+.assistant-panel {
+  position: fixed;
+  z-index: 50;
+  right: var(--ens-space-6);
+  bottom: var(--ens-space-6);
+  display: flex;
+  width: min(440px, calc(100vw - 2 * var(--ens-space-6)));
+  height: min(640px, calc(100vh - 56px - 2 * var(--ens-space-6)));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ens-border-default);
+  border-radius: var(--ens-radius-lg);
+  background: var(--ens-surface-1);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 50%);
+  transform-origin: bottom right;
+  animation: ens-panel-in var(--ens-motion-slow) var(--ens-ease-out);
+  transition: width var(--ens-motion-base) var(--ens-ease-in-out);
+}
+
+.assistant-panel[hidden] {
+  display: none;
+}
+
+.assistant-panel:focus {
+  outline: none;
+}
+
+.assistant-panel--wide {
+  width: min(900px, calc(100vw - 2 * var(--ens-space-6)));
+}
+
+.assistant-panel__header {
+  display: flex;
+  align-items: center;
+  gap: var(--ens-space-3);
+  padding: var(--ens-space-3) var(--ens-space-3) var(--ens-space-3) var(--ens-space-4);
+  border-bottom: 1px solid var(--ens-border-subtle);
+  background: var(--ens-surface-header);
+}
+
+.assistant-panel__header > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.assistant-panel__header h2 {
+  margin: 0;
+  font-size: var(--ens-type-md);
+}
+
+.assistant-panel__header p {
+  margin: 0;
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+}
+
+.assistant-panel__mark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ens-action-primary);
+  color: var(--ens-text-on-accent);
+}
+
+.assistant-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--ens-space-4);
+}
+
+.assistant-panel .campaign-assistant-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.assistant-panel--wide .campaign-assistant-layout {
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+}
+
+.assistant-panel .assistant-chat {
+  position: static;
+}
+
+.assistant-panel .assistant-context-bar label {
+  grid-template-columns: 1fr;
+}
+
+.assistant-panel .assistant-thread {
+  min-height: 200px;
+  max-height: none;
+}
+
+.assistant-panel .assistant-message {
+  width: min(96%, 560px);
+}
+
+/* The panel is the frame; the assistant's own section card would nest a second one. */
+.assistant-panel .assistant-surface {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.assistant-panel .assistant-mode-toggle {
+  display: flex;
+  width: 100%;
+}
+
+.assistant-panel .assistant-mode-toggle button {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistant-panel .assistant-heading-actions .tertiary-action {
+  white-space: nowrap;
+}
+
+@keyframes ens-launcher-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes ens-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+
 /* ------------------------------------------------------------------------
  * Shared components (UX redesign A2)
  * ---------------------------------------------------------------------- */

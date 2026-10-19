@@ -38,6 +38,8 @@ interface GeneralAssistantPanelProps {
   batches: OutreachBatch[];
   shortlists: Shortlist[];
   initialContext: AssistantContextSelection;
+  /** Changes on every "Ask AI", so asking about the same record again resets the picker. */
+  contextKey?: number;
 }
 
 interface ContextOption extends AssistantContextSelection {
@@ -94,6 +96,7 @@ export function GeneralAssistantPanel({
   batches,
   shortlists,
   initialContext,
+  contextKey = 0,
 }: GeneralAssistantPanelProps) {
   const initialContextKind = initialContext.kind;
   const initialContextId = initialContext.id;
@@ -135,7 +138,7 @@ export function GeneralAssistantPanel({
 
   useEffect(() => {
     setContext({ kind: initialContextKind, id: initialContextId });
-  }, [initialContextId, initialContextKind]);
+  }, [initialContextId, initialContextKind, contextKey]);
 
   useEffect(() => {
     let active = true;

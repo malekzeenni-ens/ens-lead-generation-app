@@ -145,7 +145,7 @@ authenticated local API, which supplies trusted context and enforces domain rule
 
 | Component | Current implementation | Responsibility |
 |---|---|---|
-| Local AI interface | `AssistantWorkspace.tsx`, `CampaignAssistantTab.tsx`, `GeneralAssistantPanel.tsx` | Presents the dedicated left-navigation **AI assistant** workspace with app-scoped **App copilot** and **Campaign draft** modes, an explicit context selector, file selection, conversation history, campaign review, override decisions and approval. Record-level **Ask AI** actions open this workspace with the relevant context selected. |
+| Local AI interface | `AssistantLauncher.tsx`, `CampaignAssistantTab.tsx`, `GeneralAssistantPanel.tsx` | Presents the **AI assistant** as a floating button on every screen, opening a panel with app-scoped **App copilot** and **Campaign draft** modes, an explicit context selector, file selection, conversation history, campaign review, override decisions and approval. Record-level **Ask AI** actions open the panel with the relevant context selected, and **Plan with AI** in Create campaign opens it in Campaign draft mode. The panel is created on first open and kept mounted, so a conversation survives closing it. |
 | General assistant API | `app/api/routes/assistant.py` | Authenticated conversation, message, download and campaign-handoff endpoints. |
 | Campaign assistant API | `app/api/routes/campaign_assistant.py` | Authenticated status, generation, refinement, manual edit, override decision, approval and discard endpoints. |
 | `AssistantService` | `app/domains/assistant/service.py` | Persists general conversations, prepares prompt history, invokes local chat, saves generated artifacts and assembles campaign-handoff briefs. |

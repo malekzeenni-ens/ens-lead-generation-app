@@ -976,18 +976,40 @@ describe("local operating workbench", () => {
     );
   });
 
-  it("places the AI assistant in the sidebar instead of Campaigns", async () => {
+  it("opens the AI assistant from a floating button on any screen and keeps it", async () => {
     const user = userEvent.setup();
     render(<App />);
     await screen.findByText("Service connected");
 
-    expect(screen.getByRole("link", { name: "AI assistant" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "AI assistant" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
-    expect(screen.queryByRole("tab", { name: "Local AI assistant" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "AI assistant" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("link", { name: "AI assistant" }));
-    expect(await screen.findByRole("heading", { name: "AI assistant" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "App copilot" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open AI assistant" }));
+    const panel = await screen.findByRole("dialog", { name: "AI assistant" });
+    expect(await within(panel).findByRole("tab", { name: "App copilot" })).toBeInTheDocument();
+    // The page behind stays where it was.
+    expect(screen.getByRole("link", { name: /Campaigns/ })).toHaveAttribute("aria-current", "location");
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "AI assistant" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open AI assistant" })).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Open AI assistant" }));
+    expect(within(screen.getByRole("dialog", { name: "AI assistant" })).getByRole("tab", { name: "App copilot" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close AI assistant" }));
+    expect(screen.getByRole("button", { name: "Open AI assistant" })).toHaveFocus();
+  });
+
+  it("plans a campaign with the assistant from Create campaign", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Service connected");
+    await user.click(screen.getByRole("link", { name: /Campaigns/ }));
+    await user.click(screen.getByRole("tab", { name: /Create campaign/ }));
+    await user.click(screen.getByRole("button", { name: "Plan with AI" }));
+    const panel = await screen.findByRole("dialog", { name: "AI assistant" });
+    expect(await within(panel).findByRole("tab", { name: /^Campaign draft/ })).toHaveAttribute("aria-selected", "true");
   });
 
   it("opens the dedicated assistant with an exact campaign context", async () => {
@@ -1007,7 +1029,7 @@ describe("local operating workbench", () => {
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
     await user.click(screen.getByRole("button", { name: "Ask AI" }));
 
-    expect(await screen.findByRole("heading", { name: "AI assistant" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "AI assistant" })).toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: "Context for the next answer" }),
     ).toHaveValue(`campaign:${campaign.id}`);
@@ -1360,7 +1382,7 @@ describe("local operating workbench", () => {
 
     render(<App />);
     await screen.findByText("Service connected");
-    await user.click(screen.getByRole("link", { name: "AI assistant" }));
+    await user.click(screen.getByRole("button", { name: "Open AI assistant" }));
     await user.click(screen.getByRole("tab", { name: /^Campaign draft/ }));
     expect(await screen.findByText("The local AI assistant is ready.")).toBeInTheDocument();
 
@@ -1438,7 +1460,7 @@ describe("local operating workbench", () => {
 
     render(<App />);
     await screen.findByText("Service connected");
-    await user.click(screen.getByRole("link", { name: "AI assistant" }));
+    await user.click(screen.getByRole("button", { name: "Open AI assistant" }));
     await user.type(
       screen.getByRole("textbox", { name: "Ask the local assistant" }),
       "Create a Luton bakery campaign playbook as a Word document",
@@ -1506,7 +1528,7 @@ describe("local operating workbench", () => {
 
     render(<App />);
     await screen.findByText("Service connected");
-    await user.click(screen.getByRole("link", { name: "AI assistant" }));
+    await user.click(screen.getByRole("button", { name: "Open AI assistant" }));
     await user.click(screen.getByRole("tab", { name: /^Campaign draft/ }));
 
     expect(await screen.findByText("Playbook override requested")).toBeInTheDocument();

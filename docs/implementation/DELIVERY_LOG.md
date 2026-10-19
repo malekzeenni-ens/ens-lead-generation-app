@@ -589,3 +589,14 @@ Branch `ux/redesign`. Visual checks run against a scratch database seeded with f
 - "Collapse sidebar" turns the sidebar into an icon rail with tooltips and corner badges, and the choice is kept between sessions (`localStorage`, view setting only). Between 901 and 1180 px it collapses on its own; below 900 px the existing top bar is unchanged.
 - Fixed while there: the compact layout still reserved a row for the removed footer.
 - Verification: 1 new test (groups, badges, collapse and its persistence); 130 frontend tests pass; TypeScript and ESLint pass.
+
+### B3 - Floating AI assistant (operator addition)
+
+- A round gold button, bottom-right on every screen, widens to "Ask AI" on hover or focus. It opens a non-modal 440 x 640 px panel (a wide mode of 900 px shows the campaign brief and review side by side) without leaving the current page.
+- The panel hosts the existing assistant unchanged in behaviour: App copilot and Campaign draft, conversations, attachments, context picker, overrides and approval. It is created on first open, so the model status is not checked at startup, and kept mounted afterwards, so a conversation survives closing it. Esc or the close button closes it and focus returns to the button; while open, the button is hidden so there is only one close control.
+- Every "Ask AI" action opens the panel with that record as context; asking about the same record again resets the picker (a request key). "Plan with AI" in Create campaign opens it in Campaign draft mode. Approving a campaign draft closes the panel and shows Campaigns.
+- The "AI assistant" screen and sidebar entry are removed (`AssistantWorkspace.tsx` deleted, `assistant` dropped from `WorkspaceSection`). The panel renders outside `<main>`, so page layout rules and the page's busy state do not apply to it.
+- The warning dot on the button appears once the assistant has reported the local model is not ready; before the first open it cannot know, by design.
+- Docs: `AI_INTEGRATION_ARCHITECTURE.md` and `LOCAL_SETUP.md` updated.
+- Found while here: the per-item typecheck used `tsc -p .`, which checks nothing because the root config only holds references. The gate is `npm run typecheck` (`tsc -b`), which passes on A1-B3.
+- Verification: 2 new tests (open, Esc, focus return, kept state; Plan with AI), 4 assistant tests moved to the panel; 131 frontend tests pass; TypeScript and ESLint pass.

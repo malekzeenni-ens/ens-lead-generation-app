@@ -51,7 +51,10 @@ export interface WorkspaceActions {
   goToLeadsNeedingReview: () => void;
   goToCatalogue: () => void;
   goToEmailDrafts: () => void;
+  /** Opens the floating assistant with this record as its context. */
   askAssistant: (context: AssistantContextSelection) => void;
+  /** Opens the floating assistant in Campaign draft mode. */
+  planCampaignWithAssistant: () => void;
   createCampaign: (data: CampaignInput) => Promise<boolean>;
   approveCampaignDraft: (
     draftId: string,

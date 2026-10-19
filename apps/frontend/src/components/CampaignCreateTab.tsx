@@ -1,4 +1,4 @@
-import { Megaphone, Plus } from "lucide-react";
+import { Megaphone, Plus, Sparkles } from "lucide-react";
 import type { FormEvent } from "react";
 
 import type { AutomationCapabilities, ProductFamily, WorkspaceSettings } from "../types";
@@ -19,7 +19,7 @@ export function CampaignCreateTab({
   productFamilies,
   onCreated,
 }: CampaignCreateTabProps) {
-  const { busy, createCampaign: onCreate } = useWorkspaceActions();
+  const { busy, createCampaign: onCreate, planCampaignWithAssistant } = useWorkspaceActions();
 
   async function createCampaign(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -61,6 +61,11 @@ export function CampaignCreateTab({
         title="Create campaign"
         description="Define one audience, location, discovery approach and product-matching objective."
         icon={Megaphone}
+        actions={
+          <button type="button" className="secondary-action" onClick={planCampaignWithAssistant}>
+            <Sparkles size={16} aria-hidden="true" /> Plan with AI
+          </button>
+        }
       />
 
       <div className="section-layout section-layout--single">

@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  Bot,
   FileText,
   GitBranch,
   LayoutDashboard,
@@ -51,7 +50,8 @@ import {
   type TemplateInput,
   type TemplateUpdate,
 } from "./api";
-import { AssistantWorkspace } from "./components/AssistantWorkspace";
+import { AssistantLauncher } from "./components/AssistantLauncher";
+import { CampaignAssistantTab } from "./components/CampaignAssistantTab";
 import { CatalogueWorkspace } from "./components/CatalogueWorkspace";
 import { CampaignWorkspace } from "./components/CampaignWorkspace";
 import { ConnectionBadge, type HealthState, NavigationItem } from "./components/DesignSystem";
@@ -114,7 +114,6 @@ async function copyTextToClipboard(value: string): Promise<void> {
 
 const SECTION_LABELS: Record<WorkspaceSection, string> = {
   overview: "Overview",
-  assistant: "AI assistant",
   campaigns: "Campaigns",
   leads: "All leads",
   catalogue: "Catalogue",
@@ -399,10 +398,14 @@ function Workbench() {
     "campaigns",
   );
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [assistantContext, setAssistantContext] = useState<AssistantContextSelection>({
-    kind: "workspace",
-    id: null,
-  });
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantNeedsSetup, setAssistantNeedsSetup] = useState(false);
+  const [assistantRequest, setAssistantRequest] = useState<{
+    context: AssistantContextSelection;
+    mode: "general" | "campaign";
+    key: number;
+  }>({ context: { kind: "workspace", id: null }, mode: "general", key: 0 });
+  const handleAssistantReady = useCallback((ready: boolean) => setAssistantNeedsSetup(!ready), []);
   const [leadsLandingFilter, setLeadsLandingFilter] = useState<"" | "review">("");
   const [backendStatus, setBackendStatus] = useState<BackendStatus | null>(null);
 
@@ -1381,8 +1384,12 @@ function Workbench() {
     goToCatalogue: () => setActiveSection("catalogue"),
     goToEmailDrafts: () => setActiveSection("drafts"),
     askAssistant: (context) => {
-      setAssistantContext(context);
-      setActiveSection("assistant");
+      setAssistantRequest((current) => ({ context, mode: "general", key: current.key + 1 }));
+      setAssistantOpen(true);
+    },
+    planCampaignWithAssistant: () => {
+      setAssistantRequest((current) => ({ ...current, mode: "campaign", key: current.key + 1 }));
+      setAssistantOpen(true);
     },
     createCampaign,
     approveCampaignDraft,
@@ -1460,21 +1467,6 @@ function Workbench() {
         settings={settings}
         shortlists={shortlists}
         outreachBatches={outreachBatches}
-      />
-    ),
-    assistant: (
-      <AssistantWorkspace
-        capabilities={automationCapabilities}
-        productFamilies={productFamilies}
-        campaigns={campaigns}
-        leads={leads}
-        batches={outreachBatches}
-        shortlists={shortlists}
-        initialContext={assistantContext}
-        onCampaignApproved={() => {
-          setCampaignLandingTask("campaigns");
-          setActiveSection("campaigns");
-        }}
       />
     ),
     campaigns: (
@@ -1584,10 +1576,6 @@ function Workbench() {
           <nav aria-label="Workspace navigation">
             <p className="navigation-label">Find</p>
             <NavigationItem href="#overview" icon={LayoutDashboard} label="Overview" collapsed={sidebarCollapsed} active={activeSection === "overview"} onSelect={() => setActiveSection("overview")} />
-            <NavigationItem href="#assistant" icon={Bot} label="AI assistant" collapsed={sidebarCollapsed} active={activeSection === "assistant"} onSelect={() => {
-              setAssistantContext({ kind: "workspace", id: null });
-              setActiveSection("assistant");
-            }} />
             <NavigationItem href="#campaigns" icon={Megaphone} label="Campaigns" collapsed={sidebarCollapsed} active={activeSection === "campaigns"} onSelect={() => {
               setCampaignLandingTask("campaigns");
               setActiveSection("campaigns");
@@ -1665,6 +1653,33 @@ function Workbench() {
           </WorkspaceActionsContext.Provider>
         </main>
       </div>
+
+      {/* Outside <main> so page layout rules and its busy state do not apply to it. */}
+      <WorkspaceActionsContext.Provider value={actions}>
+        <AssistantLauncher
+          open={assistantOpen}
+          onOpenChange={setAssistantOpen}
+          needsSetup={assistantNeedsSetup}
+        >
+          <CampaignAssistantTab
+            capabilities={automationCapabilities}
+            productFamilies={productFamilies}
+            campaigns={campaigns}
+            leads={leads}
+            batches={outreachBatches}
+            shortlists={shortlists}
+            initialContext={assistantRequest.context}
+            requestedMode={assistantRequest.mode}
+            requestKey={assistantRequest.key}
+            onReadyChange={handleAssistantReady}
+            onApproved={() => {
+              setAssistantOpen(false);
+              setCampaignLandingTask("campaigns");
+              setActiveSection("campaigns");
+            }}
+          />
+        </AssistantLauncher>
+      </WorkspaceActionsContext.Provider>
 
     </div>
   );

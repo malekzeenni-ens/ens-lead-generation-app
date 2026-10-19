@@ -210,6 +210,7 @@ interface SectionHeadingProps {
   description: string;
   icon: LucideIcon;
   count?: number;
+  actions?: ReactNode;
 }
 
 export function SectionHeading({
@@ -219,6 +220,7 @@ export function SectionHeading({
   description,
   icon: Icon,
   count,
+  actions,
 }: SectionHeadingProps) {
   return (
     <div className="section-heading">
@@ -231,6 +233,7 @@ export function SectionHeading({
         <p>{description}</p>
       </div>
       {count === undefined ? null : <span className="count-badge">{count}</span>}
+      {actions ? <div className="section-heading__actions">{actions}</div> : null}
     </div>
   );
 }
