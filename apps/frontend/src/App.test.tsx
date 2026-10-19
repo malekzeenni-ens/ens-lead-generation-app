@@ -879,6 +879,29 @@ describe("local operating workbench", () => {
     expect(screen.getByText("Active campaigns")).toBeInTheDocument();
   });
 
+  it("groups the sidebar, badges only work that needs action, and remembers collapsing", async () => {
+    const user = userEvent.setup();
+    window.localStorage.clear();
+    render(<App />);
+    await screen.findByText("Service connected");
+    const navigation = screen.getByRole("navigation", { name: "Workspace navigation" });
+    for (const group of ["Find", "Work", "Set up"]) {
+      expect(within(navigation).getByText(group)).toBeInTheDocument();
+    }
+    expect(await within(navigation).findByText("1 need review")).toBeInTheDocument();
+    // No follow-ups are due, so the pipeline shows no badge; plain totals are gone.
+    expect(within(navigation).queryByText(/follow-ups due/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Catalogue$/ })).toBeInTheDocument();
+
+    const toggle = screen.getByRole("button", { name: "Collapse sidebar" });
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("link", { name: /^Catalogue$/ })).toHaveAttribute("title", "Catalogue");
+    expect(window.localStorage.getItem("ens:layout:sidebar-collapsed")).toBe("true");
+    await user.click(toggle);
+    expect(window.localStorage.getItem("ens:layout:sidebar-collapsed")).toBeNull();
+  });
+
   it("hides cloud polish until it is configured and enabled", async () => {
     const user = userEvent.setup();
     vi.mocked(api.outreachBatches).mockResolvedValue([outreachBatch]);

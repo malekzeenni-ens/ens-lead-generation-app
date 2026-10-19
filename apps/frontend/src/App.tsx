@@ -8,6 +8,8 @@ import {
   MailCheck,
   Megaphone,
   PackageSearch,
+  PanelLeftClose,
+  PanelLeftOpen,
   RefreshCw,
   Settings,
   ShieldCheck,
@@ -54,6 +56,7 @@ import { CatalogueWorkspace } from "./components/CatalogueWorkspace";
 import { CampaignWorkspace } from "./components/CampaignWorkspace";
 import { ConnectionBadge, type HealthState, NavigationItem } from "./components/DesignSystem";
 import { DashboardWorkspace } from "./components/DashboardWorkspace";
+import { NARROW_WINDOW_QUERY, readSidebarCollapsed, useMediaQuery, writeSidebarCollapsed } from "./layout";
 import { EmailDraftsWorkspace } from "./components/EmailDraftsWorkspace";
 import { LeadWorkspace } from "./components/LeadWorkspace";
 import { PipelineWorkspace } from "./components/PipelineWorkspace";
@@ -367,6 +370,11 @@ function Workbench() {
   const productFamilies = listOf(productFamiliesQuery.data);
   const outreachLeadOptions = listOf(outreachLeadOptionsQuery.data);
   const outreachBatches = listOf(outreachBatchesQuery.data);
+  const draftsAwaitingApproval = outreachBatches.reduce((total, batch) => total + batch.pending_count, 0);
+  const shortlistAwaitingDecision = shortlists.reduce(
+    (total, shortlist) => total + shortlist.items.filter((item) => item.decision === "recommended").length,
+    0,
+  );
   const enrichmentStatus: EnrichmentStatus | null = enrichmentStatusQuery.data ?? null;
   const knowledgeNotes = listOf(knowledgeNotesQuery.data);
   const provenFits = listOf(provenFitsQuery.data);
@@ -383,6 +391,10 @@ function Workbench() {
   const [refreshing, setRefreshing] = useState(false);
   const loading = refreshing || serverQueries.some((query) => query.isPending);
   const [activeSection, setActiveSection] = useState<WorkspaceSection>("overview");
+  const [sidebarPinnedCollapsed, setSidebarPinnedCollapsed] = useState(readSidebarCollapsed);
+  const narrowWindow = useMediaQuery(NARROW_WINDOW_QUERY);
+  const sidebarCollapsed = sidebarPinnedCollapsed || narrowWindow;
+  useEffect(() => writeSidebarCollapsed(sidebarPinnedCollapsed), [sidebarPinnedCollapsed]);
   const [campaignLandingTask, setCampaignLandingTask] = useState<"campaigns" | "create">(
     "campaigns",
   );
@@ -1567,31 +1579,47 @@ function Workbench() {
         </div>
       </header>
 
-      <div className="workspace-shell">
-        <aside className="sidebar">
+      <div className={`workspace-shell${sidebarCollapsed ? " workspace-shell--collapsed" : ""}`}>
+        <aside className={`sidebar${sidebarCollapsed ? " sidebar--collapsed" : ""}`}>
           <nav aria-label="Workspace navigation">
-            <p className="navigation-label">Lead acquisition</p>
-            <NavigationItem href="#overview" icon={LayoutDashboard} label="Overview" active={activeSection === "overview"} onSelect={() => setActiveSection("overview")} />
-            <NavigationItem href="#assistant" icon={Bot} label="AI assistant" active={activeSection === "assistant"} onSelect={() => {
+            <p className="navigation-label">Find</p>
+            <NavigationItem href="#overview" icon={LayoutDashboard} label="Overview" collapsed={sidebarCollapsed} active={activeSection === "overview"} onSelect={() => setActiveSection("overview")} />
+            <NavigationItem href="#assistant" icon={Bot} label="AI assistant" collapsed={sidebarCollapsed} active={activeSection === "assistant"} onSelect={() => {
               setAssistantContext({ kind: "workspace", id: null });
               setActiveSection("assistant");
             }} />
-            <NavigationItem href="#campaigns" icon={Megaphone} label="Campaigns" count={campaigns.length} active={activeSection === "campaigns"} onSelect={() => {
+            <NavigationItem href="#campaigns" icon={Megaphone} label="Campaigns" collapsed={sidebarCollapsed} active={activeSection === "campaigns"} onSelect={() => {
               setCampaignLandingTask("campaigns");
               setActiveSection("campaigns");
             }} />
-            <NavigationItem href="#leads" icon={Users} label="All leads" count={leads.length} active={activeSection === "leads"} onSelect={() => setActiveSection("leads")} />
+            <NavigationItem href="#leads" icon={Users} label="All leads" badge={summary?.review_required} badgeLabel="need review" collapsed={sidebarCollapsed} active={activeSection === "leads"} onSelect={() => setActiveSection("leads")} />
 
-            <p className="navigation-label">Lead operations</p>
-            <NavigationItem href="#shortlist" icon={ListChecks} label="Weekly shortlist" count={summary?.shortlisted_this_week} active={activeSection === "shortlist"} onSelect={() => setActiveSection("shortlist")} />
-            <NavigationItem href="#pipeline" icon={GitBranch} label="Pipeline" count={summary?.open_follow_ups} active={activeSection === "pipeline"} onSelect={() => setActiveSection("pipeline")} />
-            <NavigationItem href="#drafts" icon={MailCheck} label="Email drafts" count={outreachBatches.reduce((total, batch) => total + batch.pending_count, 0)} active={activeSection === "drafts"} onSelect={() => setActiveSection("drafts")} />
+            <p className="navigation-label">Work</p>
+            <NavigationItem href="#shortlist" icon={ListChecks} label="Weekly shortlist" badge={shortlistAwaitingDecision} badgeLabel="awaiting a decision" collapsed={sidebarCollapsed} active={activeSection === "shortlist"} onSelect={() => setActiveSection("shortlist")} />
+            <NavigationItem href="#pipeline" icon={GitBranch} label="Pipeline" badge={summary ? summary.due_today + summary.overdue : undefined} badgeLabel="follow-ups due" collapsed={sidebarCollapsed} active={activeSection === "pipeline"} onSelect={() => setActiveSection("pipeline")} />
+            <NavigationItem href="#drafts" icon={MailCheck} label="Email drafts" badge={draftsAwaitingApproval} badgeLabel="awaiting approval" collapsed={sidebarCollapsed} active={activeSection === "drafts"} onSelect={() => setActiveSection("drafts")} />
 
-            <p className="navigation-label">Configuration</p>
-            <NavigationItem href="#catalogue" icon={PackageSearch} label="Catalogue" count={products.length} active={activeSection === "catalogue"} onSelect={() => setActiveSection("catalogue")} />
-            <NavigationItem href="#templates" icon={FileText} label="Templates" count={templates.length} active={activeSection === "templates"} onSelect={() => setActiveSection("templates")} />
-            <NavigationItem href="#settings" icon={Settings} label="Settings" active={activeSection === "settings"} onSelect={() => setActiveSection("settings")} />
+            <p className="navigation-label">Set up</p>
+            <NavigationItem href="#catalogue" icon={PackageSearch} label="Catalogue" collapsed={sidebarCollapsed} active={activeSection === "catalogue"} onSelect={() => setActiveSection("catalogue")} />
+            <NavigationItem href="#templates" icon={FileText} label="Templates" collapsed={sidebarCollapsed} active={activeSection === "templates"} onSelect={() => setActiveSection("templates")} />
+            <NavigationItem href="#settings" icon={Settings} label="Settings" collapsed={sidebarCollapsed} active={activeSection === "settings"} onSelect={() => setActiveSection("settings")} />
           </nav>
+          {narrowWindow ? null : (
+            <button
+              type="button"
+              className="sidebar-toggle"
+              aria-pressed={sidebarPinnedCollapsed}
+              title={sidebarPinnedCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => setSidebarPinnedCollapsed((current) => !current)}
+            >
+              {sidebarPinnedCollapsed ? (
+                <PanelLeftOpen size={18} aria-hidden="true" />
+              ) : (
+                <PanelLeftClose size={18} aria-hidden="true" />
+              )}
+              <span className="navigation-item__label">Collapse sidebar</span>
+            </button>
+          )}
         </aside>
 
         <main

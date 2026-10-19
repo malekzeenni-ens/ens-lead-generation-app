@@ -581,3 +581,11 @@ Branch `ux/redesign`. Visual checks run against a scratch database seeded with f
 - The "API connected" badge became a quiet green dot, with a visible label only while connecting ("Connecting to service") or offline ("Service offline"). The footer bar and the sidebar "Controlled mode" card are gone, which returns about 120 px of height to the content.
 - What they told the operator now lives where it is looked for: Settings > Diagnostics opens with "How this app protects you" (local data, nothing sent automatically, suppression, discovery limits, local AI) and the version.
 - Verification: two shell tests updated to the new wording; 129 frontend tests pass (one timed out once while the dev server and browser shared the machine, and passes on its own in 2.4 s); TypeScript and ESLint pass.
+
+### B2 - Sidebar groups, action badges and icon mode
+
+- Three groups: Find (Overview, AI assistant until B3, Campaigns, All leads), Work (Weekly shortlist, Pipeline, Email drafts) and Set up (Catalogue, Templates, Settings).
+- Plain totals are gone. A gold badge appears only when something waits for the operator: leads needing review, follow-ups due today or overdue, drafts awaiting approval, and shortlist entries still awaiting a decision. Screen readers hear what the number means ("3 awaiting approval").
+- "Collapse sidebar" turns the sidebar into an icon rail with tooltips and corner badges, and the choice is kept between sessions (`localStorage`, view setting only). Between 901 and 1180 px it collapses on its own; below 900 px the existing top bar is unchanged.
+- Fixed while there: the compact layout still reserved a row for the removed footer.
+- Verification: 1 new test (groups, badges, collapse and its persistence); 130 frontend tests pass; TypeScript and ESLint pass.

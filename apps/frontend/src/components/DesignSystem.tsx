@@ -54,8 +54,13 @@ interface NavigationItemProps {
   href: string;
   icon: LucideIcon;
   label: string;
-  count?: number;
+  /** Work waiting for the operator; hidden when zero. */
+  badge?: number;
+  /** What the badge counts, read out with it, e.g. "need review". */
+  badgeLabel?: string;
   active?: boolean;
+  /** Icon-only sidebar: the label becomes a tooltip. */
+  collapsed?: boolean;
   onSelect: () => void;
 }
 
@@ -63,23 +68,33 @@ export function NavigationItem({
   href,
   icon: Icon,
   label,
-  count,
+  badge,
+  badgeLabel,
   active = false,
+  collapsed = false,
   onSelect,
 }: NavigationItemProps) {
+  const showBadge = badge !== undefined && badge > 0;
+  const badgeText = showBadge ? `${badge}${badgeLabel ? ` ${badgeLabel}` : ""}` : "";
   return (
     <a
       className={`navigation-item${active ? " navigation-item--active" : ""}`}
       href={href}
       aria-current={active ? "location" : undefined}
+      title={collapsed ? (showBadge ? `${label} · ${badgeText}` : label) : undefined}
       onClick={(event) => {
         event.preventDefault();
         onSelect();
       }}
     >
       <Icon size={20} aria-hidden="true" />
-      <span>{label}</span>
-      {count === undefined ? null : <span className="navigation-count">{count}</span>}
+      <span className="navigation-item__label">{label}</span>
+      {showBadge ? (
+        <span className="navigation-badge">
+          <span aria-hidden="true">{badge > 99 ? "99+" : badge}</span>
+          <span className="visually-hidden">{badgeText}</span>
+        </span>
+      ) : null}
     </a>
   );
 }
