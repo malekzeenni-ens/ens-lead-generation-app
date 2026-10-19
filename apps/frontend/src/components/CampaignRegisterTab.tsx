@@ -30,6 +30,7 @@ import {
   Pagination,
 } from "./DesignSystem";
 import type { CampaignUpdate } from "../api";
+import { useRememberedState } from "../remembered";
 
 interface CampaignRegisterTabProps {
   campaigns: Campaign[];
@@ -57,10 +58,10 @@ export function CampaignRegisterTab({
     runCampaign: onRunCampaign,
     askAssistant,
   } = useWorkspaceActions();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useRememberedState("campaigns:query", "");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useRememberedState("campaigns:archived", false);
   const archivedCount = campaigns.filter((campaign) => campaign.status === "inactive").length;
   const currentCampaignCount = campaigns.length - archivedCount;
   const filteredCampaigns = useMemo(() => {
@@ -73,7 +74,7 @@ export function CampaignRegisterTab({
         ),
     );
   }, [campaigns, query, showArchived]);
-  const campaignPages = usePagination(filteredCampaigns, 6, `${query}:${showArchived}`);
+  const campaignPages = usePagination(filteredCampaigns, 6, `${query}:${showArchived}`, "campaigns");
   const runningCampaignIds = new Set(
     campaignRuns
       .filter((run) => ["queued", "running"].includes(run.status))

@@ -40,11 +40,22 @@ export function readRemembered<T>(key: string, fallback: T): T {
   }
 }
 
+/**
+ * `startWith`, when given, wins over the remembered value for this mount, for example a
+ * link from Overview that opens a list on a particular filter.
+ */
 export function useRememberedState<T>(
   key: string | undefined,
   initial: T,
+  startWith?: T,
 ): [T, (next: T | ((current: T) => T)) => void] {
-  const [value, setValue] = useState<T>(() => (key ? readRemembered(key, initial) : initial));
+  const [value, setValue] = useState<T>(() => {
+    if (startWith !== undefined) {
+      if (key) write(key, JSON.stringify(startWith));
+      return startWith;
+    }
+    return key ? readRemembered(key, initial) : initial;
+  });
   const update = useCallback(
     (next: T | ((current: T) => T)) => {
       setValue((current) => {

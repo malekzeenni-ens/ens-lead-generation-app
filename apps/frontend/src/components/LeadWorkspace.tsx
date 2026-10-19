@@ -14,6 +14,7 @@ import { emailAddressFor } from "../contact";
 import { PIPELINE_STAGES, humanize } from "../domain";
 import type { Campaign, Lead, LeadPage, StalledLeadDigest } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
+import { useRememberedState } from "../remembered";
 import {
   EmptyState,
   LoadingState,
@@ -74,13 +75,17 @@ export function LeadWorkspace({
     manageLead: onManage,
     askAssistant,
   } = useWorkspaceActions();
-  const [activeTask, setActiveTask] = useState("browse");
-  const [query, setQuery] = useState("");
-  const [campaignId, setCampaignId] = useState("");
-  const [sourceType, setSourceType] = useState("");
-  const [stage, setStage] = useState("");
-  const [suppression, setSuppression] = useState("all");
-  const [reviewFilter, setReviewFilter] = useState(initialClassificationFilter);
+  const [activeTask, setActiveTask] = useRememberedState("leads:tab", "browse");
+  const [query, setQuery] = useRememberedState("leads:query", "");
+  const [campaignId, setCampaignId] = useRememberedState("leads:campaign", "");
+  const [sourceType, setSourceType] = useRememberedState("leads:source", "");
+  const [stage, setStage] = useRememberedState("leads:stage", "");
+  const [suppression, setSuppression] = useRememberedState("leads:suppression", "all");
+  const [reviewFilter, setReviewFilter] = useRememberedState<"" | "review">(
+    "leads:review",
+    "",
+    initialClassificationFilter || undefined,
+  );
   const [aiQuery, setAiQuery] = useState("");
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
@@ -107,7 +112,7 @@ export function LeadWorkspace({
   // The register is paged and filtered on the server (R10).
   const searchText = useSettledValue(query.trim(), 300);
   const filterKey = `${searchText}|${campaignId}|${sourceType}|${stage}|${suppression}|${reviewFilter}`;
-  const [pageState, setPageState] = useState({ filterKey, page: 1 });
+  const [pageState, setPageState] = useRememberedState("leads:page", { filterKey, page: 1 });
   const page = pageState.filterKey === filterKey ? pageState.page : 1;
   const leadPageQuery = useQuery({
     queryKey: ["leads", "page", filterKey, page],

@@ -2476,7 +2476,7 @@ describe("local operating workbench", () => {
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
 
     const pagination = await screen.findByRole("navigation", { name: "products pagination" });
-    expect(within(pagination).getByText("Showing 1–8 of 13 products")).toBeInTheDocument();
+    expect(within(pagination).getByText("Showing 1–10 of 13 products")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Catalogue Product 01" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Catalogue Product 13" })).not.toBeInTheDocument();
 
@@ -2487,6 +2487,38 @@ describe("local operating workbench", () => {
     await user.type(screen.getByRole("textbox", { name: "Search catalogue" }), "Product 01");
     expect(await screen.findByRole("heading", { name: "Catalogue Product 01" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "products pagination" })).not.toBeInTheDocument();
+  });
+
+  it("remembers a list's page, search and rows per page when switching screens", async () => {
+    const user = userEvent.setup();
+    const catalogue = Array.from({ length: 13 }, (_, index) => ({
+      ...product,
+      id: `catalogue-product-${index + 1}`,
+      shopify_handle: `catalogue-product-${index + 1}`,
+      name: `Catalogue Product ${String(index + 1).padStart(2, "0")}`,
+    }));
+    vi.mocked(api.products).mockResolvedValue(catalogue);
+
+    render(<App />);
+    await screen.findByText("Service connected");
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    let pagination = await screen.findByRole("navigation", { name: "products pagination" });
+    await user.click(within(pagination).getByRole("button", { name: "Next products page" }));
+    expect(await screen.findByRole("heading", { name: "Catalogue Product 13" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: /Templates/ }));
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    expect(await screen.findByRole("heading", { name: "Catalogue Product 13" })).toBeInTheDocument();
+
+    pagination = screen.getByRole("navigation", { name: "products pagination" });
+    await user.selectOptions(within(pagination).getByRole("combobox", { name: "products per page" }), "25");
+    expect(screen.getByRole("heading", { name: "Catalogue Product 01" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Catalogue Product 13" })).toBeInTheDocument();
+
+    await user.type(screen.getByRole("textbox", { name: "Search catalogue" }), "Product 01");
+    await user.click(screen.getByRole("link", { name: /Overview/ }));
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    expect(await screen.findByRole("textbox", { name: "Search catalogue" })).toHaveValue("Product 01");
   });
 
   it("moves between pages in the pipeline lead selector", async () => {

@@ -610,3 +610,10 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - Wording, for example: "Lead intelligence dashboard" -> "Overview", "Catalogue and scoring" -> "Catalogue", "Settings and diagnostics" -> "Settings", "Message templates" -> "Templates", "Campaign register" -> "Your campaigns", "Discover, score and prepare" -> "Find new leads", "Action queue" -> "Needs you", "Upload Shopify listing CSV" -> "Import from Shopify", "Bakery scoring weights" -> "Scoring weights". Every description is now one sentence.
 - Not done here, by design: wording inside each screen's rows and buttons, and the remaining in-page safety notices, change with that screen's Phase D redesign, so each screen is reworded once.
 - Verification: three heading assertions updated; 131 frontend tests pass; TypeScript and ESLint pass.
+
+### C3 - Remembered list state
+
+- For the rest of the session, each screen keeps its open tab, search, filters, page and rows per page when the operator switches away and back: Campaigns (search, show archived, page), All leads (tab, search, all five filters, page), Pipeline (tab, search, page), Catalogue (tab, search, include-retired, page, rows), Templates (tab, search, page, rows) and Settings (tab). Keys are per screen under `ens:view:`; only view settings are stored.
+- `useRememberedState` gained an optional starting value, so a link from Overview that opens All leads on "needs review" still wins over the remembered filter.
+- Catalogue products and templates show 10 per page with a rows-per-page choice (10, 25, 50). Per-lead lists (follow-ups, timeline) are deliberately not remembered, because they belong to whichever lead is open.
+- Verification: 1 new test (page, rows per page and search survive switching screens); the catalogue paging test now expects 10 per page; 132 frontend tests pass; TypeScript and ESLint pass.

@@ -23,6 +23,7 @@ import type {
 } from "../types";
 import { humanize } from "../domain";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
+import { useRememberedState } from "../remembered";
 import {
   HelpTip,
   LoadingState,
@@ -82,7 +83,7 @@ export function SettingsWorkspace({
     configureCloudPolish: onConfigureCloudPolish,
     removeCloudPolish: onRemoveCloudPolish,
   } = useWorkspaceActions();
-  const [activeTask, setActiveTask] = useState("connections");
+  const [activeTask, setActiveTask] = useRememberedState("settings:tab", "connections");
   const [backup, setBackup] = useState<BackupResult | null>(null);
   const [verification, setVerification] = useState<VerificationResult | null>(null);
 

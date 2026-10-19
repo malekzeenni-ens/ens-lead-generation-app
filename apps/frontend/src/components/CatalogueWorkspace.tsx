@@ -27,6 +27,7 @@ import type {
   ShopifyImportResult,
 } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
+import { useRememberedState } from "../remembered";
 import {
   DangerConfirm,
   EmptyState,
@@ -187,8 +188,8 @@ export function CatalogueWorkspace({
     updateProductFamily: onUpdateFamily,
     deleteProductFamily: onDeleteFamily,
   } = useWorkspaceActions();
-  const [activeTask, setActiveTask] = useState("products");
-  const [query, setQuery] = useState("");
+  const [activeTask, setActiveTask] = useRememberedState("catalogue:tab", "products");
+  const [query, setQuery] = useRememberedState("catalogue:query", "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ShopifyImportResult | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -200,7 +201,7 @@ export function CatalogueWorkspace({
     null,
   );
   const enrichAbort = useRef<AbortController | null>(null);
-  const [includeStale, setIncludeStale] = useState(false);
+  const [includeStale, setIncludeStale] = useRememberedState("catalogue:include-stale", false);
   const weightFormRef = useRef<HTMLFormElement>(null);
   const [weightTotal, setWeightTotal] = useState(0);
 
@@ -224,7 +225,7 @@ export function CatalogueWorkspace({
         .includes(search),
     );
   }, [products, query]);
-  const productPages = usePagination(filtered, 8, query);
+  const productPages = usePagination(filtered, 10, query, "catalogue-products");
   const issuePages = usePagination(
     importResult?.issues ?? [],
     5,
@@ -994,6 +995,7 @@ export function CatalogueWorkspace({
               totalItems={productPages.totalItems}
               itemLabel="products"
               onPageChange={productPages.setPage}
+              onPageSizeChange={productPages.setPageSize}
             />
           </>
         )}

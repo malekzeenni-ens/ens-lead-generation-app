@@ -5,6 +5,7 @@ import type { TemplateInput } from "../api";
 import { usePagination } from "../pagination";
 import type { ProductFamily, Template } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
+import { useRememberedState } from "../remembered";
 import {
   DangerConfirm,
   EmptyState,
@@ -128,8 +129,8 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
     updateTemplate: onUpdate,
     deleteTemplate: onDelete,
   } = useWorkspaceActions();
-  const [activeTask, setActiveTask] = useState("templates");
-  const [query, setQuery] = useState("");
+  const [activeTask, setActiveTask] = useRememberedState("templates:tab", "templates");
+  const [query, setQuery] = useRememberedState("templates:query", "");
   const filtered = useMemo(() => {
     const search = query.toLocaleLowerCase();
     return templates.filter((template) =>
@@ -139,7 +140,7 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
         .includes(search),
     );
   }, [templates, query]);
-  const templatePages = usePagination(filtered, 8, query);
+  const templatePages = usePagination(filtered, 10, query, "templates");
 
   async function submitTemplate(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -311,6 +312,7 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
                   totalItems={templatePages.totalItems}
                   itemLabel="templates"
                   onPageChange={templatePages.setPage}
+                  onPageSizeChange={templatePages.setPageSize}
                 />
               </>
             )}

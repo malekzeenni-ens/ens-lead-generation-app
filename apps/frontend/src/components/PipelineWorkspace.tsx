@@ -47,6 +47,7 @@ import type {
   Template,
 } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
+import { useRememberedState } from "../remembered";
 import {
   DangerConfirm,
   EmptyState,
@@ -199,8 +200,8 @@ export function PipelineWorkspace({
     sendContactMessage,
     askAssistant,
   } = useWorkspaceActions();
-  const [activeTask, setActiveTask] = useState("overview");
-  const [leadQuery, setLeadQuery] = useState("");
+  const [activeTask, setActiveTask] = useRememberedState("pipeline:tab", "overview");
+  const [leadQuery, setLeadQuery] = useRememberedState("pipeline:query", "");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [briefing, setBriefing] = useState<LeadBriefing | null>(null);
   const [briefingLeadId, setBriefingLeadId] = useState<string | null>(null);
@@ -250,7 +251,7 @@ export function PipelineWorkspace({
   const openFollowUps = selectedLead
     ? selectedLead.follow_ups.filter((item) => item.status === "open")
     : [];
-  const leadPages = usePagination(filteredLeads, 8, leadQuery);
+  const leadPages = usePagination(filteredLeads, 8, leadQuery, "pipeline-leads");
   const { pageSize: leadPageSize, setPage: setLeadPage } = leadPages;
   const followUpPages = usePagination(
     openFollowUps,
