@@ -9,6 +9,7 @@ import {
   HardDrive,
   Info,
   KeyRound,
+  Palette,
   MailCheck,
   MapPin,
   PlugZap,
@@ -32,6 +33,7 @@ import type {
 import { humanize } from "../domain";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import { useRememberedState } from "../remembered";
+import { type DensityChoice, type ThemeChoice, useAppearance } from "../appearance";
 import {
   HelpTip,
   LoadingState,
@@ -146,6 +148,7 @@ export function SettingsWorkspace({
           : { tone: "neutral" as const, status: "Not set up", detail: "Optional; set up under AI and models" }),
     },
   ];
+  const { theme, setTheme, density, setDensity } = useAppearance();
   const [backup, setBackup] = useState<BackupResult | null>(null);
   const [verification, setVerification] = useState<VerificationResult | null>(null);
 
@@ -471,6 +474,46 @@ export function SettingsWorkspace({
                 </div>
                 <button className="primary-action" type="submit" disabled={busy}><Save size={17} /> Save settings</button>
               </form>
+            </section>
+            ) : null}
+
+            {activeTask === "general" ? (
+            <section className="form-panel">
+              <div className="subsection-heading">
+                <div><h3>Appearance</h3><p>Applies straight away, on this computer only.</p></div>
+                <Palette size={19} aria-hidden="true" />
+              </div>
+              <div className="form-grid">
+                <fieldset className="choice-group">
+                  <legend>Theme</legend>
+                  {(
+                    [
+                      ["system", "Match Windows"],
+                      ["light", "Light"],
+                      ["dark", "Dark"],
+                    ] as [ThemeChoice, string][]
+                  ).map(([value, label]) => (
+                    <label key={value}>
+                      <input type="radio" name="appearance-theme" checked={theme === value} onChange={() => setTheme(value)} />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
+                <fieldset className="choice-group">
+                  <legend>Density</legend>
+                  {(
+                    [
+                      ["comfortable", "Comfortable"],
+                      ["compact", "Compact: more rows on screen"],
+                    ] as [DensityChoice, string][]
+                  ).map(([value, label]) => (
+                    <label key={value}>
+                      <input type="radio" name="appearance-density" checked={density === value} onChange={() => setDensity(value)} />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
+              </div>
             </section>
             ) : null}
 

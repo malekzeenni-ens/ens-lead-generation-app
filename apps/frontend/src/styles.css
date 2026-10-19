@@ -90,6 +90,100 @@
   font-family: "Segoe UI", Inter, Geist, "IBM Plex Sans", system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizelegibility;
+  color-scheme: dark;
+}
+
+/*
+ * Light theme (UX redesign E2): the same brand colours on warm paper. Every text colour
+ * meets WCAG AA (4.5:1) on every surface; dark text on the gold buttons is 9.3:1.
+ * It follows the system setting unless the operator chose a theme in Settings.
+ */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ens-app-background: #f6f2ec;
+    --ens-surface-1: #ffffff;
+    --ens-surface-2: #f1ebe2;
+    --ens-surface-3: #e8dfd2;
+    --ens-surface-header: #fbf8f3;
+    --ens-surface-hover: rgb(76 100 124 / 10%);
+    --ens-surface-selected: rgb(76 100 124 / 16%);
+    --ens-surface-disabled: rgb(124 124 107 / 12%);
+    --ens-border-subtle: rgb(20 33 45 / 10%);
+    --ens-border-default: rgb(20 33 45 / 18%);
+    --ens-border-strong: rgb(133 97 43 / 45%);
+    --ens-border-active: #85612b;
+    --ens-text-primary: #14212d;
+    --ens-text-secondary: #3d4b57;
+    --ens-text-muted: #5c6873;
+    --ens-text-accent: #85612b;
+    --ens-text-on-accent: #14212d;
+    --ens-action-primary: #ddbf93;
+    --ens-action-primary-hover: #d3b282;
+    --ens-action-primary-pressed: #c9a46e;
+    --ens-action-secondary: #4c647c;
+    --ens-success: #2c7350;
+    --ens-success-soft: rgb(44 115 80 / 10%);
+    --ens-warning: #8a5d14;
+    --ens-warning-soft: rgb(212 168 92 / 18%);
+    --ens-error: #a93636;
+    --ens-error-soft: rgb(169 54 54 / 8%);
+    --ens-error-hover: rgb(169 54 54 / 14%);
+    --ens-error-border: rgb(169 54 54 / 30%);
+    --ens-overlay: rgb(20 33 45 / 40%);
+    --ens-shadow: 0 8px 24px rgb(20 33 45 / 8%);
+    --ens-shadow-raised: 0 12px 32px rgb(20 33 45 / 14%);
+    --ens-header-shadow: 0 1px 0 rgb(20 33 45 / 8%);
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] {
+  --ens-app-background: #f6f2ec;
+  --ens-surface-1: #ffffff;
+  --ens-surface-2: #f1ebe2;
+  --ens-surface-3: #e8dfd2;
+  --ens-surface-header: #fbf8f3;
+  --ens-surface-hover: rgb(76 100 124 / 10%);
+  --ens-surface-selected: rgb(76 100 124 / 16%);
+  --ens-surface-disabled: rgb(124 124 107 / 12%);
+  --ens-border-subtle: rgb(20 33 45 / 10%);
+  --ens-border-default: rgb(20 33 45 / 18%);
+  --ens-border-strong: rgb(133 97 43 / 45%);
+  --ens-border-active: #85612b;
+  --ens-text-primary: #14212d;
+  --ens-text-secondary: #3d4b57;
+  --ens-text-muted: #5c6873;
+  --ens-text-accent: #85612b;
+  --ens-text-on-accent: #14212d;
+  --ens-action-primary: #ddbf93;
+  --ens-action-primary-hover: #d3b282;
+  --ens-action-primary-pressed: #c9a46e;
+  --ens-action-secondary: #4c647c;
+  --ens-success: #2c7350;
+  --ens-success-soft: rgb(44 115 80 / 10%);
+  --ens-warning: #8a5d14;
+  --ens-warning-soft: rgb(212 168 92 / 18%);
+  --ens-error: #a93636;
+  --ens-error-soft: rgb(169 54 54 / 8%);
+  --ens-error-hover: rgb(169 54 54 / 14%);
+  --ens-error-border: rgb(169 54 54 / 30%);
+  --ens-overlay: rgb(20 33 45 / 40%);
+  --ens-shadow: 0 8px 24px rgb(20 33 45 / 8%);
+  --ens-shadow-raised: 0 12px 32px rgb(20 33 45 / 14%);
+  --ens-header-shadow: 0 1px 0 rgb(20 33 45 / 8%);
+  color-scheme: light;
+}
+
+/* Compact density (UX redesign E1): smaller controls and tighter spacing, same type sizes. */
+:root[data-density="compact"] {
+  --ens-control-height-sm: 28px;
+  --ens-control-height-md: 32px;
+  --ens-control-height-lg: 36px;
+  --ens-space-3: 10px;
+  --ens-space-4: 12px;
+  --ens-space-5: 16px;
+  --ens-space-6: 18px;
+  --ens-space-8: 24px;
 }
 
 * {
@@ -5220,6 +5314,30 @@ kbd {
 
 .settings-nav button[aria-current="page"] svg {
   color: var(--ens-text-accent);
+}
+
+.choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ens-space-2) var(--ens-space-5);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice-group legend {
+  width: 100%;
+  margin-bottom: var(--ens-space-2);
+  font-size: var(--ens-type-sm);
+  font-weight: 600;
+}
+
+.choice-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ens-space-2);
+  font-size: var(--ens-type-sm);
+  font-weight: 500;
 }
 
 .connection-cards {

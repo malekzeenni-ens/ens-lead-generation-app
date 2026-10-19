@@ -2551,6 +2551,26 @@ describe("local operating workbench", () => {
     );
   });
 
+  it("switches theme and density from Settings and keeps the choice on this computer", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Service connected");
+    await user.click(screen.getByRole("link", { name: /Settings/ }));
+    const theme = screen.getByRole("group", { name: "Theme" });
+    expect(within(theme).getByRole("radio", { name: "Match Windows" })).toBeChecked();
+
+    await user.click(within(theme).getByRole("radio", { name: "Light" }));
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(window.localStorage.getItem("ens:appearance:theme")).toBe("light");
+
+    await user.click(within(screen.getByRole("group", { name: "Density" })).getByRole("radio", { name: /Compact/ }));
+    expect(document.documentElement.dataset.density).toBe("compact");
+
+    await user.click(within(theme).getByRole("radio", { name: "Match Windows" }));
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(window.localStorage.getItem("ens:appearance:theme")).toBeNull();
+  });
+
   it("lets the local AI model be chosen in Settings", async () => {
     const user = userEvent.setup();
     render(<App />);

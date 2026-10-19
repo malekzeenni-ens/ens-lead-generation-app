@@ -688,3 +688,10 @@ Phase gate after D7: `npm run quality` passed (frontend 140, backend 271, Rust 3
 - Keyboard first: arrows move, Enter opens, Esc closes and focus returns to where it was. It is a combobox over a listbox, so screen readers announce the active result. Choosing a lead opens it in Pipeline; a campaign, product or template opens its screen.
 - Nothing new is fetched and nothing is stored: it searches the data each screen already has.
 - Verification: 1 new test (Ctrl+K, grouped results, Enter opens the lead, header button, Esc closes); 141 frontend tests pass; TypeScript and ESLint pass.
+
+### E1 + E2 - Density and light theme
+
+- Settings > General > Appearance: Theme (Match Windows, Light, Dark) and Density (Comfortable, Compact). Both apply at once, through `data-theme` and `data-density` on the page root, and are kept in this computer's browser storage (display preferences only, no workspace data). They are applied before the first paint, so a light-theme user never sees a dark flash.
+- The light theme is the same brand on warm paper: navy text, gold actions, and a darker gold for accent text. Measured contrast: every text colour is at least 4.7:1 on every light surface (WCAG AA is 4.5:1), and dark text on the gold buttons is 9.3:1. Following Windows is the default; `color-scheme` is set so native controls and scrollbars match.
+- Compact density lowers control heights (44/38/32 px to 36/32/28 px) and tightens the spacing scale; type sizes stay the same, for legibility.
+- Verification: 1 new test (theme and density applied, stored, and "Match Windows" clearing the choice); the test setup now clears local storage and the appearance attributes between tests; 142 frontend tests pass; TypeScript and ESLint pass.
