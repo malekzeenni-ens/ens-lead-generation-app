@@ -11,17 +11,20 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import { ApiError, api } from "../api";
 import { emailAddressFor } from "../contact";
-import { PIPELINE_STAGES, humanize } from "../domain";
-import type { Campaign, Lead, LeadPage, StalledLeadDigest } from "../types";
+import { PIPELINE_STAGES, formatDate, humanize } from "../domain";
+import type { Campaign, Lead, LeadListItem, LeadPage, StalledLeadDigest } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import { useRememberedState } from "../remembered";
 import {
+  Drawer,
   EmptyState,
-  LoadingState,
   PageHeader,
   Pagination,
+  SkeletonRows,
+  StatusPill,
   TaskPanel,
   TaskTabs,
+  Toolbar,
 } from "./DesignSystem";
 
 interface LeadWorkspaceProps {
@@ -48,6 +51,42 @@ const SOURCE_LABELS: Record<string, string> = {
 const PRIMARY_SOURCE_TYPES = ["google", "instagram", "facebook", "manual"];
 
 const LEAD_PAGE_SIZE = 10;
+
+interface LeadFilters {
+  campaignId: string;
+  sourceType: string;
+  stage: string;
+  suppression: string;
+  reviewFilter: "" | "review";
+}
+
+const NO_FILTERS: LeadFilters = {
+  campaignId: "",
+  sourceType: "",
+  stage: "",
+  suppression: "all",
+  reviewFilter: "",
+};
+
+/** Common questions as one click. Each is a combination of the register's own filters. */
+const SAVED_VIEWS: { id: string; label: string; filters: LeadFilters }[] = [
+  { id: "all", label: "All", filters: NO_FILTERS },
+  { id: "review", label: "Needs review", filters: { ...NO_FILTERS, reviewFilter: "review" } },
+  { id: "ready", label: "Ready to contact", filters: { ...NO_FILTERS, stage: "ready_to_contact", suppression: "available" } },
+  { id: "following", label: "Following up", filters: { ...NO_FILTERS, stage: "follow_up_due", suppression: "available" } },
+  { id: "won", label: "Won", filters: { ...NO_FILTERS, stage: "won" } },
+  { id: "dnc", label: "Do not contact", filters: { ...NO_FILTERS, suppression: "suppressed" } },
+];
+
+function sameFilters(left: LeadFilters, right: LeadFilters): boolean {
+  return (
+    left.campaignId === right.campaignId &&
+    left.sourceType === right.sourceType &&
+    left.stage === right.stage &&
+    left.suppression === right.suppression &&
+    left.reviewFilter === right.reviewFilter
+  );
+}
 
 /** `value`, settled for `delayMs`, so typing does not query the backend on every keystroke. */
 function useSettledValue<T>(value: T, delayMs: number): T {
@@ -92,6 +131,7 @@ export function LeadWorkspace({
   const [digest, setDigest] = useState<StalledLeadDigest | null>(null);
   const [loadingDigest, setLoadingDigest] = useState(false);
   const [digestError, setDigestError] = useState<string | null>(null);
+  const [previewLead, setPreviewLead] = useState<LeadListItem | null>(null);
   const currentCampaigns = campaigns.filter((campaign) => campaign.status !== "inactive");
   const sourceTypesQuery = useQuery({
     queryKey: ["leads", "source-types"],
@@ -131,6 +171,38 @@ export function LeadWorkspace({
   });
   const leadPage: LeadPage | undefined = leadPageQuery.data;
   const pageCount = leadPage ? Math.max(1, Math.ceil(leadPage.total / LEAD_PAGE_SIZE)) : 1;
+
+  const filters: LeadFilters = { campaignId, sourceType, stage, suppression, reviewFilter };
+  const activeView = SAVED_VIEWS.find((view) => sameFilters(view.filters, filters))?.id ?? null;
+
+  function applyFilters(next: LeadFilters): void {
+    setCampaignId(next.campaignId);
+    setSourceType(next.sourceType);
+    setStage(next.stage);
+    setSuppression(next.suppression);
+    setReviewFilter(next.reviewFilter);
+  }
+
+  const filterChips = [
+    query.trim() && { label: `Search: ${query.trim()}`, onRemove: () => setQuery("") },
+    campaignId && {
+      label: `Campaign: ${campaigns.find((campaign) => campaign.id === campaignId)?.name ?? "Unknown"}`,
+      onRemove: () => setCampaignId(""),
+    },
+    sourceType && { label: `Source: ${sourceLabel(sourceType)}`, onRemove: () => setSourceType("") },
+    stage && { label: `Stage: ${humanize(stage)}`, onRemove: () => setStage("") },
+    suppression !== "all" && {
+      label: suppression === "suppressed" ? "Do not contact" : "Can be contacted",
+      onRemove: () => setSuppression("all"),
+    },
+    reviewFilter && { label: "Needs review", onRemove: () => setReviewFilter("") },
+  ].filter((chip): chip is { label: string; onRemove: () => void } => Boolean(chip));
+
+  const resultSummary = leadPage
+    ? leadPage.total === 0
+      ? "No leads match"
+      : `Showing ${(page - 1) * LEAD_PAGE_SIZE + 1}–${Math.min(page * LEAD_PAGE_SIZE, leadPage.total)} of ${leadPage.total}`
+    : undefined;
 
   async function createLead(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -299,7 +371,91 @@ export function LeadWorkspace({
           </TaskPanel>
         ) : (
           <TaskPanel id="leads-tasks" tabId="browse">
-          <div className="records-panel records-panel--table">
+          <div className="saved-views" role="group" aria-label="Saved views">
+            {SAVED_VIEWS.map((view) => (
+              <button
+                key={view.id}
+                type="button"
+                className={`saved-view${activeView === view.id ? " saved-view--active" : ""}`}
+                aria-pressed={activeView === view.id}
+                onClick={() => {
+                  applyFilters(view.filters);
+                  if (view.id === "all") setQuery("");
+                }}
+              >
+                {view.label}
+              </button>
+            ))}
+          </div>
+          <Toolbar
+            chips={filterChips}
+            onClearAll={() => {
+              applyFilters(NO_FILTERS);
+              setQuery("");
+            }}
+            summary={resultSummary}
+          >
+            <div className="filter-bar filter-bar--leads" aria-label="Lead filters">
+              <label className="search-control">
+                <span className="visually-hidden">Search leads</span>
+                <Search size={16} aria-hidden="true" />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search leads" />
+              </label>
+              <label>
+                <span className="visually-hidden">Filter by campaign</span>
+                <select
+                  value={campaignId}
+                  onChange={(event) => setCampaignId(event.target.value)}
+                >
+                  <option value="">All campaigns</option>
+                  {campaigns.map((campaign) => (
+                    <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="visually-hidden">Filter by lead source</span>
+                <select
+                  value={sourceType}
+                  onChange={(event) => setSourceType(event.target.value)}
+                >
+                  <option value="">All lead sources</option>
+                  {sourceOptions.map((value) => (
+                    <option key={value} value={value}>{sourceLabel(value)}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="visually-hidden">Filter by stage</span>
+                <select value={stage} onChange={(event) => setStage(event.target.value)}>
+                  <option value="">All stages</option>
+                  {PIPELINE_STAGES.map((value) => <option key={value} value={value}>{humanize(value)}</option>)}
+                </select>
+              </label>
+              <label>
+                <span className="visually-hidden">Filter by suppression</span>
+                <select value={suppression} onChange={(event) => setSuppression(event.target.value)}>
+                  <option value="all">All contact states</option>
+                  <option value="available">Available</option>
+                  <option value="suppressed">Suppressed</option>
+                </select>
+              </label>
+              <label>
+                <span className="visually-hidden">Filter by review status</span>
+                <select
+                  value={reviewFilter}
+                  onChange={(event) => setReviewFilter(event.target.value as "" | "review")}
+                >
+                  <option value="">All contact reviews</option>
+                  <option value="review">Needs review</option>
+                </select>
+              </label>
+            </div>
+          </Toolbar>
+          <details className="lead-tools">
+            <summary>
+              <Sparkles size={15} aria-hidden="true" /> Set filters with AI, or find stalled leads
+            </summary>
             <form className="form-grid form-grid--compact" onSubmit={(event) => void translateFilters(event)}>
               <div className="field-pair">
                 <label>
@@ -372,72 +528,17 @@ export function LeadWorkspace({
                 )}
               </section>
             ) : null}
-            <div className="filter-bar filter-bar--leads" aria-label="Lead filters">
-              <label className="search-control">
-                <span className="visually-hidden">Search leads</span>
-                <Search size={16} aria-hidden="true" />
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search leads" />
-              </label>
-              <label>
-                <span className="visually-hidden">Filter by campaign</span>
-                <select
-                  value={campaignId}
-                  onChange={(event) => setCampaignId(event.target.value)}
-                >
-                  <option value="">All campaigns</option>
-                  {campaigns.map((campaign) => (
-                    <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span className="visually-hidden">Filter by lead source</span>
-                <select
-                  value={sourceType}
-                  onChange={(event) => setSourceType(event.target.value)}
-                >
-                  <option value="">All lead sources</option>
-                  {sourceOptions.map((value) => (
-                    <option key={value} value={value}>{sourceLabel(value)}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span className="visually-hidden">Filter by stage</span>
-                <select value={stage} onChange={(event) => setStage(event.target.value)}>
-                  <option value="">All stages</option>
-                  {PIPELINE_STAGES.map((value) => <option key={value} value={value}>{humanize(value)}</option>)}
-                </select>
-              </label>
-              <label>
-                <span className="visually-hidden">Filter by suppression</span>
-                <select value={suppression} onChange={(event) => setSuppression(event.target.value)}>
-                  <option value="all">All contact states</option>
-                  <option value="available">Available</option>
-                  <option value="suppressed">Suppressed</option>
-                </select>
-              </label>
-              <label>
-                <span className="visually-hidden">Filter by review status</span>
-                <select
-                  value={reviewFilter}
-                  onChange={(event) => setReviewFilter(event.target.value as "" | "review")}
-                >
-                  <option value="">All contact reviews</option>
-                  <option value="review">Needs review</option>
-                </select>
-              </label>
-            </div>
-
+          </details>
+          <div className="records-panel records-panel--table">
             {loading ? (
-              <LoadingState label="Loading leads" />
+              <SkeletonRows label="Loading leads" />
             ) : leadPageQuery.isError ? (
               <EmptyState
                 title="Leads could not be loaded"
                 description="The lead register is unavailable. Use Refresh to try again."
               />
             ) : !leadPage ? (
-              <LoadingState label="Loading leads" />
+              <SkeletonRows label="Loading leads" />
             ) : leadPage.total === 0 ? (
               <EmptyState
                 title={leads.length === 0 ? "No leads recorded" : "No leads match"}
@@ -466,12 +567,26 @@ export function LeadWorkspace({
                   <tbody>
                     {leadPage.items.map((lead) => {
                       return (
-                        <tr key={lead.id}>
+                        <tr
+                          key={lead.id}
+                          className="lead-row"
+                          onClick={(event) => {
+                            if ((event.target as HTMLElement).closest("button, a")) return;
+                            setPreviewLead(lead);
+                          }}
+                        >
                           <td data-label="Business">
-                            <strong>{lead.business_name}</strong>
+                            <button
+                              type="button"
+                              className="lead-row__name"
+                              aria-label={`Preview ${lead.business_name}`}
+                              onClick={() => setPreviewLead(lead)}
+                            >
+                              <strong>{lead.business_name}</strong>
+                            </button>
                             <small>{lead.segment}</small>
                             {lead.suppressed ? (
-                              <span className="status-badge status-badge--warning">Do not contact</span>
+                              <StatusPill tone="warning">Do not contact</StatusPill>
                             ) : null}
                           </td>
                           <td data-label="Score">
@@ -506,7 +621,9 @@ export function LeadWorkspace({
                           </td>
                           <td data-label="Stage"><span className="status-badge">{humanize(lead.pipeline_stage)}</span></td>
                           <td data-label="Location">{lead.location}</td>
-                          <td data-label="Next action">{lead.next_follow_up_due ?? "Not set"}</td>
+                          <td data-label="Next action">
+                            {lead.next_follow_up_due ? formatDate(lead.next_follow_up_due) : <span className="supporting-copy">None planned</span>}
+                          </td>
                           <td data-label="Action">
                             <div className="record-actions">
                               <button
@@ -541,6 +658,83 @@ export function LeadWorkspace({
           </TaskPanel>
         )}
       </section>
+
+      <Drawer
+        open={previewLead !== null}
+        title={previewLead?.business_name ?? "Lead"}
+        description={previewLead ? `${previewLead.segment} · ${previewLead.location}` : undefined}
+        onClose={() => setPreviewLead(null)}
+        footer={
+          previewLead ? (
+            <>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => {
+                  const id = previewLead.id;
+                  setPreviewLead(null);
+                  askAssistant({ kind: "lead", id });
+                }}
+              >
+                <Sparkles size={16} aria-hidden="true" /> Ask AI
+              </button>
+              <button
+                type="button"
+                className="primary-action"
+                onClick={() => {
+                  const id = previewLead.id;
+                  setPreviewLead(null);
+                  onManage(id);
+                }}
+              >
+                Open in pipeline <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </>
+          ) : null
+        }
+      >
+        {previewLead ? (
+          <dl className="lead-preview">
+            <div>
+              <dt>Stage</dt>
+              <dd>
+                <StatusPill tone={previewLead.suppressed ? "warning" : "accent"}>
+                  {previewLead.suppressed ? "Do not contact" : humanize(previewLead.pipeline_stage)}
+                </StatusPill>
+              </dd>
+            </div>
+            <div>
+              <dt>Score</dt>
+              <dd>{previewLead.current_score === null ? "Not scored yet" : `${previewLead.current_score}/100`}</dd>
+            </div>
+            <div>
+              <dt>Contact</dt>
+              <dd>
+                {[previewLead.contact_first_name, previewLead.contact_last_name].filter(Boolean).join(" ") || "No named contact"}
+                {previewLead.phone_number ? <span>{previewLead.phone_number}</span> : null}
+                {emailAddressFor(previewLead) ? <span>{emailAddressFor(previewLead)}</span> : null}
+              </dd>
+            </div>
+            <div>
+              <dt>Found through</dt>
+              <dd>{previewLead.source_types.length ? previewLead.source_types.map(sourceLabel).join(", ") : "Unknown"}</dd>
+            </div>
+            <div>
+              <dt>Next follow-up</dt>
+              <dd>{previewLead.next_follow_up_due ? formatDate(previewLead.next_follow_up_due) : "None planned"}</dd>
+            </div>
+            <div>
+              <dt>Campaigns</dt>
+              <dd>
+                {previewLead.campaign_ids
+                  .map((id) => campaigns.find((campaign) => campaign.id === id)?.name)
+                  .filter(Boolean)
+                  .join(", ") || "None"}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
+      </Drawer>
     </>
   );
 }

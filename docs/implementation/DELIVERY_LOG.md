@@ -625,3 +625,11 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - Below: "This week" (found, scored, shortlisted, drafted, sent, plus the pipeline by stage group), "Coming up" (next five follow-ups), the weekly runs as a collapsible section with the capacity and "how it works" help, and a slim totals row. The long weekly explanation became a help tip.
 - Counts agree with the sidebar badges (the shortlist count covers every open shortlist). New `goToPipeline` action. Staggered card entry is switched off under reduced motion, which now also zeroes animation delays app-wide.
 - Verification: 2 new tests (empty day; urgency order); the dashboard tests now go through the action cards and help tips; 134 frontend tests pass; TypeScript and ESLint pass.
+
+### D2 - All leads: saved views, filter chips and a preview drawer
+
+- Saved views above the register: All, Needs review, Ready to contact, Following up, Won and Do not contact. Each is a combination of the existing server filters (R10), so the backend is unchanged; the matching view is highlighted, and none is when the filters are custom.
+- The filters sit in the shared toolbar with a chip per active filter (removable), "Clear all" and "Showing 1–10 of N". "Set filters with AI" and "Stalled leads" moved into a closed disclosure under the toolbar.
+- Clicking a row, or the business name, opens a preview drawer: stage, score, contact, where it was found, next follow-up and campaigns, with "Ask AI" and "Open in pipeline". Row buttons still work without opening it. Loading shows skeleton rows instead of a spinner; dates show as dates.
+- Not done: stage names are still title case from `humanize` ("Ready To Contact"); a sentence-case pass touches every screen and is left for the polish phase.
+- Verification: 1 new test (saved view sets filters, chip removal, clear all, preview drawer to pipeline); 135 frontend tests pass; TypeScript and ESLint pass.

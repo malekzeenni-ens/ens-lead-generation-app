@@ -2097,6 +2097,29 @@ describe("local operating workbench", () => {
     expect(screen.queryByText(lead.business_name)).not.toBeInTheDocument();
   });
 
+  it("filters leads with saved views and chips, and previews a lead in a drawer", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Service connected");
+    await user.click(screen.getByRole("link", { name: /All leads/ }));
+
+    const views = screen.getByRole("group", { name: "Saved views" });
+    expect(within(views).getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(views).getByRole("button", { name: "Ready to contact" }));
+    expect(screen.getByRole("combobox", { name: "Filter by stage" })).toHaveValue("ready_to_contact");
+    expect(screen.getByRole("combobox", { name: "Filter by suppression" })).toHaveValue("available");
+    await user.click(screen.getByRole("button", { name: "Remove filter Stage: Ready To Contact" }));
+    expect(screen.getByRole("combobox", { name: "Filter by stage" })).toHaveValue("");
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+    expect(within(views).getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(await screen.findByRole("button", { name: `Preview ${lead.business_name}` }));
+    const drawer = screen.getByRole("dialog", { name: lead.business_name });
+    expect(within(drawer).getByText("Next follow-up")).toBeInTheDocument();
+    await user.click(within(drawer).getByRole("button", { name: /Open in pipeline/ }));
+    expect(screen.getByRole("heading", { name: "Pipeline", level: 1 })).toBeInTheDocument();
+  });
+
   it("opens a registered lead in the pipeline workspace", async () => {
     const user = userEvent.setup();
     render(<App />);

@@ -4586,6 +4586,156 @@ td small {
   }
 }
 
+/* All leads (UX redesign D2): saved views, a toolbar, a quiet table and a preview drawer. */
+.saved-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ens-space-2);
+  margin-bottom: var(--ens-space-2);
+}
+
+.saved-view {
+  min-height: var(--ens-control-height-sm);
+  padding: 0 var(--ens-space-4);
+  border: 1px solid var(--ens-border-default);
+  border-radius: var(--ens-radius-pill);
+  background: transparent;
+  color: var(--ens-text-secondary);
+  cursor: pointer;
+  font-size: var(--ens-type-sm);
+  font-weight: 600;
+  transition:
+    background var(--ens-motion-fast) var(--ens-ease-out),
+    color var(--ens-motion-fast) var(--ens-ease-out),
+    border-color var(--ens-motion-fast) var(--ens-ease-out);
+}
+
+.saved-view:hover {
+  background: var(--ens-surface-hover);
+  color: var(--ens-text-primary);
+}
+
+.saved-view--active {
+  border-color: var(--ens-action-primary);
+  background: var(--ens-action-primary);
+  color: var(--ens-text-on-accent);
+}
+
+.saved-view--active:hover {
+  background: var(--ens-action-primary);
+  color: var(--ens-text-on-accent);
+}
+
+.toolbar .filter-bar {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.lead-tools {
+  margin-bottom: var(--ens-space-3);
+  border: 1px solid var(--ens-border-subtle);
+  border-radius: var(--ens-radius-md);
+  background: var(--ens-surface-1);
+}
+
+.lead-tools > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--ens-space-2);
+  padding: var(--ens-space-2) var(--ens-space-4);
+  color: var(--ens-text-secondary);
+  cursor: pointer;
+  font-size: var(--ens-type-sm);
+  font-weight: 600;
+  list-style: none;
+}
+
+.lead-tools > summary::-webkit-details-marker {
+  display: none;
+}
+
+.lead-tools > summary svg {
+  color: var(--ens-text-accent);
+}
+
+.lead-tools[open] > summary {
+  border-bottom: 1px solid var(--ens-border-subtle);
+}
+
+.lead-tools > form,
+.lead-tools > section {
+  padding: var(--ens-space-3) var(--ens-space-4);
+}
+
+.lead-row {
+  cursor: pointer;
+  transition: background var(--ens-motion-fast) var(--ens-ease-out);
+}
+
+.lead-row:hover {
+  background: var(--ens-surface-hover);
+}
+
+.lead-row__name {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ens-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.lead-row__name:hover strong,
+.lead-row__name:focus-visible strong {
+  color: var(--ens-text-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lead-row .record-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
+.lead-preview {
+  display: grid;
+  gap: var(--ens-space-4);
+  margin: 0;
+}
+
+.lead-preview > div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: var(--ens-space-3);
+  padding-bottom: var(--ens-space-4);
+  border-bottom: 1px solid var(--ens-border-subtle);
+}
+
+.lead-preview dt {
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-sm);
+}
+
+.lead-preview dd {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  color: var(--ens-text-primary);
+  font-size: var(--ens-type-sm);
+}
+
+.lead-preview dd span:not(.status-pill) {
+  color: var(--ens-text-secondary);
+}
+
+.lead-preview dd .status-pill {
+  justify-self: start;
+}
+
 /* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */
 .section-heading__actions {
   display: flex;
