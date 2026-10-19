@@ -617,3 +617,11 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - `useRememberedState` gained an optional starting value, so a link from Overview that opens All leads on "needs review" still wins over the remembered filter.
 - Catalogue products and templates show 10 per page with a rows-per-page choice (10, 25, 50). Per-lead lists (follow-ups, timeline) are deliberately not remembered, because they belong to whichever lead is open.
 - Verification: 1 new test (page, rows per page and search survive switching screens); the catalogue paging test now expects 10 per page; 132 frontend tests pass; TypeScript and ESLint pass.
+
+### D1 - Overview becomes "Today"
+
+- The first screen is now "Today" (sidebar and title), dated, and opens with what needs the operator, most urgent first: a campaign that stopped, campaigns due to run, drafts to approve, approved emails ready for Zoho, emails to mark as sent, follow-ups due or overdue, shortlisted leads to decide, leads needing review and possible duplicates. Each card says what to do and has one button straight to the right screen; "Run due campaigns" keeps its confirmation.
+- When nothing needs the operator: "You're up to date", with the date of the next weekly check (or how to turn weekly outreach on).
+- Below: "This week" (found, scored, shortlisted, drafted, sent, plus the pipeline by stage group), "Coming up" (next five follow-ups), the weekly runs as a collapsible section with the capacity and "how it works" help, and a slim totals row. The long weekly explanation became a help tip.
+- Counts agree with the sidebar badges (the shortlist count covers every open shortlist). New `goToPipeline` action. Staggered card entry is switched off under reduced motion, which now also zeroes animation delays app-wide.
+- Verification: 2 new tests (empty day; urgency order); the dashboard tests now go through the action cards and help tips; 134 frontend tests pass; TypeScript and ESLint pass.

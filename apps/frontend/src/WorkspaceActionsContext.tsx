@@ -46,6 +46,7 @@ export interface WorkspaceActions {
   manageLead: (leadId: string) => void;
   goToCreateCampaign: () => void;
   goToShortlist: () => void;
+  goToPipeline: () => void;
   goToCampaigns: () => void;
   goToLeads: () => void;
   goToLeadsNeedingReview: () => void;

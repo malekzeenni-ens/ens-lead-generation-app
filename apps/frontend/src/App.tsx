@@ -113,7 +113,7 @@ async function copyTextToClipboard(value: string): Promise<void> {
 }
 
 const SECTION_LABELS: Record<WorkspaceSection, string> = {
-  overview: "Overview",
+  overview: "Today",
   campaigns: "Campaigns",
   leads: "All leads",
   catalogue: "Catalogue",
@@ -1369,6 +1369,7 @@ function Workbench() {
       setActiveSection("campaigns");
     },
     goToShortlist: () => setActiveSection("shortlist"),
+    goToPipeline: () => setActiveSection("pipeline"),
     goToCampaigns: () => {
       setCampaignLandingTask("campaigns");
       setActiveSection("campaigns");
@@ -1575,7 +1576,7 @@ function Workbench() {
         <aside className={`sidebar${sidebarCollapsed ? " sidebar--collapsed" : ""}`}>
           <nav aria-label="Workspace navigation">
             <p className="navigation-label">Find</p>
-            <NavigationItem href="#overview" icon={LayoutDashboard} label="Overview" collapsed={sidebarCollapsed} active={activeSection === "overview"} onSelect={() => setActiveSection("overview")} />
+            <NavigationItem href="#overview" icon={LayoutDashboard} label="Today" collapsed={sidebarCollapsed} active={activeSection === "overview"} onSelect={() => setActiveSection("overview")} />
             <NavigationItem href="#campaigns" icon={Megaphone} label="Campaigns" collapsed={sidebarCollapsed} active={activeSection === "campaigns"} onSelect={() => {
               setCampaignLandingTask("campaigns");
               setActiveSection("campaigns");

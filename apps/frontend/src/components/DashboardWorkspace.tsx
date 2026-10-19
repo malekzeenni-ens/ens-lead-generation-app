@@ -3,16 +3,17 @@ import {
   ArrowRight,
   CalendarClock,
   CheckCircle2,
-  CirclePause,
+  Copy,
   MailCheck,
   Megaphone,
   PackageCheck,
   PencilLine,
   Play,
   RefreshCw,
-  ShieldCheck,
+  Send,
   Star,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 
 import {
@@ -33,14 +34,24 @@ import type {
 } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import {
+  Collapsible,
   EmptyState,
-  GuidanceNote,
   HelpTip,
-  LoadingState,
   MetricCard,
   PageHeader,
-  SectionHeading,
+  SkeletonRows,
 } from "./DesignSystem";
+
+interface TodayAction {
+  id: string;
+  tone: "error" | "warning" | "accent" | "success" | "neutral";
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+  actionLabel: string;
+  onAction: () => void;
+  disabled?: boolean;
+}
 
 interface DashboardWorkspaceProps {
   campaigns: Campaign[];
@@ -102,6 +113,7 @@ export function DashboardWorkspace({
     busy,
     manageLead: onManageLead,
     goToShortlist: onOpenShortlist,
+    goToPipeline: onOpenPipeline,
     goToCampaigns: onOpenCampaigns,
     goToLeads: onOpenLeads,
     goToLeadsNeedingReview: onOpenLeadsNeedingReview,
@@ -111,7 +123,6 @@ export function DashboardWorkspace({
     retryWeeklyOutreach: onRetryWeekly,
   } = useWorkspaceActions();
   const weekStart = mondayIso();
-  const weekday = new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(new Date());
   const enabledCampaigns = campaigns.filter(
     (campaign) => campaign.status === "active" && campaign.weekly_outreach_enabled,
   );
@@ -127,10 +138,6 @@ export function DashboardWorkspace({
   const failedRuns = weeklyRuns.filter((run) => run.status === "failed");
   const draftsCreated = weeklyRuns.reduce(
     (total, run) => total + (run.metrics.drafts_created ?? 0),
-    0,
-  );
-  const attentionTotal = weeklyRuns.reduce(
-    (total, run) => total + (run.metrics.attention_required ?? 0),
     0,
   );
   const missingContext = weeklyRuns.reduce(
@@ -165,11 +172,6 @@ export function DashboardWorkspace({
     0,
   );
   const due = openFollowUps(leads).slice(0, 5);
-  const latestShortlist = shortlists.find((shortlist) => shortlist.week_start === weekStart) ?? null;
-  const activeShortlistItems =
-    latestShortlist?.items
-      .filter((item) => ["recommended", "approved"].includes(item.decision))
-      .slice(0, 5) ?? [];
   const discovered = weeklyRuns.reduce(
     (total, run) => total + (run.metrics.discovered ?? 0),
     0,
@@ -188,20 +190,24 @@ export function DashboardWorkspace({
     dueCampaigns.length === 0 &&
     activeRuns.length === 0 &&
     failedRuns.length === 0;
-  const bannerTitle =
+  const runSummary =
     enabledCampaigns.length === 0
-      ? "Weekly outreach is not enabled"
+      ? "Weekly outreach is off"
       : activeRuns.length > 0
-        ? `${activeRuns.length} campaign${activeRuns.length === 1 ? " is" : "s are"} running`
-        : failedRuns.length > 0
-          ? `${failedRuns.length} campaign${failedRuns.length === 1 ? " needs" : "s need"} retrying`
-          : caughtUp
-            ? "You are caught up for this week"
-            : `${dueCampaigns.length} campaign${dueCampaigns.length === 1 ? " is" : "s are"} due`;
-  const bannerDetail =
-    enabledCampaigns.length === 0
-      ? "Enable a template and provider from a campaign to start first-open weekly preparation."
-      : `${weekday} check for the week beginning ${formatDate(weekStart)} · ${completedRuns.length} of ${enabledCampaigns.length} completed`;
+        ? `${activeRuns.length} running now`
+        : caughtUp
+          ? "You are caught up for this week"
+          : `${completedRuns.length} of ${enabledCampaigns.length} completed`;
+  const followUpsDue = (summary?.due_today ?? 0) + (summary?.overdue ?? 0);
+  // Same count as the sidebar badge: every shortlist entry still awaiting a decision.
+  const shortlistToDecide = shortlists.reduce(
+    (total, shortlist) => total + shortlist.items.filter((item) => item.decision === "recommended").length,
+    0,
+  );
+  const reviewRequired = summary?.review_required ?? 0;
+  const nextMonday = new Date(`${weekStart}T00:00:00`);
+  nextMonday.setDate(nextMonday.getDate() + 7);
+  const today = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
 
   function confirmAndRunDueCampaigns(): void {
     const campaignCount = dueCampaigns.length;
@@ -219,126 +225,225 @@ export function DashboardWorkspace({
     if (confirmed) void onRunWeekly();
   }
 
+  const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
+
+  // What needs the operator, most urgent first. Each card has exactly one way forward.
+  const todayActions: TodayAction[] = [
+    failedRuns.length > 0 && {
+      id: "failed",
+      tone: "error",
+      icon: AlertTriangle,
+      title: `${failedRuns.length} ${plural(failedRuns.length, "campaign", "campaigns")} stopped`,
+      detail: "The others carried on. Retry it from the weekly runs below.",
+      actionLabel: "See campaigns",
+      onAction: onOpenCampaigns,
+    },
+    dueCampaigns.length > 0 && {
+      id: "due",
+      tone: "accent",
+      icon: Play,
+      title: `${dueCampaigns.length} ${plural(dueCampaigns.length, "campaign is", "campaigns are")} due to run`,
+      detail: "Finds and scores leads, then prepares drafts. Nothing is sent.",
+      actionLabel: "Run due campaigns",
+      onAction: confirmAndRunDueCampaigns,
+      disabled: busy,
+    },
+    pendingDrafts > 0 && {
+      id: "drafts",
+      tone: "warning",
+      icon: MailCheck,
+      title: `${pendingDrafts} ${plural(pendingDrafts, "draft", "drafts")} to approve`,
+      detail: "Edit, approve or reject each one.",
+      actionLabel: "Review drafts",
+      onAction: onOpenEmailDrafts,
+    },
+    approvedDrafts > 0 && {
+      id: "approved",
+      tone: "success",
+      icon: Send,
+      title: `${approvedDrafts} approved ${plural(approvedDrafts, "email", "emails")} ready for Zoho`,
+      detail: "Open each one in Zoho and send it yourself.",
+      actionLabel: "Open approved",
+      onAction: onOpenEmailDrafts,
+    },
+    openedInZoho > 0 && {
+      id: "confirm",
+      tone: "neutral",
+      icon: CheckCircle2,
+      title: `${openedInZoho} ${plural(openedInZoho, "email", "emails")} to mark as sent`,
+      detail: "Confirm only once it has left Zoho.",
+      actionLabel: "Confirm sent",
+      onAction: onOpenEmailDrafts,
+    },
+    followUpsDue > 0 && {
+      id: "follow-ups",
+      tone: (summary?.overdue ?? 0) > 0 ? "warning" : "accent",
+      icon: CalendarClock,
+      title: `${followUpsDue} ${plural(followUpsDue, "follow-up", "follow-ups")} due`,
+      detail: (summary?.overdue ?? 0) > 0 ? `${summary?.overdue} overdue.` : "Due today.",
+      actionLabel: "Open pipeline",
+      onAction: onOpenPipeline,
+    },
+    shortlistToDecide > 0 && {
+      id: "shortlist",
+      tone: "accent",
+      icon: Star,
+      title: `${shortlistToDecide} shortlisted ${plural(shortlistToDecide, "lead", "leads")} to decide`,
+      detail: "Approve, defer or dismiss each recommended lead.",
+      actionLabel: "Open shortlist",
+      onAction: onOpenShortlist,
+    },
+    reviewRequired > 0 && {
+      id: "review",
+      tone: "neutral",
+      icon: Users,
+      title: `${reviewRequired} ${plural(reviewRequired, "lead needs", "leads need")} review`,
+      detail: missingContext > 0 ? `${missingContext} missing context from this week's runs.` : "Check the details before contacting them.",
+      actionLabel: "Review leads",
+      onAction: onOpenLeadsNeedingReview,
+    },
+    duplicateReviews > 0 && {
+      id: "duplicates",
+      tone: "neutral",
+      icon: Copy,
+      title: `${duplicateReviews} possible ${plural(duplicateReviews, "duplicate", "duplicates")}`,
+      detail: "A run found a business that may already be a lead.",
+      actionLabel: "Check in Campaigns",
+      onAction: onOpenCampaigns,
+    },
+  ].filter((action): action is TodayAction => Boolean(action));
+
   return (
     <>
-      <PageHeader
-        title="Overview"
-        description="What ran this week, what needs you, and what is ready to send."
-        action={
-          dueCampaigns.length > 0 ? (
-            <button
-              className="primary-action"
-              type="button"
-              disabled={busy}
-              title="Refresh every due enabled campaign and prepare local drafts after confirmation"
-              onClick={confirmAndRunDueCampaigns}
-            >
-              <Play size={18} aria-hidden="true" /> Run due campaigns
-            </button>
-          ) : pendingDrafts > 0 ? (
-            <button className="primary-action" type="button" onClick={onOpenEmailDrafts}>
-              <MailCheck size={18} aria-hidden="true" /> Review drafts
-            </button>
-          ) : (
-            <button
-              className="secondary-action"
-              type="button"
-              disabled={busy || enabledCampaigns.length === 0}
-              onClick={() => void onRunWeekly()}
-            >
-              <RefreshCw size={18} aria-hidden="true" /> Check weekly automation
-            </button>
-          )
-        }
-      />
+      <PageHeader title="Today" description={`${today} · week beginning ${formatDate(weekStart)}`} />
 
-      <GuidanceNote title="How the weekly check works">
-        While the app is open, enabled campaigns refresh once each week and prepare local drafts
-        only. If the app was closed at the start of the week, it catches up when you next open it;
-        every draft still requires your edit and approval, and nothing is sent automatically.
-      </GuidanceNote>
-
-      <section
-        className={`weekly-status-banner${caughtUp ? " weekly-status-banner--success" : ""}`}
-      >
-        <div className="weekly-status-banner__icon" aria-hidden="true">
-          {caughtUp ? <CheckCircle2 size={22} /> : <CalendarClock size={22} />}
-        </div>
-        <div>
-          <span className="eyebrow">Week beginning {formatDate(weekStart)}</span>
-          <h2>{bannerTitle}</h2>
-          <p>{bannerDetail}</p>
-        </div>
-        <div className="weekly-capacity">
-          <strong>{draftsCreated}/{settings?.weekly_outreach_global_limit ?? 20}</strong>
-          <span className="weekly-capacity-label">
-            weekly draft capacity
-            <HelpTip label="About weekly draft capacity">
-              This workspace-wide safety limit is applied after a shared lead has been assigned
-              to its strongest campaign. Change it in Settings.
-            </HelpTip>
-          </span>
-        </div>
-      </section>
-
-      <section
-        className="metrics-grid metrics-grid--operations"
-        aria-label="Weekly outreach summary"
-      >
-        <MetricCard
-          label="Campaign progress"
-          value={`${completedRuns.length}/${enabledCampaigns.length}`}
-          detail={activeRuns.length > 0 ? `${activeRuns.length} running` : `${dueCampaigns.length} due`}
-          icon={Megaphone}
-          onSelect={onOpenCampaigns}
-        />
-        <MetricCard
-          label="Draft review"
-          value={pendingDrafts}
-          detail={approvedDrafts > 0 ? `${approvedDrafts} approved for Zoho` : "Waiting for your decision"}
-          icon={MailCheck}
-          tone={pendingDrafts > 0 ? "warning" : "default"}
-          onSelect={onOpenEmailDrafts}
-        />
-        <MetricCard
-          label="Needs attention"
-          value={attentionTotal + duplicateReviews + failedRuns.length}
-          detail={`${missingContext} missing Context`}
-          icon={AlertTriangle}
-          tone={attentionTotal + duplicateReviews + failedRuns.length > 0 ? "warning" : "default"}
-          onSelect={onOpenLeadsNeedingReview}
-        />
-        <MetricCard
-          label="Sent this week"
-          value={sentThisWeek}
-          detail={openedInZoho > 0 ? `${openedInZoho} awaiting confirmation` : "User confirmed"}
-          icon={CheckCircle2}
-          onSelect={onOpenEmailDrafts}
-        />
-      </section>
-
-      <section className="workspace-section" aria-labelledby="weekly-automation-heading">
-        <SectionHeading
-          id="weekly-automation-heading"
-          title="Weekly automation"
-          description="Campaigns run one after another; a problem in one does not stop the rest."
-          icon={RefreshCw}
-          count={enabledCampaigns.length}
-        />
+      <section className="today-actions" aria-labelledby="today-actions-heading">
+        <h2 id="today-actions-heading" className="visually-hidden">Needs you</h2>
         {loading ? (
-          <LoadingState label="Loading weekly automation" />
-        ) : enabledCampaigns.length === 0 ? (
+          <SkeletonRows rows={3} label="Loading what needs you" />
+        ) : todayActions.length === 0 ? (
+          <div className="today-clear">
+            <CheckCircle2 size={28} aria-hidden="true" />
+            <div>
+              <strong>You're up to date</strong>
+              <p>
+                {enabledCampaigns.length > 0
+                  ? `The next weekly check runs on ${formatDate(nextMonday.toISOString().slice(0, 10))}.`
+                  : "Turn on weekly outreach in a campaign to have drafts prepared each week."}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ul className="today-action-list">
+            {todayActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <li key={action.id} className={`today-action today-action--${action.tone}`}>
+                  <span className="today-action__icon" aria-hidden="true"><Icon size={20} /></span>
+                  <div className="today-action__copy">
+                    <strong>{action.title}</strong>
+                    <p>{action.detail}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className={action.tone === "accent" || action.tone === "warning" || action.tone === "error" ? "primary-action" : "secondary-action"}
+                    disabled={action.disabled}
+                    onClick={action.onAction}
+                  >
+                    {action.actionLabel} <ArrowRight size={16} aria-hidden="true" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <div className="today-grid">
+        <section className="records-panel today-panel" aria-labelledby="today-week-heading">
+          <div className="records-heading">
+            <div><h3 id="today-week-heading">This week</h3><p>From found to sent</p></div>
+          </div>
+          <ol className="today-funnel">
+            {[
+              ["Found", discovered],
+              ["Scored", scored],
+              ["Shortlisted", shortlisted],
+              ["Drafted", draftsCreated],
+              ["Sent", sentThisWeek],
+            ].map(([label, value]) => (
+              <li key={String(label)}><strong>{value}</strong><span>{label}</span></li>
+            ))}
+          </ol>
+          <div className="today-pipeline" aria-label="Pipeline by stage group">
+            {PIPELINE_GROUPS.map((group) => {
+              const count = group.stages.reduce(
+                (total, stage) => total + (summary?.pipeline[stage] ?? 0),
+                0,
+              );
+              return (
+                <div key={group.label}><strong>{count}</strong><span>{group.label}</span></div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="records-panel today-panel" aria-labelledby="today-follow-ups-heading">
+          <div className="records-heading">
+            <div><h3 id="today-follow-ups-heading">Coming up</h3><p>Next follow-ups by due date</p></div>
+            <span>{summary?.open_follow_ups ?? due.length} open</span>
+          </div>
+          {due.length === 0 ? (
+            <EmptyState title="No follow-ups planned" description="Add one from a lead in Pipeline." />
+          ) : (
+            <div className="action-list">
+              {due.map(({ lead, followUp }) => (
+                <button type="button" className="action-row" key={followUp.id} onClick={() => onManageLead(lead.id)}>
+                  <span className="record-icon"><CalendarClock size={17} /></span>
+                  <span><strong>{lead.business_name}</strong><small>{humanize(followUp.follow_up_type)} · {formatDate(followUp.due_date)}</small></span>
+                  <ArrowRight size={17} />
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <Collapsible
+        rememberKey="today-weekly-runs"
+        title="Weekly runs"
+        summary={runSummary}
+        icon={RefreshCw}
+        actions={
+          <>
+            <span className="weekly-capacity-label">
+              {draftsCreated}/{settings?.weekly_outreach_global_limit ?? 20} drafts this week
+              <HelpTip label="About weekly draft capacity">
+                This workspace-wide safety limit is applied after a shared lead has been assigned
+                to its strongest campaign. Change it in Settings.
+              </HelpTip>
+            </span>
+            <HelpTip label="How the weekly check works">
+              While the app is open, enabled campaigns refresh once each week and prepare local
+              drafts only. If the app was closed at the start of the week, it catches up when you
+              next open it. Every draft still needs your approval, and nothing is sent automatically.
+            </HelpTip>
+          </>
+        }
+      >
+        {enabledCampaigns.length === 0 ? (
           <EmptyState
             title="No automated campaigns"
-            description="Open a campaign, choose its weekly template and enable automatic preparation."
+            description="Open a campaign, choose its weekly template and turn on weekly outreach."
             action={
-              <button className="primary-action" type="button" onClick={onOpenCampaigns}>
-                Configure campaigns
+              <button className="secondary-action" type="button" onClick={onOpenCampaigns}>
+                Set up in Campaigns
               </button>
             }
           />
         ) : (
           <div className="weekly-campaign-list">
+            <p className="weekly-campaign-list__summary">{runSummary}</p>
             {enabledCampaigns.map((campaign) => {
               const run = runByCampaign.get(campaign.id);
               const runDrafts = run?.metrics.drafts_created ?? 0;
@@ -385,153 +490,24 @@ export function DashboardWorkspace({
                 </article>
               );
             })}
+            {dueCampaigns.length === 0 && enabledCampaigns.length > 0 ? (
+              <button
+                className="tertiary-action"
+                type="button"
+                disabled={busy}
+                onClick={() => void onRunWeekly()}
+              >
+                <RefreshCw size={15} aria-hidden="true" /> Check again now
+              </button>
+            ) : null}
           </div>
         )}
-      </section>
+      </Collapsible>
 
-      <section className="workspace-section" aria-labelledby="action-queue-heading">
-        <SectionHeading
-          id="action-queue-heading"
-          title="Needs you"
-          description="Automation prepares the work. You approve and send."
-          icon={ShieldCheck}
-        />
-        <div className="dashboard-grid dashboard-grid--actions">
-          <div className="records-panel">
-            <div className="records-heading">
-              <div><h3>Your action queue</h3><p>Ordered by outreach stage</p></div>
-            </div>
-            <div className="action-list">
-              <button type="button" className="action-row" onClick={onOpenEmailDrafts}>
-                <span className="record-icon"><MailCheck size={17} /></span>
-                <span><strong>{pendingDrafts} drafts to review</strong><small>Edit, approve or reject</small></span>
-                <ArrowRight size={17} />
-              </button>
-              <button type="button" className="action-row" onClick={onOpenEmailDrafts}>
-                <span className="record-icon"><CheckCircle2 size={17} /></span>
-                <span><strong>{approvedDrafts} approved for Zoho</strong><small>Open and send manually</small></span>
-                <ArrowRight size={17} />
-              </button>
-              <button type="button" className="action-row" onClick={onOpenEmailDrafts}>
-                <span className="record-icon"><CalendarClock size={17} /></span>
-                <span><strong>{openedInZoho} awaiting sent confirmation</strong><small>Confirm only after sending</small></span>
-                <ArrowRight size={17} />
-              </button>
-            </div>
-          </div>
-
-          <div className="records-panel">
-            <div className="records-heading">
-              <div><h3>Needs attention</h3><p>Grouped by the next fix</p></div>
-            </div>
-            <div className="attention-summary">
-              <button type="button" onClick={onOpenLeadsNeedingReview}><strong>{missingContext}</strong><span>Missing Context</span></button>
-              <button type="button" onClick={onOpenCampaigns}><strong>{duplicateReviews}</strong><span>Possible duplicates</span></button>
-              <button type="button" onClick={onOpenLeads}><strong>{activeHolds}</strong><span>Outreach holds</span></button>
-              <button type="button" onClick={onOpenCampaigns}><strong>{failedRuns.length}</strong><span>Failed campaigns</span></button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="workspace-section weekly-funnel" aria-labelledby="weekly-results-heading">
-        <SectionHeading
-          id="weekly-results-heading"
-          title="This week"
-          description="From found to sent."
-          icon={Star}
-        />
-        <div className="weekly-funnel__steps">
-          {[
-            ["Discovered", discovered],
-            ["Scored", scored],
-            ["Shortlisted", shortlisted],
-            ["Drafts", draftsCreated],
-            ["Sent", sentThisWeek],
-          ].map(([label, value], index) => (
-            <div key={String(label)}>
-              <strong>{value}</strong><span>{label}</span>
-              {index < 4 ? <ArrowRight size={17} aria-hidden="true" /> : null}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="workspace-section" aria-labelledby="operations-heading">
-        <SectionHeading
-          id="operations-heading"
-          title="Shortlist and follow-ups"
-          icon={CalendarClock}
-        />
-        <div className="dashboard-grid">
-          <div className="records-panel">
-            <div className="records-heading">
-              <div><h3>Weekly shortlist</h3><p>Strongest controlled recommendations</p></div>
-              <button className="tertiary-action" type="button" onClick={onOpenShortlist}>Open</button>
-            </div>
-            {activeShortlistItems.length === 0 ? (
-              <EmptyState title="No weekly shortlist" description="Automation will prepare one after scoring." />
-            ) : (
-              <div className="action-list">
-                {activeShortlistItems.map((item) => (
-                  <button type="button" className="action-row" key={item.id} onClick={() => onManageLead(item.lead_id)}>
-                    <span className="record-icon"><Star size={17} /></span>
-                    <span><strong>{item.business_name}</strong><small>{item.score}/100 · {humanize(item.decision)}</small></span>
-                    <ArrowRight size={17} />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="records-panel">
-            <div className="records-heading">
-              <div><h3>Open follow-ups</h3><p>Ordered by due date</p></div>
-              <span>{summary?.open_follow_ups ?? due.length} open</span>
-            </div>
-            {due.length === 0 ? (
-              <EmptyState title="No follow-ups due" description="There are no manual follow-ups in the current window." />
-            ) : (
-              <div className="action-list">
-                {due.map(({ lead, followUp }) => (
-                  <button type="button" className="action-row" key={followUp.id} onClick={() => onManageLead(lead.id)}>
-                    <span className="record-icon"><CalendarClock size={17} /></span>
-                    <span><strong>{lead.business_name}</strong><small>{humanize(followUp.follow_up_type)} · {formatDate(followUp.due_date)}</small></span>
-                    <ArrowRight size={17} />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="records-panel">
-            <div className="records-heading">
-              <div><h3>Pipeline summary</h3><p>Grouped for a low-volume workflow</p></div>
-              <span>{leads.length} leads</span>
-            </div>
-            <div className="pipeline-summary">
-              {PIPELINE_GROUPS.map((group) => {
-                const count = group.stages.reduce(
-                  (total, stage) => total + (summary?.pipeline[stage] ?? 0),
-                  0,
-                );
-                return (
-                  <article key={group.label}>
-                    <span>{group.label === "Closed" ? <CheckCircle2 size={18} /> : <ShieldCheck size={18} />}</span>
-                    <div><strong>{count}</strong><p>{group.label}</p></div>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="metrics-grid metrics-grid--compact" aria-label="Business overview">
+      <section className="today-totals" aria-label="Business overview">
         <MetricCard label="Active campaigns" value={summary?.active_campaigns ?? 0} detail={`${campaigns.length} total`} icon={Megaphone} onSelect={onOpenCampaigns} />
-        <MetricCard label="Leads" value={summary?.leads ?? leads.length} detail="Locally stored" icon={Users} onSelect={onOpenLeads} />
-        <MetricCard label="Active products" value={summary?.products ?? 0} detail="Matching catalogue" icon={PackageCheck} onSelect={onOpenCatalogue} />
-        <MetricCard label="Open follow-ups" value={summary?.open_follow_ups ?? 0} detail={`${summary?.due_this_week ?? 0} due soon`} icon={CirclePause} onSelect={onOpenLeads} />
+        <MetricCard label="Leads" value={summary?.leads ?? leads.length} detail={activeHolds > 0 ? `${activeHolds} on hold` : "On this computer"} icon={Users} onSelect={onOpenLeads} />
+        <MetricCard label="Active products" value={summary?.products ?? 0} detail="In the catalogue" icon={PackageCheck} onSelect={onOpenCatalogue} />
         <MetricCard
           label="Draft edit rate"
           value={
@@ -543,7 +519,7 @@ export function DashboardWorkspace({
           detail={
             summary?.approved_drafts_measured
               ? `How much you rewrite before approving, over ${summary.approved_drafts_measured} drafts. Under 25% means the local model is doing the job.`
-              : "Approve an outreach draft to start measuring."
+              : "Approve a draft to start measuring."
           }
           icon={PencilLine}
         />

@@ -869,11 +869,11 @@ describe("local operating workbench", () => {
     expect(await screen.findByText("Service connected")).toBeInTheDocument();
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Workspace navigation" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute(
       "aria-current",
       "location",
     );
-    expect(screen.getByRole("heading", { name: "Overview", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Today", level: 1 })).toBeInTheDocument();
     // The old sidebar "Controlled mode" card and footer status bar were removed (UX B1).
     expect(screen.queryByText("Controlled mode")).not.toBeInTheDocument();
     expect(screen.getByText("Active campaigns")).toBeInTheDocument();
@@ -1050,12 +1050,37 @@ describe("local operating workbench", () => {
     );
   });
 
-  it("navigates from a dashboard metric card to the pre-filtered leads register", async () => {
+  it("says the day is clear when nothing needs the operator", async () => {
+    vi.mocked(api.summary).mockResolvedValue({ ...summary, review_required: 0, due_today: 0, overdue: 0 });
+    vi.mocked(api.shortlists).mockResolvedValue([]);
+    vi.mocked(api.outreachBatches).mockResolvedValue([]);
+    render(<App />);
+    await screen.findByText("Service connected");
+    expect(await screen.findByText("You're up to date")).toBeInTheDocument();
+  });
+
+  it("orders Today's actions by urgency", async () => {
+    vi.mocked(api.summary).mockResolvedValue({ ...summary, review_required: 2, due_today: 1, overdue: 1 });
+    vi.mocked(api.outreachBatches).mockResolvedValue([outreachBatch]);
+    render(<App />);
+    await screen.findByText("Service connected");
+    const actions = await screen.findAllByRole("listitem");
+    const titles = actions.map((item) => item.querySelector("strong")?.textContent ?? "");
+    const draftsAt = titles.findIndex((title) => /to approve/.test(title));
+    const followUpsAt = titles.findIndex((title) => /follow-ups due/.test(title));
+    const reviewAt = titles.findIndex((title) => /need review/.test(title));
+    expect(draftsAt).toBeGreaterThanOrEqual(0);
+    expect(draftsAt).toBeLessThan(followUpsAt);
+    expect(followUpsAt).toBeLessThan(reviewAt);
+  });
+
+  it("goes from a Today action straight to the pre-filtered leads register", async () => {
     const user = userEvent.setup();
     render(<App />);
     await screen.findByText("Service connected");
 
-    await user.click(screen.getByRole("button", { name: /Needs attention/ }));
+    expect(await screen.findByText("1 lead needs review")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Review leads/ }));
 
     expect(screen.getByRole("heading", { name: "All leads" })).toBeInTheDocument();
     expect(
@@ -1117,12 +1142,14 @@ describe("local operating workbench", () => {
       await screen.findByText("Service connected");
       expect(api.ensureWeeklyOutreach).not.toHaveBeenCalled();
 
-      expect(screen.getByText("How the weekly check works")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "How the weekly check works" })).toBeInTheDocument();
       const capacityHelp = screen.getByRole("button", {
         name: "About weekly draft capacity",
       });
       expect(capacityHelp).toHaveAttribute("aria-describedby");
-      expect(screen.getByRole("tooltip")).toHaveTextContent("workspace-wide safety limit");
+      expect(document.getElementById(capacityHelp.getAttribute("aria-describedby") ?? "")).toHaveTextContent(
+        "workspace-wide safety limit",
+      );
 
       confirm.mockReturnValueOnce(false);
       await user.click(screen.getByRole("button", { name: "Run due campaigns" }));
@@ -2516,7 +2543,7 @@ describe("local operating workbench", () => {
     expect(screen.getByRole("heading", { name: "Catalogue Product 13" })).toBeInTheDocument();
 
     await user.type(screen.getByRole("textbox", { name: "Search catalogue" }), "Product 01");
-    await user.click(screen.getByRole("link", { name: /Overview/ }));
+    await user.click(screen.getByRole("link", { name: /Today/ }));
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
     expect(await screen.findByRole("textbox", { name: "Search catalogue" })).toHaveValue("Product 01");
   });
