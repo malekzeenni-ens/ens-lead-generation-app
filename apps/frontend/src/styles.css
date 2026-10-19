@@ -4942,6 +4942,69 @@ td small {
   }
 }
 
+/* Email drafts (UX redesign D4): progress through the queue and keyboard help. */
+.review-progress {
+  display: grid;
+  gap: var(--ens-space-2);
+  margin-bottom: var(--ens-space-3);
+}
+
+.review-progress__text {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--ens-type-sm);
+}
+
+.review-progress__bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--ens-radius-pill);
+  background: var(--ens-surface-2);
+}
+
+.review-progress__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ens-action-primary);
+  transition: width var(--ens-motion-slow) var(--ens-ease-out);
+}
+
+.shortcut-help {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ens-space-2) var(--ens-space-5);
+  margin: 0;
+  padding: var(--ens-space-3) var(--ens-space-4);
+  border: 1px solid var(--ens-border-subtle);
+  border-radius: var(--ens-radius-md);
+  background: var(--ens-surface-1);
+  color: var(--ens-text-secondary);
+  font-size: var(--ens-type-xs);
+  list-style: none;
+  animation: ens-reveal var(--ens-motion-fast) var(--ens-ease-out);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 1px 6px;
+  border: 1px solid var(--ens-border-default);
+  border-bottom-width: 2px;
+  border-radius: var(--ens-radius-sm);
+  background: var(--ens-surface-2);
+  color: var(--ens-text-primary);
+  font-family: var(--ens-font-mono);
+  font-size: 0.6875rem;
+  text-align: center;
+}
+
+.draft-queue:focus-visible {
+  outline: 2px solid var(--ens-border-active);
+  outline-offset: 2px;
+}
+
 /* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */
 .section-heading__actions {
   display: flex;

@@ -641,3 +641,9 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - The open lead now has a summary strip above its tabs: stage, score, next follow-up and value. The duplicate stage badge and the "Selected lead" eyebrow were removed from its header.
 - Not done from the plan: making "Lead details" the default tab with privacy and audit collapsed. The current tabs already open on Overview, and folding Privacy into a collapsed section is left for the polish phase.
 - Verification: 1 new test (board columns, Move to…, no "Do not contact" option, stage change called with the reason, card opens the list); the score test reads the summary strip; 136 frontend tests pass; TypeScript and ESLint pass.
+
+### D4 - Email drafts review queue
+
+- The review tab already had the queue beside the editor; it now shows progress ("2 of 12 reviewed" with a bar) and keyboard shortcuts while the queue has focus: J or Down for the next draft, K or Up for the previous, A to approve the draft on screen, E to jump to its subject, ? to show or hide the list. A "Shortcuts" button shows the same list.
+- Shortcuts never fire while typing (text fields, text areas, selects) or with Ctrl, Alt or Cmd held. A uses the same approval call as "Approve selected" and asks first, with the same "Nothing will be sent automatically" wording; it does nothing for a draft that is not awaiting review.
+- Verification: 1 new test (J/K move, ? shows help, E focuses the subject, typing "a" there does nothing, A confirms then approves); 137 frontend tests pass; TypeScript and ESLint pass.

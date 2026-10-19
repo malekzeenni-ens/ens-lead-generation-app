@@ -2796,6 +2796,51 @@ describe("local operating workbench", () => {
     );
   });
 
+  it("reviews drafts from the keyboard without acting while typing", async () => {
+    const user = userEvent.setup();
+    const second = {
+      ...outreachDraft,
+      id: "99999999-9999-4999-8999-999999999999",
+      lead_id: "88888888-8888-4888-8888-888888888888",
+      business_name: "Second Bakery",
+    };
+    vi.mocked(api.outreachBatches).mockResolvedValue([
+      { ...outreachBatch, pending_count: 2, drafts: [outreachDraft, second] },
+    ]);
+    const confirm = vi.spyOn(window, "confirm");
+    try {
+      render(<App />);
+      await screen.findByText("Service connected");
+      await user.click(screen.getByRole("link", { name: /Email drafts/ }));
+      await user.click(screen.getByRole("tab", { name: /^Review drafts/ }));
+      expect(screen.getByText("0 of 2 reviewed")).toBeInTheDocument();
+
+      const queue = screen.getByLabelText("Draft review queue");
+      queue.focus();
+      await user.keyboard("j");
+      expect(screen.getByRole("heading", { name: "Second Bakery" })).toBeInTheDocument();
+      await user.keyboard("k");
+      expect(screen.getByRole("heading", { name: outreachDraft.business_name })).toBeInTheDocument();
+
+      await user.keyboard("?");
+      expect(screen.getByRole("list", { name: "Keyboard shortcuts in the queue" })).toBeInTheDocument();
+
+      await user.keyboard("e");
+      const subject = screen.getByRole("textbox", { name: "Subject" });
+      expect(subject).toHaveFocus();
+      await user.type(subject, "a");
+      expect(confirm).not.toHaveBeenCalled();
+
+      queue.focus();
+      confirm.mockReturnValueOnce(true);
+      await user.keyboard("a");
+      await waitFor(() => expect(api.approveOutreachDrafts).toHaveBeenCalledWith([outreachDraft.id]));
+      expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining("Nothing will be sent automatically"));
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
   it("explains bulk draft approval and requires confirmation", async () => {
     const user = userEvent.setup();
     vi.mocked(api.outreachBatches).mockResolvedValue([outreachBatch]);

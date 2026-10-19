@@ -6,6 +6,7 @@ import {
   CirclePause,
   ExternalLink,
   FileEdit,
+  Keyboard,
   MailCheck,
   RotateCcw,
   Save,
@@ -13,7 +14,7 @@ import {
   Sparkles,
   XCircle,
 } from "lucide-react";
-import { type FormEvent, useMemo, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useMemo, useRef, useState } from "react";
 
 import { emailAddressFor } from "../contact";
 import { ApiError, api } from "../api";
@@ -250,6 +251,7 @@ function DraftEditor({ draft, cloudPolishStatus }: DraftEditorProps) {
       <label>
         Subject
         <input
+          id="draft-subject"
           value={subject}
           maxLength={300}
           disabled={busy || rejected || sentConfirmed}
@@ -527,6 +529,7 @@ export function EmailDraftsWorkspace({
   const [selectedDraftId, setSelectedDraftId] = useState("");
   const [selectedApprovalIds, setSelectedApprovalIds] = useState<string[]>([]);
   const [holdLeadId, setHoldLeadId] = useState<string | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [autofillItems, setAutofillItems] = useState<LeadAutofillResultItem[]>([]);
   const [autofilling, setAutofilling] = useState(false);
   const [autofillError, setAutofillError] = useState<string | null>(null);
@@ -623,6 +626,48 @@ export function EmailDraftsWorkspace({
         ? current.filter((id) => id !== draftId)
         : [...current, draftId],
     );
+  }
+
+  /** The A shortcut: the same confirmation and approval as the button, for the draft on screen. */
+  async function approveOne(draftId: string): Promise<void> {
+    const confirmed = window.confirm(
+      "Approve this draft?\n\nThis exact version will become ready to open in Zoho. Nothing will be sent automatically.",
+    );
+    if (!confirmed) return;
+    if (await approveOutreachDrafts([draftId])) {
+      setSelectedApprovalIds((current) => current.filter((id) => id !== draftId));
+    }
+  }
+
+  function handleQueueKey(event: KeyboardEvent<HTMLDivElement>): void {
+    const target = event.target as HTMLElement;
+    // Never while typing; checkboxes in the queue are fine.
+    if (target.isContentEditable || ["TEXTAREA", "SELECT"].includes(target.tagName)) return;
+    if (target.tagName === "INPUT" && (target as HTMLInputElement).type !== "checkbox") return;
+    if (event.ctrlKey || event.metaKey || event.altKey || !selectedBatch) return;
+    const drafts = selectedBatch.drafts;
+    const index = drafts.findIndex((draft) => draft.id === selectedDraft?.id);
+    const key = event.key.toLowerCase();
+    if (key === "j" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const next = drafts[Math.min(index + 1, drafts.length - 1)];
+      if (next) setSelectedDraftId(next.id);
+    } else if (key === "k" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const previous = drafts[Math.max(index - 1, 0)];
+      if (previous) setSelectedDraftId(previous.id);
+    } else if (key === "a") {
+      event.preventDefault();
+      if (selectedDraft && selectedDraft.review_status === "pending_review" && !busy) {
+        void approveOne(selectedDraft.id);
+      }
+    } else if (key === "e") {
+      event.preventDefault();
+      document.getElementById("draft-subject")?.focus();
+    } else if (event.key === "?") {
+      event.preventDefault();
+      setShowShortcuts((current) => !current);
+    }
   }
 
   async function approveSelected(): Promise<void> {
@@ -1020,8 +1065,53 @@ export function EmailDraftsWorkspace({
                   </button>
                 </div>
 
+                {(() => {
+                  const total = selectedBatch.drafts.length;
+                  const reviewed = total - selectedBatch.pending_count;
+                  return (
+                    <div className="review-progress">
+                      <div className="review-progress__text">
+                        <strong>{reviewed} of {total} reviewed</strong>
+                        <button
+                          type="button"
+                          className="tertiary-action"
+                          aria-expanded={showShortcuts}
+                          onClick={() => setShowShortcuts((current) => !current)}
+                        >
+                          <Keyboard size={15} aria-hidden="true" /> Shortcuts
+                        </button>
+                      </div>
+                      <div
+                        className="review-progress__bar"
+                        role="progressbar"
+                        aria-label="Drafts reviewed"
+                        aria-valuemin={0}
+                        aria-valuemax={total}
+                        aria-valuenow={reviewed}
+                      >
+                        <span style={{ width: `${total ? (reviewed / total) * 100 : 0}%` }} />
+                      </div>
+                      {showShortcuts ? (
+                        <ul className="shortcut-help" aria-label="Keyboard shortcuts in the queue">
+                          <li><kbd>J</kbd> or <kbd>↓</kbd> next draft</li>
+                          <li><kbd>K</kbd> or <kbd>↑</kbd> previous draft</li>
+                          <li><kbd>A</kbd> approve the draft on screen (asks first)</li>
+                          <li><kbd>E</kbd> edit the subject</li>
+                          <li><kbd>?</kbd> show or hide this list</li>
+                        </ul>
+                      ) : null}
+                    </div>
+                  );
+                })()}
+
                 <div className="draft-review-layout">
-                  <div className="draft-queue" aria-label="Draft review queue">
+                  <div
+                    className="draft-queue"
+                    aria-label="Draft review queue"
+                    tabIndex={0}
+                    aria-keyshortcuts="J K A E ?"
+                    onKeyDown={handleQueueKey}
+                  >
                     {selectedBatch.drafts.map((draft) => (
                       <div
                         key={draft.id}
