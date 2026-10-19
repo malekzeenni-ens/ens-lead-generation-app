@@ -59,17 +59,15 @@ export function ShortlistWorkspace({ campaigns, shortlists }: ShortlistWorkspace
   return (
     <>
       <PageHeader
-        eyebrow="Weekly focus"
         title="Weekly shortlist"
-        description="Rank the strongest local opportunities using versioned scores, product fit, contact history, freshness, capacity and suppression controls."
+        description="This week's best leads for each campaign, waiting for your decision."
       />
 
       <section className="workspace-section" aria-labelledby="shortlist-generator-heading">
         <SectionHeading
           id="shortlist-generator-heading"
-          eyebrow="Recommendation engine"
-          title="Generate a controlled shortlist"
-          description="An existing campaign/week result is returned unchanged to preserve decisions."
+          title="Build this week's shortlist"
+          description="Building again for the same campaign and week keeps your decisions."
           icon={ListChecks}
           count={latest?.items.filter((item) => ["recommended", "approved"].includes(item.decision)).length ?? 0}
         />
@@ -114,7 +112,6 @@ export function ShortlistWorkspace({ campaigns, shortlists }: ShortlistWorkspace
       <section className="workspace-section" aria-labelledby="weekly-results-heading">
         <SectionHeading
           id="weekly-results-heading"
-          eyebrow="Human review"
           title={latest ? `${latest.campaign_name} · ${formatDate(latest.week_start)}` : "Shortlist results"}
           description="Approve, defer, dismiss or replace recommendations. No action sends a message."
           icon={ListChecks}

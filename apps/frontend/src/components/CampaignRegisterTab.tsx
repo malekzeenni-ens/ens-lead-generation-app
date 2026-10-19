@@ -3,7 +3,6 @@ import {
   ArchiveRestore,
   Copy,
   Edit3,
-  Megaphone,
   Pause,
   Play,
   RefreshCw,
@@ -29,7 +28,6 @@ import {
   GuidanceNote,
   LoadingState,
   Pagination,
-  SectionHeading,
 } from "./DesignSystem";
 import type { CampaignUpdate } from "../api";
 
@@ -206,22 +204,14 @@ export function CampaignRegisterTab({
   }
 
   return (
-    <section className="workspace-section" aria-labelledby="campaign-heading">
-      <SectionHeading
-        id="campaign-heading"
-        eyebrow="Controlled discovery"
-        title="Campaign register"
-        description="Manage current campaigns while archived campaigns stay safely stored and out of automation."
-        icon={Megaphone}
-        count={currentCampaignCount}
-      />
+    <section className="workspace-section" aria-label="Your campaigns">
 
       <div className="section-layout section-layout--single">
         <div className="records-panel">
           <div className="records-heading records-heading--stackable">
             <div>
-              <h3>Campaign register</h3>
-              <p>Search and manage local definitions</p>
+              <h3>Your campaigns</h3>
+              <p>Archived campaigns are kept but never run.</p>
             </div>
             <div className="records-heading__actions">
               <label className="search-control">

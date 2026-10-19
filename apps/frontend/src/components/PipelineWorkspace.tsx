@@ -52,7 +52,6 @@ import {
   EmptyState,
   PageHeader,
   Pagination,
-  SectionHeading,
   StatGrid,
   TaskPanel,
   TaskTabs,
@@ -431,20 +430,11 @@ export function PipelineWorkspace({
   return (
     <>
       <PageHeader
-        eyebrow="Opportunity management"
         title="Pipeline"
-        description="Track each prospect through an explicit, audited and entirely manual workflow."
+        description="Move each lead through its stages and keep follow-ups on time."
       />
 
-      <section className="workspace-section" aria-labelledby="pipeline-heading">
-        <SectionHeading
-          id="pipeline-heading"
-          eyebrow="Lead operations"
-          title="Pipeline workspace"
-          description="Stage history, next actions and contact controls stay together."
-          icon={UserRoundCog}
-          count={leads.length}
-        />
+      <section className="workspace-section" aria-label="Pipeline">
 
         {leads.length === 0 ? (
           <div className="records-panel">

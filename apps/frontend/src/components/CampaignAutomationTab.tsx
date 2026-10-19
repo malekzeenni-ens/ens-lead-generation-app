@@ -41,9 +41,8 @@ export function CampaignAutomationTab({
     <section className="workspace-section" aria-labelledby="automation-heading">
       <SectionHeading
         id="automation-heading"
-        eyebrow="Operator-triggered automation"
-        title="Discover, score and prepare"
-        description="Choose exactly one discovery provider per run. That source completes duplicate checks before deterministic scoring, product matching and shortlist preparation."
+        title="Find new leads"
+        description="Choose one source per run. Duplicates are skipped before scoring and shortlisting."
         icon={RefreshCw}
         count={campaignRuns.length}
       />

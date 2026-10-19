@@ -323,9 +323,8 @@ export function CatalogueWorkspace({
   return (
     <>
       <PageHeader
-        eyebrow="Product matching"
-        title="Catalogue and scoring"
-        description="Import Shopify listings, refine matching metadata and version the transparent bakery scoring model. No Shopify API connection or external sync is used."
+        title="Catalogue"
+        description="Your products, what they suit, and how leads are scored."
       />
 
       <TaskTabs
@@ -348,9 +347,8 @@ export function CatalogueWorkspace({
           <section className="workspace-section" aria-labelledby="add-product-heading">
             <SectionHeading
               id="add-product-heading"
-              eyebrow="Manual catalogue entry"
               title="Add product"
-              description="Create one local product without opening the Shopify import workflow."
+              description="Add one product by hand."
               icon={PackagePlus}
             />
             <form
@@ -403,9 +401,8 @@ export function CatalogueWorkspace({
         <section className="workspace-section" aria-labelledby="shopify-import-heading">
           <SectionHeading
             id="shopify-import-heading"
-            eyebrow="Local CSV ingress"
-            title="Upload Shopify listing CSV"
-            description="Products are grouped by Handle and upserted into the editable local catalogue."
+            title="Import from Shopify"
+            description="Upload a Shopify product export. Products are matched by handle and updated in place."
             icon={FileSpreadsheet}
           />
           {enrichmentStatus?.catalogue_imported_at ? (
@@ -475,9 +472,8 @@ export function CatalogueWorkspace({
         <section className="workspace-section" aria-labelledby="knowledge-import-heading">
           <SectionHeading
             id="knowledge-import-heading"
-            eyebrow="Sales knowledge"
             title="Import product knowledge"
-            description="Applies the shipped knowledge pack: what each product is for, which trades buy it, and past jobs. Matched on product handle, so import the Shopify CSV first."
+            description="What each product is for, which trades buy it, and past jobs. Import the Shopify export first."
             icon={BookOpen}
           />
           <form className="stacked-form" onSubmit={(event) => void submitKnowledgeImport(event)}>
@@ -541,9 +537,8 @@ export function CatalogueWorkspace({
         <section className="workspace-section" aria-labelledby="enrichment-run-heading">
           <SectionHeading
             id="enrichment-run-heading"
-            eyebrow="Local AI"
             title="Enrich pending products"
-            description="Asks the local model why a business would buy each product the knowledge pack does not cover. Runs while you watch, roughly 15 seconds per product, and is paused while LightBurn or xTool is open."
+            description="The local AI explains what each uncovered product is for, about 15 seconds per product."
             icon={Sparkles}
           />
           <p className="form-hint" role="status">
@@ -618,9 +613,8 @@ export function CatalogueWorkspace({
         <section className="workspace-section" aria-labelledby="knowledge-notes-heading">
           <SectionHeading
             id="knowledge-notes-heading"
-            eyebrow="What a trade buys"
             title="Knowledge notes"
-            description="The assistant cites these when recommending products. Editing one marks it yours, so no import or refresh will overwrite it."
+            description="The assistant cites these. A note you edit is never overwritten by an import."
             icon={BookOpen}
           />
           {knowledgeNotes.length === 0 ? (
@@ -675,9 +669,8 @@ export function CatalogueWorkspace({
         <section className="workspace-section" aria-labelledby="proven-fits-heading">
           <SectionHeading
             id="proven-fits-heading"
-            eyebrow="Work already done"
             title="Past jobs"
-            description="Confirm a job before the assistant may use it in an email. A client is named only when you allow it."
+            description="Confirm a job before emails may mention it. A client is named only if you allow it."
             icon={Layers}
           />
           {provenFits.length === 0 ? (
@@ -761,9 +754,8 @@ export function CatalogueWorkspace({
         <section className="workspace-section" aria-labelledby="scoring-profile-heading">
           <SectionHeading
             id="scoring-profile-heading"
-            eyebrow="Deterministic model"
-            title="Bakery scoring weights"
-            description="Saving creates a new immutable version; weights must total 100."
+            title="Scoring weights"
+            description="Weights must total 100. Each save keeps the previous version."
             icon={SlidersHorizontal}
             count={scoringProfile?.version}
           />
@@ -814,9 +806,8 @@ export function CatalogueWorkspace({
         <section className="workspace-section" aria-labelledby="product-families-heading">
           <SectionHeading
             id="product-families-heading"
-            eyebrow="Curated matching"
             title="Product families"
-            description="Group specific products under a topic, then assign that family to a campaign so its leads are matched to exactly those products — no automatic guessing."
+            description="Group products under a topic and give it to a campaign, so its leads see exactly those products."
             icon={Layers}
             count={productFamilies.length}
           />
@@ -903,9 +894,8 @@ export function CatalogueWorkspace({
       <section className="workspace-section" aria-labelledby="catalogue-heading">
         <SectionHeading
           id="catalogue-heading"
-          eyebrow="Local catalogue"
-          title="Products and matching metadata"
-          description="Shopify fields remain editable after import. Inactive products never match leads."
+          title="Products"
+          description="Inactive products are never matched to leads."
           icon={PackagePlus}
           count={products.length}
         />

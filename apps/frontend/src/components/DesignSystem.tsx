@@ -184,19 +184,18 @@ export function TaskPanel({ id, tabId, children, className = "" }: TaskPanelProp
 }
 
 interface PageHeaderProps {
-  eyebrow: string;
   title: string;
-  description: ReactNode;
+  /** One sentence at most. */
+  description?: ReactNode;
   action?: ReactNode;
 }
 
-export function PageHeader({ eyebrow, title, description, action }: PageHeaderProps) {
+export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
     <section className="page-intro" aria-labelledby="page-title">
       <div>
-        <p className="eyebrow">{eyebrow}</p>
         <h1 id="page-title">{title}</h1>
-        <p>{description}</p>
+        {description ? <p>{description}</p> : null}
       </div>
       {action}
     </section>
@@ -205,9 +204,8 @@ export function PageHeader({ eyebrow, title, description, action }: PageHeaderPr
 
 interface SectionHeadingProps {
   id: string;
-  eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   icon: LucideIcon;
   count?: number;
   actions?: ReactNode;
@@ -215,7 +213,6 @@ interface SectionHeadingProps {
 
 export function SectionHeading({
   id,
-  eyebrow,
   title,
   description,
   icon: Icon,
@@ -228,9 +225,8 @@ export function SectionHeading({
         <Icon size={20} />
       </div>
       <div className="section-heading__copy">
-        <p className="eyebrow">{eyebrow}</p>
         <h2 id={id}>{title}</h2>
-        <p>{description}</p>
+        {description ? <p>{description}</p> : null}
       </div>
       {count === undefined ? null : <span className="count-badge">{count}</span>}
       {actions ? <div className="section-heading__actions">{actions}</div> : null}

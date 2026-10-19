@@ -43,9 +43,8 @@ export function CampaignWorkspace({
   return (
     <>
       <PageHeader
-        eyebrow="Campaign management"
         title="Campaigns"
-        description="Create, revise, pause, archive or safely delete focused local campaign definitions."
+        description="Who to find, where to look, and what to offer them."
       />
 
       <TaskTabs

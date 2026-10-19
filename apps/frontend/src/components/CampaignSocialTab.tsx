@@ -103,9 +103,8 @@ export function CampaignSocialTab({ campaigns, capabilities }: CampaignSocialTab
     <section className="workspace-section" aria-labelledby="social-discovery-heading">
       <SectionHeading
         id="social-discovery-heading"
-        eyebrow="Social lead acquisition"
         title="Instagram and Facebook leads"
-        description="Look up a known Instagram professional profile through Meta, enrich profiles already saved on leads, or use the separate public-search and Facebook capture actions."
+        description="Find leads on Instagram and Facebook, or enrich profiles you already saved."
         icon={Search}
       />
       <div className="social-campaign-selector">

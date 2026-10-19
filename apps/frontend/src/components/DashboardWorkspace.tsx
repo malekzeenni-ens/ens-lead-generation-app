@@ -222,9 +222,8 @@ export function DashboardWorkspace({
   return (
     <>
       <PageHeader
-        eyebrow="Weekly control centre"
-        title="Lead intelligence dashboard"
-        description="See what ran, what needs you and which approved emails are ready for Zoho."
+        title="Overview"
+        description="What ran this week, what needs you, and what is ready to send."
         action={
           dueCampaigns.length > 0 ? (
             <button
@@ -321,9 +320,8 @@ export function DashboardWorkspace({
       <section className="workspace-section" aria-labelledby="weekly-automation-heading">
         <SectionHeading
           id="weekly-automation-heading"
-          eyebrow="Multiple campaigns"
           title="Weekly automation"
-          description="Campaigns run sequentially. A problem in one campaign does not stop the rest."
+          description="Campaigns run one after another; a problem in one does not stop the rest."
           icon={RefreshCw}
           count={enabledCampaigns.length}
         />
@@ -394,9 +392,8 @@ export function DashboardWorkspace({
       <section className="workspace-section" aria-labelledby="action-queue-heading">
         <SectionHeading
           id="action-queue-heading"
-          eyebrow="Your decisions"
-          title="Action queue"
-          description="Automation prepares the work; approval and sending remain with you."
+          title="Needs you"
+          description="Automation prepares the work. You approve and send."
           icon={ShieldCheck}
         />
         <div className="dashboard-grid dashboard-grid--actions">
@@ -440,9 +437,8 @@ export function DashboardWorkspace({
       <section className="workspace-section weekly-funnel" aria-labelledby="weekly-results-heading">
         <SectionHeading
           id="weekly-results-heading"
-          eyebrow="This week's results"
-          title="From discovery to sending"
-          description="A simple view of the current week's controlled funnel."
+          title="This week"
+          description="From found to sent."
           icon={Star}
         />
         <div className="weekly-funnel__steps">
@@ -464,9 +460,7 @@ export function DashboardWorkspace({
       <section className="workspace-section" aria-labelledby="operations-heading">
         <SectionHeading
           id="operations-heading"
-          eyebrow="Supporting work"
-          title="Shortlist, follow-ups and pipeline"
-          description="The existing operational views remain available beneath the weekly control centre."
+          title="Shortlist and follow-ups"
           icon={CalendarClock}
         />
         <div className="dashboard-grid">

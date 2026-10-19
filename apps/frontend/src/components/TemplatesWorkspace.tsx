@@ -163,9 +163,8 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
   return (
     <>
       <PageHeader
-        eyebrow="Outreach messaging"
-        title="Message templates"
-        description="Reusable topic, subject and body text for WhatsApp, email and Instagram messages. Templates never send anything automatically — a lead's Contact tab opens the message in the chosen app for you to review and send."
+        title="Templates"
+        description="Reusable messages, filled in for each lead. Nothing is sent automatically."
       />
 
       <TaskTabs
@@ -195,9 +194,8 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
           <section className="workspace-section" aria-labelledby="add-template-heading">
             <SectionHeading
               id="add-template-heading"
-              eyebrow="New template"
               title="Add template"
-              description="Build one reusable message and insert the lead-specific details you need from the available template fields above."
+              description="Write one message and insert lead fields where you need them."
               icon={FileText}
             />
             <form
@@ -233,9 +231,8 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
           <section className="workspace-section" aria-labelledby="templates-heading">
             <SectionHeading
               id="templates-heading"
-              eyebrow="Local templates"
-              title="Topic, subject and body"
-              description="Edit or remove a template; changes apply the next time it is selected for a lead."
+              title="Your templates"
+              description="Changes apply the next time a template is used."
               icon={FileText}
               count={templates.length}
             />

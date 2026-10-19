@@ -27,7 +27,6 @@ import {
   HelpTip,
   LoadingState,
   PageHeader,
-  SectionHeading,
   StatGrid,
   TaskPanel,
   TaskTabs,
@@ -150,9 +149,8 @@ export function SettingsWorkspace({
   return (
     <>
       <PageHeader
-        eyebrow="Local administration"
-        title="Settings and diagnostics"
-        description="Control local defaults, export records and verify the health of the operating core."
+        title="Settings"
+        description="Defaults, connections, exports and app health."
       />
 
       <TaskTabs
@@ -168,30 +166,7 @@ export function SettingsWorkspace({
         ]}
       />
 
-      <section className="workspace-section" aria-labelledby="settings-heading">
-        <SectionHeading
-          id="settings-heading"
-          eyebrow={activeTask === "connections" ? "Provider connections" : "Workspace controls"}
-          title={
-            activeTask === "connections"
-              ? "External connections"
-              : activeTask === "defaults"
-                ? "Operating defaults"
-                : activeTask === "data"
-                  ? "Data export and backup"
-                  : "Runtime diagnostics"
-          }
-          description={
-            activeTask === "connections"
-              ? "Configure encrypted provider access without exposing credentials to the browser or database."
-              : activeTask === "defaults"
-                ? "Set the defaults used when creating new campaigns and dashboard follow-up windows."
-                : activeTask === "data"
-                  ? "Export local records and create or verify consistent backups."
-                  : "Review authenticated local runtime and database health information."
-          }
-          icon={Settings}
-        />
+      <section className="workspace-section" aria-label="Settings">
 
         {loading || !settings ? (
           <div className="records-panel"><LoadingState label="Loading settings" /></div>

@@ -600,3 +600,13 @@ Branch `ux/redesign`. Visual checks run against a scratch database seeded with f
 - Docs: `AI_INTEGRATION_ARCHITECTURE.md` and `LOCAL_SETUP.md` updated.
 - Found while here: the per-item typecheck used `tsc -p .`, which checks nothing because the root config only holds references. The gate is `npm run typecheck` (`tsc -b`), which passes on A1-B3.
 - Verification: 2 new tests (open, Esc, focus return, kept state; Plan with AI), 4 assistant tests moved to the panel; 131 frontend tests pass; TypeScript and ESLint pass.
+
+Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3; lint, types and build).
+
+### C1 + C2 - One level of cards, plain wording
+
+- Eyebrow labels are gone from all 31 page and section headings; `PageHeader` and `SectionHeading` take an optional one-sentence description.
+- Section headings that only repeated the tab or page name are removed (Campaigns list, Leads, Pipeline, Settings); their sections keep an accessible label. A section without its own heading now draws no frame, so the panels inside it are the only cards: one level instead of two.
+- Wording, for example: "Lead intelligence dashboard" -> "Overview", "Catalogue and scoring" -> "Catalogue", "Settings and diagnostics" -> "Settings", "Message templates" -> "Templates", "Campaign register" -> "Your campaigns", "Discover, score and prepare" -> "Find new leads", "Action queue" -> "Needs you", "Upload Shopify listing CSV" -> "Import from Shopify", "Bakery scoring weights" -> "Scoring weights". Every description is now one sentence.
+- Not done here, by design: wording inside each screen's rows and buttons, and the remaining in-page safety notices, change with that screen's Phase D redesign, so each screen is reworded once.
+- Verification: three heading assertions updated; 131 frontend tests pass; TypeScript and ESLint pass.

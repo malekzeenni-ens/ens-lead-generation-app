@@ -5,7 +5,6 @@ import {
   Plus,
   Search,
   Sparkles,
-  UserRoundSearch,
 } from "lucide-react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
@@ -20,7 +19,6 @@ import {
   LoadingState,
   PageHeader,
   Pagination,
-  SectionHeading,
   TaskPanel,
   TaskTabs,
 } from "./DesignSystem";
@@ -208,9 +206,8 @@ export function LeadWorkspace({
   return (
     <>
       <PageHeader
-        eyebrow="Prospect register"
         title="All leads"
-        description="Capture public business evidence, search the register and open any lead for action."
+        description="Every business you have found, with its evidence and next step."
       />
 
       <TaskTabs
@@ -224,19 +221,7 @@ export function LeadWorkspace({
         ]}
       />
 
-      <section className="workspace-section" aria-labelledby="lead-heading">
-        <SectionHeading
-          id="lead-heading"
-          eyebrow={activeTask === "add" ? "Evidence-backed entry" : "Prospect register"}
-          title={activeTask === "add" ? "Add manual lead" : "Browse leads"}
-          description={
-            activeTask === "add"
-              ? "Capture one public business source and assign the lead to a campaign."
-              : "Search, filter and open a lead without unrelated entry controls."
-          }
-          icon={UserRoundSearch}
-          count={activeTask === "browse" ? leads.length : undefined}
-        />
+      <section className="workspace-section" aria-label="Leads">
 
         {activeTask === "add" ? (
           <TaskPanel id="leads-tasks" tabId="add">

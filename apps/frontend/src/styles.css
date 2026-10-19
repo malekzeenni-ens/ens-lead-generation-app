@@ -4400,6 +4400,15 @@ td small {
   }
 }
 
+/* One level of cards (UX redesign C1): a section without its own heading is only a
+   grouping, so it draws no frame and the panels inside it are the cards. */
+.workspace-section:not(:has(> .section-heading)) {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
 /* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */
 .section-heading__actions {
   display: flex;

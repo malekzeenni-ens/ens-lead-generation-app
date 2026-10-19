@@ -873,7 +873,7 @@ describe("local operating workbench", () => {
       "aria-current",
       "location",
     );
-    expect(screen.getByRole("heading", { name: "Lead intelligence dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Overview", level: 1 })).toBeInTheDocument();
     // The old sidebar "Controlled mode" card and footer status bar were removed (UX B1).
     expect(screen.queryByText("Controlled mode")).not.toBeInTheDocument();
     expect(screen.getByText("Active campaigns")).toBeInTheDocument();
@@ -1144,7 +1144,7 @@ describe("local operating workbench", () => {
 
     await user.click(screen.getByRole("button", { name: /Active products/ }));
 
-    expect(screen.getByRole("heading", { name: "Catalogue and scoring" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Catalogue", level: 1 })).toBeInTheDocument();
   });
 
   it("creates a product family in Catalogue and assigns it to a campaign", async () => {
@@ -2076,7 +2076,7 @@ describe("local operating workbench", () => {
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /All leads/ }));
     await user.click(screen.getByRole("button", { name: "Manage" }));
-    expect(screen.getByRole("heading", { name: "Pipeline workspace" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pipeline", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: lead.business_name })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Pipeline/ })).toHaveAttribute(
       "aria-current",

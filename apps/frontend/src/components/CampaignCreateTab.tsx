@@ -57,9 +57,8 @@ export function CampaignCreateTab({
     <section className="workspace-section" aria-labelledby="campaign-heading">
       <SectionHeading
         id="campaign-heading"
-        eyebrow="Controlled discovery"
-        title="Create campaign"
-        description="Define one audience, location, discovery approach and product-matching objective."
+        title="Create a campaign"
+        description="One audience, one area, one offer."
         icon={Megaphone}
         actions={
           <button type="button" className="secondary-action" onClick={planCampaignWithAssistant}>

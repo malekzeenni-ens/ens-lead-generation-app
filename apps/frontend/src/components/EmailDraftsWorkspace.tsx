@@ -691,9 +691,8 @@ export function EmailDraftsWorkspace({
   return (
     <>
       <PageHeader
-        eyebrow="Lead operations"
         title="Email drafts"
-        description="Prepare and approve emails here, then open an approved version in Zoho. You stay in control of the final send."
+        description="Write, review and approve emails, then send them yourself from Zoho."
         action={
           <div className="phase-badge">
             <ShieldCheck size={17} aria-hidden="true" />
@@ -724,9 +723,8 @@ export function EmailDraftsWorkspace({
           <section className="workspace-section" aria-labelledby="prepare-drafts-heading">
             <SectionHeading
               id="prepare-drafts-heading"
-              eyebrow="Step 1"
               title="Choose leads and a template"
-              description="Only contact-ready leads can be selected. Warnings and recent notes remain visible for your decision."
+              description="Only leads with a usable email address can be chosen."
               icon={FileEdit}
               count={selectedLeadIds.length}
             />
@@ -957,9 +955,8 @@ export function EmailDraftsWorkspace({
           <section className="workspace-section" aria-labelledby="review-drafts-heading">
             <SectionHeading
               id="review-drafts-heading"
-              eyebrow="Step 2"
               title="Review and decide"
-              description="Edit for your personal touch. Saving an edit removes any previous approval until you approve the new version."
+              description="Edit, then approve. Changing an approved draft needs approval again."
               icon={MailCheck}
               count={pendingTotal}
             />
