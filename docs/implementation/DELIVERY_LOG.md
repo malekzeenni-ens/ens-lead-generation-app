@@ -663,3 +663,10 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - The plan's "Weekly outreach" step is not there because the create form has never had weekly-outreach fields; weekly outreach is still set when editing, with its confirmation.
 - Fixed while checking: a rule that sized every child of the main area also stretched the success toast across the window; the toast is now excluded and sits top-right again.
 - Verification: 1 new test (an empty required field keeps the step; Enter advances without creating); the three creation tests step through the form with a helper; 139 frontend tests pass; TypeScript and ESLint pass.
+
+### D6 - Shortlist cards
+
+- Each ranked card shows why it scored as short chips ("Public contact route", "Matched …"), without repeating the score already on the card, and a plain decision label ("Awaiting your decision", "Accepted", "Skipped", "Deferred", "Replaced", "Do not contact").
+- Accept and Skip are the two buttons on each card (the existing "approved" and "dismissed" actions); Defer and Replace moved into its More menu. The builder form is a collapsible section, open only when there is no shortlist yet.
+- Not done: an undo toast. The backend has no action that reopens a decided shortlist entry, so there is nothing to undo with; adding one is a backend change for later.
+- Verification: the shortlist test now checks the reason chips, Accept, and Defer through the More menu; 139 frontend tests pass; TypeScript and ESLint pass.

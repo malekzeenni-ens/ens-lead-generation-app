@@ -2666,7 +2666,11 @@ describe("local operating workbench", () => {
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Weekly shortlist/ }));
     expect(screen.getByRole("heading", { name: /Luton Bakery Partnerships/ })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Approve" }));
+    // The score's reasons show as short chips, without repeating the score itself.
+    const reasons = screen.getByRole("list", { name: "Why it scored" });
+    expect(within(reasons).getByText("Public contact route")).toBeInTheDocument();
+    expect(within(reasons).queryByText(/Score 72/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Accept" }));
     await waitFor(() =>
       expect(api.shortlistAction).toHaveBeenCalledWith(
         shortlist.id,
@@ -2674,6 +2678,11 @@ describe("local operating workbench", () => {
         "approved",
         undefined,
       ),
+    );
+    await user.click(screen.getByLabelText(`More choices for ${shortlist.items[0]?.business_name}`));
+    await user.click(screen.getByRole("button", { name: /Defer to a later week/ }));
+    await waitFor(() =>
+      expect(api.shortlistAction).toHaveBeenCalledWith(shortlist.id, shortlist.items[0]?.id, "deferred", undefined),
     );
   });
 

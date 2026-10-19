@@ -5149,6 +5149,33 @@ kbd {
   font-size: var(--ens-type-sm);
 }
 
+/* Shortlist (UX redesign D6): why each lead scored, and one-click decisions. */
+.shortlist-builder {
+  margin-bottom: var(--ens-space-5);
+}
+
+.reason-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ens-space-2);
+  margin: var(--ens-space-2) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reason-chips li {
+  padding: 2px 10px;
+  border: 1px solid var(--ens-border-subtle);
+  border-radius: var(--ens-radius-pill);
+  background: var(--ens-surface-2);
+  color: var(--ens-text-secondary);
+  font-size: var(--ens-type-xs);
+}
+
+.shortlist-actions {
+  align-items: center;
+}
+
 /* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */
 .section-heading__actions {
   display: flex;

@@ -10,11 +10,39 @@ import {
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { formatDate, humanize, mondayIso } from "../domain";
+import { formatDate, mondayIso } from "../domain";
 import { usePagination } from "../pagination";
 import type { Campaign, Shortlist } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
-import { EmptyState, LoadingState, PageHeader, Pagination, SectionHeading } from "./DesignSystem";
+import {
+  Collapsible,
+  EmptyState,
+  MoreMenu,
+  PageHeader,
+  Pagination,
+  SectionHeading,
+  SkeletonRows,
+  StatusPill,
+  type StatusTone,
+} from "./DesignSystem";
+
+const DECISIONS: Record<string, { label: string; tone: StatusTone }> = {
+  recommended: { label: "Awaiting your decision", tone: "accent" },
+  approved: { label: "Accepted", tone: "success" },
+  deferred: { label: "Deferred", tone: "neutral" },
+  dismissed: { label: "Skipped", tone: "neutral" },
+  replaced: { label: "Replaced", tone: "neutral" },
+  suppressed: { label: "Do not contact", tone: "warning" },
+};
+
+/** "Score 72/100; public contact route; matched Topper." -> ["Public contact route", "Matched Topper"]. */
+function reasonParts(reason: string): string[] {
+  return reason
+    .split(/;\s*|\.\s+(?=Decision:)/)
+    .map((part) => part.trim().replace(/\.$/, ""))
+    .filter((part) => part && !/^Score \d+\/100$/i.test(part))
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1));
+}
 
 interface ShortlistWorkspaceProps {
   campaigns: Campaign[];
@@ -63,14 +91,14 @@ export function ShortlistWorkspace({ campaigns, shortlists }: ShortlistWorkspace
         description="This week's best leads for each campaign, waiting for your decision."
       />
 
-      <section className="workspace-section" aria-labelledby="shortlist-generator-heading">
-        <SectionHeading
-          id="shortlist-generator-heading"
-          title="Build this week's shortlist"
-          description="Building again for the same campaign and week keeps your decisions."
-          icon={ListChecks}
-          count={latest?.items.filter((item) => ["recommended", "approved"].includes(item.decision)).length ?? 0}
-        />
+      <Collapsible
+        key={latest ? "has-shortlist" : "empty"}
+        title="Build this week's shortlist"
+        summary="Building again for the same campaign and week keeps your decisions."
+        icon={ListChecks}
+        defaultOpen={!latest}
+        className="shortlist-builder"
+      >
         <form className="inline-editor shortlist-generator" onSubmit={(event) => void generate(event)}>
           <label>
             Campaign
@@ -104,16 +132,16 @@ export function ShortlistWorkspace({ campaigns, shortlists }: ShortlistWorkspace
         {selectedCampaign ? (
           <p className="form-hint">
             Campaign capacity: {selectedCampaign.weekly_shortlist_size} · minimum score:{" "}
-            {selectedCampaign.minimum_score_threshold}/100.
+            {selectedCampaign.minimum_score_threshold}/100. Building again for the same campaign and week keeps your decisions.
           </p>
         ) : null}
-      </section>
+      </Collapsible>
 
       <section className="workspace-section" aria-labelledby="weekly-results-heading">
         <SectionHeading
           id="weekly-results-heading"
           title={latest ? `${latest.campaign_name} · ${formatDate(latest.week_start)}` : "Shortlist results"}
-          description="Approve, defer, dismiss or replace recommendations. No action sends a message."
+          description="Accept the leads worth contacting this week. Nothing is sent from here."
           icon={ListChecks}
           count={latest?.capacity}
         />
@@ -129,7 +157,7 @@ export function ShortlistWorkspace({ campaigns, shortlists }: ShortlistWorkspace
           </div>
         ) : null}
         {loading ? (
-          <LoadingState label="Loading weekly recommendations" />
+          <SkeletonRows rows={4} label="Loading weekly recommendations" />
         ) : !latest ? (
           <EmptyState
             title="No weekly shortlist yet"
@@ -156,7 +184,11 @@ export function ShortlistWorkspace({ campaigns, shortlists }: ShortlistWorkspace
                       {item.score}/100
                     </span>
                   </div>
-                  <p>{item.reason}</p>
+                  <ul className="reason-chips" aria-label="Why it scored">
+                    {reasonParts(item.reason).map((part) => (
+                      <li key={part}>{part}</li>
+                    ))}
+                  </ul>
                   {item.product_matches.length > 0 ? (
                     <details>
                       <summary>{item.product_matches.length} product match{item.product_matches.length === 1 ? "" : "es"}</summary>
@@ -171,27 +203,29 @@ export function ShortlistWorkspace({ campaigns, shortlists }: ShortlistWorkspace
                     </details>
                   ) : null}
                   <div className="shortlist-status-row">
-                    <span className={`status-badge${item.decision === "approved" ? " status-badge--success" : ""}`}>
-                      {humanize(item.decision)}
-                    </span>
+                    <StatusPill tone={DECISIONS[item.decision]?.tone ?? "neutral"}>
+                      {DECISIONS[item.decision]?.label ?? item.decision}
+                    </StatusPill>
                     <button className="tertiary-action" type="button" onClick={() => onManageLead(item.lead_id)}>
                       Open lead <ArrowRight size={15} aria-hidden="true" />
                     </button>
                   </div>
                   {item.decision === "recommended" ? (
                     <div className="shortlist-actions">
-                      <button type="button" className="secondary-action" disabled={busy} onClick={() => void onAction(latest.id, item.id, "approved")}>
-                        <Check size={15} aria-hidden="true" /> Approve
+                      <button type="button" className="primary-action" disabled={busy} onClick={() => void onAction(latest.id, item.id, "approved")}>
+                        <Check size={15} aria-hidden="true" /> Accept
                       </button>
-                      <button type="button" className="tertiary-action" disabled={busy} onClick={() => void onAction(latest.id, item.id, "deferred")}>
-                        <Clock3 size={15} aria-hidden="true" /> Defer
+                      <button type="button" className="secondary-action" disabled={busy} onClick={() => void onAction(latest.id, item.id, "dismissed")}>
+                        <X size={15} aria-hidden="true" /> Skip
                       </button>
-                      <button type="button" className="tertiary-action" disabled={busy} onClick={() => void onAction(latest.id, item.id, "dismissed")}>
-                        <X size={15} aria-hidden="true" /> Dismiss
-                      </button>
-                      <button type="button" className="tertiary-action" disabled={busy} onClick={() => void onAction(latest.id, item.id, "replace")}>
-                        <RefreshCw size={15} aria-hidden="true" /> Replace
-                      </button>
+                      <MoreMenu label={`More choices for ${item.business_name}`}>
+                        <button type="button" className="tertiary-action" disabled={busy} onClick={() => void onAction(latest.id, item.id, "deferred")}>
+                          <Clock3 size={15} aria-hidden="true" /> Defer to a later week
+                        </button>
+                        <button type="button" className="tertiary-action" disabled={busy} onClick={() => void onAction(latest.id, item.id, "replace")}>
+                          <RefreshCw size={15} aria-hidden="true" /> Replace with the next best
+                        </button>
+                      </MoreMenu>
                     </div>
                   ) : null}
                   {item.decision === "suppressed" ? (
