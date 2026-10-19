@@ -706,7 +706,7 @@ h3 {
   outline: none;
 }
 
-.workspace-content > *:not(.visually-hidden) {
+.workspace-content > *:not(.visually-hidden, .toast) {
   width: min(100%, 1440px);
   margin-right: auto;
   margin-left: auto;
@@ -5057,6 +5057,96 @@ kbd {
 
 .campaign-edit-form {
   max-width: none;
+}
+
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ens-space-2);
+  margin: 0 0 var(--ens-space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.stepper__step button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ens-space-2);
+  padding: var(--ens-space-1) var(--ens-space-3) var(--ens-space-1) var(--ens-space-1);
+  border: 1px solid var(--ens-border-subtle);
+  border-radius: var(--ens-radius-pill);
+  background: transparent;
+  color: var(--ens-text-muted);
+  cursor: pointer;
+  font-size: var(--ens-type-sm);
+  font-weight: 600;
+}
+
+.stepper__number {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ens-surface-2);
+  font-size: var(--ens-type-xs);
+}
+
+.stepper__step--current button {
+  border-color: var(--ens-action-primary);
+  color: var(--ens-text-primary);
+}
+
+.stepper__step--current .stepper__number {
+  background: var(--ens-action-primary);
+  color: var(--ens-text-on-accent);
+}
+
+.stepper__step--done button {
+  color: var(--ens-text-secondary);
+}
+
+.stepper__step--done .stepper__number {
+  background: var(--ens-success-soft);
+  color: var(--ens-success);
+}
+
+.form-step {
+  display: grid;
+  gap: var(--ens-space-4);
+  animation: ens-page-enter var(--ens-motion-base) var(--ens-ease-out);
+}
+
+.form-step[hidden] {
+  display: none;
+}
+
+.form-actions--steps {
+  justify-content: space-between;
+}
+
+.campaign-review {
+  display: grid;
+  gap: var(--ens-space-3);
+  margin: 0;
+}
+
+.campaign-review > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--ens-space-3);
+  padding-bottom: var(--ens-space-3);
+  border-bottom: 1px solid var(--ens-border-subtle);
+}
+
+.campaign-review dt {
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-sm);
+}
+
+.campaign-review dd {
+  margin: 0;
+  font-size: var(--ens-type-sm);
 }
 
 /* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */

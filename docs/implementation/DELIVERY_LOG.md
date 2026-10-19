@@ -655,3 +655,11 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - Edit opens the full campaign form in a wide drawer instead of expanding inside the card, with the same validation, weekly-outreach confirmation and save.
 - Not done here: "last run" and "this week's leads" on each card need per-campaign figures the screen does not load yet.
 - Verification: 1 new component test (More menu); the edit, weekly-enable and archive tests now use the drawer and the Archived section; 138 frontend tests pass; TypeScript and ESLint pass.
+
+### D5 (part 2) - New campaign as steps
+
+- Create campaign is now five steps over the same fields and the same `createCampaign` call: Basics (name, segment, location, description), Audience (radius, weekly shortlist, minimum score, keywords, exclusions), Discovery (sources), Products (categories or a product family) and Review (a plain summary before "Create campaign"). "Plan with AI" stays beside the heading as the other way to start.
+- Next checks only the fields on the current step, with the browser's own messages, and will not move past an invalid one; clicking a later step in the stepper checks every step on the way. Enter in a field moves to the next step; only the Review step can create the campaign.
+- The plan's "Weekly outreach" step is not there because the create form has never had weekly-outreach fields; weekly outreach is still set when editing, with its confirmation.
+- Fixed while checking: a rule that sized every child of the main area also stretched the success toast across the window; the toast is now excluded and sits top-right again.
+- Verification: 1 new test (an empty required field keeps the step; Enter advances without creating); the three creation tests step through the form with a helper; 139 frontend tests pass; TypeScript and ESLint pass.

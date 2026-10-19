@@ -1,10 +1,12 @@
-import { Megaphone, Plus, Sparkles } from "lucide-react";
-import type { FormEvent } from "react";
+import { ArrowLeft, ArrowRight, Check, Megaphone, Plus, Sparkles } from "lucide-react";
+import { type FormEvent, useRef, useState } from "react";
 
 import type { AutomationCapabilities, ProductFamily, WorkspaceSettings } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import { DEFAULT_PRODUCT_CATEGORIES, formList, formValue } from "./campaignShared";
 import { SectionHeading } from "./DesignSystem";
+
+const STEPS = ["Basics", "Audience", "Discovery", "Products", "Review"] as const;
 
 interface CampaignCreateTabProps {
   capabilities: AutomationCapabilities | null;
@@ -20,9 +22,71 @@ export function CampaignCreateTab({
   onCreated,
 }: CampaignCreateTabProps) {
   const { busy, createCampaign: onCreate, planCampaignWithAssistant } = useWorkspaceActions();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [step, setStep] = useState(0);
+  const [review, setReview] = useState<{ label: string; value: string }[]>([]);
+  const lastStep = STEPS.length - 1;
+
+  /** Checks only the fields on the current step, with the browser's own messages. */
+  function stepIsValid(index: number): boolean {
+    const container = formRef.current?.querySelector(`[data-step="${index}"]`);
+    if (!container) return true;
+    const fields = container.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      "input, select, textarea",
+    );
+    for (const field of fields) {
+      if (!field.checkValidity()) {
+        field.reportValidity();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function summarise(): void {
+    if (!formRef.current) return;
+    const form = new FormData(formRef.current);
+    const sources = [
+      form.has("campaign-google-places") && "Google Places",
+      form.has("campaign-instagram") && "Instagram",
+      form.has("campaign-public-registries") && "Public registries",
+    ].filter(Boolean);
+    const familyId = formValue(form, "campaign-product-family");
+    setReview([
+      { label: "Name", value: formValue(form, "campaign-name") },
+      { label: "Who", value: formValue(form, "campaign-segment") },
+      { label: "Where", value: `${formValue(form, "campaign-location")} · ${formValue(form, "campaign-radius")} miles` },
+      { label: "Each week", value: `Up to ${formValue(form, "campaign-shortlist")} leads scoring ${formValue(form, "campaign-minimum-score")}+` },
+      { label: "Keywords", value: formList(form, "campaign-keywords").join(", ") || "None" },
+      { label: "Discovery", value: sources.length ? `Manual, ${sources.join(", ")}` : "Manual entry only" },
+      {
+        label: "Products",
+        value: familyId
+          ? productFamilies.find((family) => family.id === familyId)?.name ?? "Selected family"
+          : formList(form, "campaign-product-categories").join(", "),
+      },
+    ]);
+  }
+
+  function goTo(next: number): void {
+    if (next > step) {
+      for (let index = step; index < next; index += 1) {
+        if (!stepIsValid(index)) {
+          setStep(index);
+          return;
+        }
+      }
+    }
+    if (next === lastStep) summarise();
+    setStep(next);
+  }
 
   async function createCampaign(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    if (step < lastStep) {
+      goTo(step + 1);
+      return;
+    }
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     const discoverySources = ["manual"];
@@ -49,6 +113,7 @@ export function CampaignCreateTab({
     });
     if (saved) {
       formElement.reset();
+      setStep(0);
       onCreated();
     }
   }
@@ -69,14 +134,36 @@ export function CampaignCreateTab({
 
       <div className="section-layout section-layout--single">
         <div className="form-panel form-panel--bounded">
-          <div className="subsection-heading">
-            <div>
-              <h3>New campaign</h3>
-              <p>Define who to find, where to look and what to exclude.</p>
-            </div>
-            <span className="step-badge">01</span>
-          </div>
-          <form id="campaign-form" className="form-grid" onSubmit={(event) => void createCampaign(event)}>
+          <ol className="stepper" aria-label="Campaign steps">
+            {STEPS.map((label, index) => (
+              <li
+                key={label}
+                className={`stepper__step${index === step ? " stepper__step--current" : ""}${index < step ? " stepper__step--done" : ""}`}
+                aria-current={index === step ? "step" : undefined}
+              >
+                <button type="button" onClick={() => goTo(index)} disabled={busy}>
+                  <span className="stepper__number" aria-hidden="true">
+                    {index < step ? <Check size={14} /> : index + 1}
+                  </span>
+                  {label}
+                </button>
+              </li>
+            ))}
+          </ol>
+          <form
+            id="campaign-form"
+            ref={formRef}
+            className="form-grid"
+            onSubmit={(event) => void createCampaign(event)}
+            onKeyDown={(event) => {
+              // Enter in a field moves to the next step; only the last step creates the campaign.
+              const target = event.target as HTMLElement;
+              if (event.key !== "Enter" || step === lastStep || target.tagName !== "INPUT") return;
+              event.preventDefault();
+              goTo(step + 1);
+            }}
+          >
+            <div className="form-step" data-step="0" hidden={step !== 0}>
             <label>
               Campaign name
               <input name="campaign-name" required maxLength={200} placeholder="Luton Bakery Partnerships" />
@@ -89,6 +176,13 @@ export function CampaignCreateTab({
               Primary location
               <input name="campaign-location" required defaultValue="Luton, United Kingdom" />
             </label>
+            <label>
+              Description <span className="optional-label">Optional</span>
+              <textarea name="campaign-description" maxLength={2000} rows={3} />
+            </label>
+            </div>
+
+            <div className="form-step" data-step="1" hidden={step !== 1}>
             <div className="field-pair">
               <label>
                 Radius
@@ -150,6 +244,10 @@ export function CampaignCreateTab({
               Exclusion keywords <span className="optional-label">Optional</span>
               <input name="campaign-exclusions" placeholder="wholesaler, permanently closed" />
             </label>
+            </div>
+
+            <div className="form-step" data-step="2" hidden={step !== 2}>
+            <p className="supporting-copy">Manual entry is always on. Add the sources this campaign may search.</p>
             <label className="choice-row">
               <input
                 name="campaign-google-places"
@@ -195,6 +293,9 @@ export function CampaignCreateTab({
                 </small>
               </span>
             </label>
+            </div>
+
+            <div className="form-step" data-step="3" hidden={step !== 3}>
             <label>
               Product categories
               <input
@@ -222,16 +323,33 @@ export function CampaignCreateTab({
                 Catalogue → Product families.
               </small>
             </label>
-            <label>
-              Description <span className="optional-label">Optional</span>
-              <textarea name="campaign-description" maxLength={2000} rows={3} />
-            </label>
-            <div className="form-actions">
-              <p>Controlled discovery · duplicate review · local storage</p>
-              <button className="primary-action" type="submit" disabled={busy}>
-                <Plus size={18} aria-hidden="true" />
-                {busy ? "Saving…" : "Create campaign"}
-              </button>
+            </div>
+
+            <div className="form-step" data-step="4" hidden={step !== 4}>
+              <dl className="campaign-review">
+                {review.map((item) => (
+                  <div key={item.label}><dt>{item.label}</dt><dd>{item.value}</dd></div>
+                ))}
+              </dl>
+              <p className="supporting-copy">Stored on this computer. Runs only find and score leads; every email still waits for your approval.</p>
+            </div>
+
+            <div className="form-actions form-actions--steps">
+              {step > 0 ? (
+                <button className="secondary-action" type="button" disabled={busy} onClick={() => goTo(step - 1)}>
+                  <ArrowLeft size={16} aria-hidden="true" /> Back
+                </button>
+              ) : <span />}
+              {step < lastStep ? (
+                <button className="primary-action" type="button" disabled={busy} onClick={() => goTo(step + 1)}>
+                  Next: {STEPS[step + 1]} <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              ) : (
+                <button className="primary-action" type="submit" disabled={busy}>
+                  <Plus size={18} aria-hidden="true" />
+                  {busy ? "Saving…" : "Create campaign"}
+                </button>
+              )}
             </div>
           </form>
         </div>

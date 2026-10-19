@@ -764,6 +764,13 @@ const provenFit: ProvenFit = {
   created_at: "2026-09-27T10:00:00+00:00",
 };
 
+/** Steps through the New campaign form until the named step is showing. */
+async function goToCampaignStep(user: ReturnType<typeof userEvent.setup>, step: string): Promise<void> {
+  while (!document.querySelector('[aria-current="step"]')?.textContent?.includes(step)) {
+    await user.click(screen.getByRole("button", { name: /^Next:/ }));
+  }
+}
+
 describe("local operating workbench", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1199,14 +1206,16 @@ describe("local operating workbench", () => {
 
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
     await user.click(screen.getByRole("tab", { name: "Create campaign" }));
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: /Product family/ }),
-      productFamily.id,
-    );
     await user.type(
       screen.getByRole("textbox", { name: "Campaign name" }),
       "Family assigned campaign",
     );
+    await goToCampaignStep(user, "Products");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Product family/ }),
+      productFamily.id,
+    );
+    await goToCampaignStep(user, "Review");
     await user.click(screen.getByRole("button", { name: "Create campaign" }));
     await waitFor(() =>
       expect(api.createCampaign).toHaveBeenCalledWith(
@@ -1342,6 +1351,7 @@ describe("local operating workbench", () => {
     await user.click(screen.getByRole("link", { name: /Campaigns/ }));
     await user.click(screen.getByRole("tab", { name: "Create campaign" }));
     await user.type(screen.getByRole("textbox", { name: "Campaign name" }), "New Luton Campaign");
+    await goToCampaignStep(user, "Review");
     await user.click(screen.getByRole("button", { name: "Create campaign" }));
 
     const alert = await screen.findByRole("alert");
@@ -1365,6 +1375,22 @@ describe("local operating workbench", () => {
     expect(screen.getByRole("textbox", { name: "Campaign name" })).toBeInTheDocument();
   });
 
+  it("keeps the New campaign form on a step until its required fields are filled", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Service connected");
+    await user.click(screen.getByRole("link", { name: /Campaigns/ }));
+    await user.click(screen.getByRole("tab", { name: "Create campaign" }));
+    await user.click(screen.getByRole("button", { name: "Next: Audience" }));
+    expect(document.querySelector('[aria-current="step"]')).toHaveTextContent("Basics");
+    expect(screen.getByRole("textbox", { name: "Campaign name" })).toBeInvalid();
+
+    await user.type(screen.getByRole("textbox", { name: "Campaign name" }), "Stepped Campaign");
+    await user.type(screen.getByRole("textbox", { name: "Campaign name" }), "{Enter}");
+    expect(document.querySelector('[aria-current="step"]')).toHaveTextContent("Audience");
+    expect(api.createCampaign).not.toHaveBeenCalled();
+  });
+
   it("creates a configured campaign from the campaign workspace", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -1373,12 +1399,16 @@ describe("local operating workbench", () => {
     await user.click(screen.getByRole("tab", { name: "Create campaign" }));
     const name = screen.getByRole("textbox", { name: "Campaign name" });
     await user.type(name, "New Luton Campaign");
+    await goToCampaignStep(user, "Audience");
     const minimumScore = screen.getByRole("spinbutton", { name: "Minimum shortlist score" });
     await user.clear(minimumScore);
     await user.type(minimumScore, "65");
+    await goToCampaignStep(user, "Products");
     const productCategories = screen.getByRole("textbox", { name: "Product categories" });
     await user.clear(productCategories);
     await user.type(productCategories, "Cake toppers, Wedding signage, cake toppers");
+    await goToCampaignStep(user, "Review");
+    expect(screen.getByText("New Luton Campaign")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create campaign" }));
     await waitFor(() => expect(api.createCampaign).toHaveBeenCalledTimes(1));
     expect(api.createCampaign).toHaveBeenCalledWith(
