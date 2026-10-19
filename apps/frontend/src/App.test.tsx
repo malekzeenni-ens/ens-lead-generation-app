@@ -2571,6 +2571,28 @@ describe("local operating workbench", () => {
     expect(await screen.findByRole("textbox", { name: "Search catalogue" })).toHaveValue("Product 01");
   });
 
+  it("moves a lead from the pipeline board through the same stage change", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.changeLeadStage).mockResolvedValue({ ...lead, pipeline_stage: "contacted" });
+    render(<App />);
+    await screen.findByText("Service connected");
+    await user.click(screen.getByRole("link", { name: /Pipeline/ }));
+    await user.click(screen.getByRole("button", { name: /Board/ }));
+
+    const board = screen.getByLabelText("Pipeline board");
+    expect(within(board).getByRole("heading", { name: "Prospecting" })).toBeInTheDocument();
+    await user.click(within(board).getByRole("button", { name: `Move ${lead.business_name} to another stage` }));
+    const dialog = screen.getByRole("dialog", { name: `Move ${lead.business_name}` });
+    expect(within(dialog).queryByRole("option", { name: "Do Not Contact" })).not.toBeInTheDocument();
+    await user.selectOptions(within(dialog).getByRole("combobox", { name: "New stage" }), "contacted");
+    await user.type(within(dialog).getByRole("textbox", { name: /Reason/ }), "Called them");
+    await user.click(within(dialog).getByRole("button", { name: "Move lead" }));
+    await waitFor(() => expect(api.changeLeadStage).toHaveBeenCalledWith(lead.id, "contacted", "Called them"));
+
+    await user.click(within(board).getByRole("button", { name: new RegExp(`^${lead.business_name}`) }));
+    expect(screen.getByRole("button", { name: /List/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("moves between pages in the pipeline lead selector", async () => {
     const user = userEvent.setup();
     const pipelineLeads = Array.from({ length: 15 }, (_, index) => ({
@@ -2600,7 +2622,7 @@ describe("local operating workbench", () => {
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Pipeline/ }));
     await user.click(screen.getByRole("tab", { name: "Score & products" }));
-    expect(screen.getByText("72/100")).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Lead summary")).getByText("72/100")).toBeInTheDocument();
     expect(screen.getByText("Business relevance")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Calculate score" }));
     await waitFor(() => expect(api.calculateScore).toHaveBeenCalledWith(lead.id, campaign.id));

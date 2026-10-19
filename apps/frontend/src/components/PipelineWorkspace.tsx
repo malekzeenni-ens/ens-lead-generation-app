@@ -14,6 +14,8 @@ import {
   ShieldOff,
   Sparkles,
   UserRoundCog,
+  Columns3,
+  List,
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
@@ -48,6 +50,7 @@ import type {
 } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import { useRememberedState } from "../remembered";
+import { PipelineBoard } from "./PipelineBoard";
 import {
   DangerConfirm,
   EmptyState,
@@ -202,6 +205,7 @@ export function PipelineWorkspace({
   } = useWorkspaceActions();
   const [activeTask, setActiveTask] = useRememberedState("pipeline:tab", "overview");
   const [leadQuery, setLeadQuery] = useRememberedState("pipeline:query", "");
+  const [view, setView] = useRememberedState<"list" | "board">("pipeline:view", "list");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [briefing, setBriefing] = useState<LeadBriefing | null>(null);
   const [briefingLeadId, setBriefingLeadId] = useState<string | null>(null);
@@ -433,6 +437,16 @@ export function PipelineWorkspace({
       <PageHeader
         title="Pipeline"
         description="Move each lead through its stages and keep follow-ups on time."
+        action={
+          <div className="view-switch" role="group" aria-label="Pipeline view">
+            <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>
+              <List size={16} aria-hidden="true" /> List
+            </button>
+            <button type="button" aria-pressed={view === "board"} onClick={() => setView("board")}>
+              <Columns3 size={16} aria-hidden="true" /> Board
+            </button>
+          </div>
+        }
       />
 
       <section className="workspace-section" aria-label="Pipeline">
@@ -441,6 +455,15 @@ export function PipelineWorkspace({
           <div className="records-panel">
             <EmptyState title="No leads to manage" description="Add a manual lead before opening the pipeline." />
           </div>
+        ) : view === "board" ? (
+          <PipelineBoard
+            leads={leads}
+            scores={scores}
+            onOpen={(leadId) => {
+              onSelectLead(leadId);
+              setView("list");
+            }}
+          />
         ) : (
           <div className="pipeline-layout">
             <aside className="lead-selector" aria-label="Pipeline leads">
@@ -483,7 +506,6 @@ export function PipelineWorkspace({
               <div className="pipeline-detail" key={`${selectedLead.id}-${selectedLead.updated_at}`}>
                 <div className="lead-detail-header">
                   <div>
-                    <p className="eyebrow">Selected lead</p>
                     <h2>{selectedLead.business_name}</h2>
                     {selectedLead.contact_first_name || selectedLead.contact_last_name ? (
                       <p>
@@ -528,7 +550,6 @@ export function PipelineWorkspace({
                     >
                       <Sparkles size={16} aria-hidden="true" /> Ask AI about this lead
                     </button>
-                    <span className="status-badge">{humanize(selectedLead.pipeline_stage)}</span>
                     <span className={`status-badge status-badge--${selectedLead.suppressed ? "warning" : classificationTone(selectedLead.contact_classification)}`}>
                       {selectedLead.suppressed ? "Do not contact" : classificationLabel(selectedLead.contact_classification)}
                     </span>
@@ -547,6 +568,26 @@ export function PipelineWorkspace({
                     </button>
                   </div>
                 ) : null}
+
+                <dl className="lead-summary-strip" aria-label="Lead summary">
+                  <div><dt>Stage</dt><dd>{selectedLead.suppressed ? "Do not contact" : humanize(selectedLead.pipeline_stage)}</dd></div>
+                  <div><dt>Score</dt><dd>{selectedScore ? `${selectedScore.final_score}/100` : "Not scored"}</dd></div>
+                  <div>
+                    <dt>Next follow-up</dt>
+                    <dd>{openFollowUps.length > 0 ? formatDate([...openFollowUps].sort((left, right) => left.due_date.localeCompare(right.due_date))[0]?.due_date ?? null) : "None planned"}</dd>
+                  </div>
+                  <div>
+                    <dt>Value</dt>
+                    <dd>
+                      {(() => {
+                        const value = selectedLead.won_value ?? selectedLead.quote_value ?? selectedLead.estimated_order_value;
+                        return value === null
+                          ? "Not set"
+                          : new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(value);
+                      })()}
+                    </dd>
+                  </div>
+                </dl>
 
                 <TaskTabs
                   id="lead-pipeline-tasks"

@@ -633,3 +633,11 @@ Phase gate after B3: `npm run quality` passed (frontend 131, backend 271, Rust 3
 - Clicking a row, or the business name, opens a preview drawer: stage, score, contact, where it was found, next follow-up and campaigns, with "Ask AI" and "Open in pipeline". Row buttons still work without opening it. Loading shows skeleton rows instead of a spinner; dates show as dates.
 - Not done: stage names are still title case from `humanize` ("Ready To Contact"); a sentence-case pass touches every screen and is left for the polish phase.
 - Verification: 1 new test (saved view sets filters, chip removal, clear all, preview drawer to pipeline); 135 frontend tests pass; TypeScript and ESLint pass.
+
+### D3 - Pipeline board and lead summary
+
+- A List / Board switch on Pipeline, remembered for the session. The board has one column per stage group (Prospecting, Contact, Engaged, Closed) with a count; each card shows the business, location, stage, score, next follow-up and value (won, else quoted, else estimated).
+- Moving a card, by dragging it onto a column or with its "Move to…" button (the keyboard route), opens a small dialog: the new stage (only that column's stages when dragged) and an optional reason, then the same `changeLeadStage` action and server rules as the lead's own form, recorded in its history. Suppressed leads cannot be dragged or moved and say why; "Do not contact" is never offered, because suppression belongs to the Privacy tab. Clicking a card opens that lead in the list view.
+- The open lead now has a summary strip above its tabs: stage, score, next follow-up and value. The duplicate stage badge and the "Selected lead" eyebrow were removed from its header.
+- Not done from the plan: making "Lead details" the default tab with privacy and audit collapsed. The current tabs already open on Overview, and folding Privacy into a collapsed section is left for the polish phase.
+- Verification: 1 new test (board columns, Move to…, no "Do not contact" option, stage change called with the reason, card opens the list); the score test reads the summary strip; 136 frontend tests pass; TypeScript and ESLint pass.

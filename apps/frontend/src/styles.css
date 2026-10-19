@@ -4736,6 +4736,212 @@ td small {
   justify-self: start;
 }
 
+/* Pipeline (UX redesign D3): list or board, and a summary strip for the open lead. */
+.view-switch {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--ens-border-default);
+  border-radius: var(--ens-radius-md);
+  background: var(--ens-surface-1);
+}
+
+.view-switch button {
+  display: inline-flex;
+  min-height: var(--ens-control-height-sm);
+  align-items: center;
+  gap: var(--ens-space-2);
+  padding: 0 var(--ens-space-3);
+  border: 0;
+  border-radius: var(--ens-radius-sm);
+  background: transparent;
+  color: var(--ens-text-secondary);
+  cursor: pointer;
+  font-size: var(--ens-type-sm);
+  font-weight: 600;
+}
+
+.view-switch button[aria-pressed="true"] {
+  background: var(--ens-surface-selected);
+  color: var(--ens-text-primary);
+  box-shadow: var(--ens-shadow);
+}
+
+.pipeline-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: var(--ens-space-3);
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: var(--ens-space-2);
+}
+
+.board-column {
+  display: flex;
+  min-height: 240px;
+  flex-direction: column;
+  border: 1px solid var(--ens-border-subtle);
+  border-radius: var(--ens-radius-lg);
+  background: var(--ens-surface-header);
+  transition:
+    border-color var(--ens-motion-fast) var(--ens-ease-out),
+    background var(--ens-motion-fast) var(--ens-ease-out);
+}
+
+.board-column--drop {
+  border-color: var(--ens-action-primary);
+  background: rgb(221 191 147 / 6%);
+}
+
+.board-column__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ens-space-3) var(--ens-space-4);
+  border-bottom: 1px solid var(--ens-border-subtle);
+}
+
+.board-column__header h3 {
+  margin: 0;
+  font-size: var(--ens-type-sm);
+}
+
+.board-column__count {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: var(--ens-radius-pill);
+  background: var(--ens-surface-2);
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+  text-align: center;
+}
+
+.board-column__cards {
+  display: grid;
+  gap: var(--ens-space-2);
+  padding: var(--ens-space-3);
+}
+
+.board-column__empty {
+  margin: var(--ens-space-4) 0;
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+  text-align: center;
+}
+
+.board-card {
+  display: grid;
+  gap: var(--ens-space-2);
+  padding: var(--ens-space-3);
+  border: 1px solid var(--ens-border-subtle);
+  border-radius: var(--ens-radius-md);
+  background: var(--ens-surface-1);
+  cursor: grab;
+  transition:
+    transform var(--ens-motion-fast) var(--ens-ease-out),
+    box-shadow var(--ens-motion-fast) var(--ens-ease-out),
+    opacity var(--ens-motion-fast) var(--ens-ease-out);
+}
+
+.board-card:hover {
+  box-shadow: var(--ens-shadow);
+  transform: translateY(-1px);
+}
+
+.board-card[draggable="false"] {
+  cursor: default;
+}
+
+.board-card--dragging {
+  opacity: 0.45;
+}
+
+.board-card__open {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ens-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.board-card__open strong {
+  font-size: var(--ens-type-sm);
+}
+
+.board-card__open small {
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+}
+
+.board-card__open:hover strong,
+.board-card__open:focus-visible strong {
+  color: var(--ens-text-accent);
+}
+
+.board-card__meta,
+.board-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ens-space-2);
+}
+
+.board-card__score {
+  color: var(--ens-text-accent);
+  font-size: var(--ens-type-xs);
+  font-weight: 700;
+}
+
+.board-card__footer {
+  justify-content: space-between;
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+}
+
+.board-card__footer > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.board-card__move {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  margin-left: auto;
+}
+
+.lead-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--ens-space-3);
+  margin: 0 0 var(--ens-space-4);
+  padding: var(--ens-space-3) var(--ens-space-4);
+  border: 1px solid var(--ens-border-subtle);
+  border-radius: var(--ens-radius-lg);
+  background: var(--ens-surface-1);
+}
+
+.lead-summary-strip dt {
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+}
+
+.lead-summary-strip dd {
+  margin: 2px 0 0;
+  color: var(--ens-text-primary);
+  font-size: var(--ens-type-sm);
+  font-weight: 600;
+}
+
+@media (max-width: 680px) {
+  .lead-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Floating AI assistant (UX redesign B3): a bubble bottom-right, a panel above it. */
 .section-heading__actions {
   display: flex;
