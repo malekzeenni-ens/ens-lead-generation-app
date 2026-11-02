@@ -11,7 +11,7 @@ $specDirectory = Join-Path $buildRoot "spec"
 $alembicConfig = Join-Path $backendDirectory "alembic.ini"
 $migrationsDirectory = Join-Path $backendDirectory "migrations"
 # Phones are served the same built frontend (ADR-025), bundled beside the backend.
-$frontendDistDirectory = Join-Path $repoRoot "appsrontenddist"
+$frontendDistDirectory = Join-Path $repoRoot "apps\frontend\dist"
 
 $resolvedRepoRoot = [IO.Path]::GetFullPath($repoRoot)
 $resolvedSidecarDirectory = [IO.Path]::GetFullPath($sidecarDirectory)

@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.channel import current_actor
 from app.db.models import AuditEvent
 
 # Audit events outlive privacy deletion (FR-163), so they record IDs, versions, counts, enums,
@@ -68,7 +69,7 @@ def record_audit_event(
     entity_id: str,
     correlation_id: str,
     summary: dict[str, Any],
-    actor: str = "local_user",
+    actor: str | None = None,
 ) -> AuditEvent:
     personal = _personal_keys(summary)
     if personal:
@@ -79,7 +80,8 @@ def record_audit_event(
         action=action,
         entity_type=entity_type,
         entity_id=entity_id,
-        actor=actor,
+        # A phone request sets the actor to its device (ADR-025); otherwise the desktop user.
+        actor=actor or current_actor.get(),
         correlation_id=correlation_id,
         summary=summary,
     )

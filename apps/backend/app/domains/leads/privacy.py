@@ -15,6 +15,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.channel import current_actor
 from app.core.csv_safety import safe_csv_cell
 from app.core.errors import DomainError
 from app.db.models import (
@@ -104,7 +105,7 @@ class LeadPrivacy(LeadOperations):
                     lead_id=lead.id,
                     previous_stage=previous_stage,
                     new_stage=PipelineStage.DO_NOT_CONTACT.value,
-                    actor="local_user",
+                    actor=current_actor.get(),
                     reason=data.reason,
                 )
             )

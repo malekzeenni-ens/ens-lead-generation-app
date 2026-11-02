@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from app.core.channel import current_actor
 from app.core.errors import DomainError
 from app.db.models import (
     Communication,
@@ -40,7 +41,7 @@ class LeadOperations(LeadEditing):
         correlation_id: str,
     ) -> LeadRead:
         lead = self._get_model(session, lead_id)
-        note = LeadNote(lead_id=lead.id, content=data.content, actor="local_user")
+        note = LeadNote(lead_id=lead.id, content=data.content, actor=current_actor.get())
         self.repository.add_note(session, note)
         session.flush()
         record_audit_event(

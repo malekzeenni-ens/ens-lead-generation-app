@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.channel import current_actor
 from app.core.errors import DomainError
 from app.db.models import (
     Campaign,
@@ -1039,7 +1040,7 @@ class QualificationService:
                         lead_id=lead.id,
                         previous_stage=previous,
                         new_stage="recommended_this_week",
-                        actor="local_user",
+                        actor=current_actor.get(),
                         reason=f"Selected for shortlist beginning {week_start.isoformat()}",
                     )
                 )

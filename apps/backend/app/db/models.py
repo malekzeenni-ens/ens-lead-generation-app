@@ -20,6 +20,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.channel import current_actor
 from app.db.base import Base
 
 
@@ -29,6 +30,11 @@ def new_id() -> str:
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+def _current_actor() -> str:
+    """The desktop user, or the paired phone handling this request (ADR-025)."""
+    return current_actor.get()
 
 
 class Campaign(Base):
@@ -432,7 +438,7 @@ class LeadStageEvent(Base):
     )
     previous_stage: Mapped[str | None] = mapped_column(String(50))
     new_stage: Mapped[str] = mapped_column(String(50), nullable=False)
-    actor: Mapped[str] = mapped_column(String(100), nullable=False, default="local_user")
+    actor: Mapped[str] = mapped_column(String(100), nullable=False, default=_current_actor)
     reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
@@ -448,7 +454,7 @@ class LeadNote(Base):
         String(36), ForeignKey("lead.id", ondelete="CASCADE"), nullable=False
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    actor: Mapped[str] = mapped_column(String(100), nullable=False, default="local_user")
+    actor: Mapped[str] = mapped_column(String(100), nullable=False, default=_current_actor)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     lead: Mapped[Lead] = relationship(back_populates="notes")
@@ -566,7 +572,7 @@ class AuditEvent(Base):
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     entity_type: Mapped[str] = mapped_column(String(100), nullable=False)
     entity_id: Mapped[str] = mapped_column(String(36), nullable=False)
-    actor: Mapped[str] = mapped_column(String(100), nullable=False, default="local_user")
+    actor: Mapped[str] = mapped_column(String(100), nullable=False, default=_current_actor)
     correlation_id: Mapped[str] = mapped_column(String(100), nullable=False)
     summary: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

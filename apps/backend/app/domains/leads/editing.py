@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.channel import current_actor
 from app.core.errors import DomainError
 from app.db.models import (
     Lead,
@@ -169,7 +170,7 @@ class LeadEditing(LeadServiceBase):
                 lead_id=lead.id,
                 previous_stage=None,
                 new_stage=PipelineStage.NEW.value,
-                actor="local_user",
+                actor=current_actor.get(),
                 reason="Manual lead entry",
             )
         )
@@ -361,7 +362,7 @@ class LeadEditing(LeadServiceBase):
                 lead_id=lead.id,
                 previous_stage=previous_stage,
                 new_stage=data.stage.value,
-                actor="local_user",
+                actor=current_actor.get(),
                 reason=data.reason,
             )
         )
