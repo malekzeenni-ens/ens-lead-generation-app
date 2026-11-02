@@ -108,8 +108,34 @@ if ($PreflightOnly) {
     exit 0
 }
 
+function Update-PhoneAppFiles {
+    # Phones are served the built frontend, not the Vite dev server (ADR-025). Rebuild it when
+    # the source is newer, so a phone never gets an out-of-date app. A failure only affects
+    # phones, so the desktop still starts.
+    $frontendDirectory = Join-Path $repoRoot "apps\frontend"
+    $builtPage = Join-Path $frontendDirectory "dist\index.html"
+    $localEnvFiles = Get-ChildItem -LiteralPath $frontendDirectory -Filter ".env*" -File -Force -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne ".env.example" }
+    if ($localEnvFiles) {
+        Write-Warning "Phone app files were not rebuilt: Vite would copy values from $(($localEnvFiles | ForEach-Object { $_.Name }) -join ', ') into the files phones load."
+        return
+    }
+    $newestSource = Get-ChildItem -LiteralPath (Join-Path $frontendDirectory "src"), (Join-Path $frontendDirectory "public"), (Join-Path $frontendDirectory "index.html") -Recurse -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if ((Test-Path -LiteralPath $builtPage) -and $newestSource.LastWriteTime -le (Get-Item -LiteralPath $builtPage).LastWriteTime) {
+        return
+    }
+    Write-Output "Building the phone app files..."
+    & npm.cmd run frontend:build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "The phone app files could not be built (exit code $LASTEXITCODE). The desktop app still starts; phones will see the previous build."
+    }
+}
+
 Push-Location $repoRoot
 try {
+    Update-PhoneAppFiles
     & npm.cmd run tauri --workspace "@ens/desktop" -- dev
     if ($LASTEXITCODE -ne 0) {
         throw "Tauri desktop development host failed with exit code $LASTEXITCODE"
