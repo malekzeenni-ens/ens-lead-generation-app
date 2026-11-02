@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 /**
  * Per-computer display preferences (UX redesign E1, E2). They change only how the app
@@ -47,9 +47,21 @@ export function applyDensity(density: DensityChoice): void {
   else document.documentElement.dataset.density = density;
 }
 
-export function useAppearance() {
+export function useAppearanceState() {
   const [theme, setThemeState] = useState(readTheme);
   const [density, setDensityState] = useState(readDensity);
+  const [systemIsLight, setSystemIsLight] = useState(
+    () => typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: light)").matches,
+  );
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    const update = () => setSystemIsLight(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   const setTheme = useCallback((next: ThemeChoice) => {
     write(THEME_KEY, next, "system");
     setThemeState(next);
@@ -60,5 +72,17 @@ export function useAppearance() {
     setDensityState(next);
     applyDensity(next);
   }, []);
-  return { theme, setTheme, density, setDensity };
+  const effectiveTheme: "light" | "dark" = theme === "system"
+    ? (systemIsLight ? "light" : "dark")
+    : theme;
+  return { theme, setTheme, effectiveTheme, density, setDensity };
+}
+
+export const AppearanceContext = createContext<ReturnType<typeof useAppearanceState> | null>(null);
+
+/** Header and Settings consume one owner; storage is not used as a same-window event bus. */
+export function useAppearance() {
+  const appearance = useContext(AppearanceContext);
+  if (!appearance) throw new Error("Appearance controls require AppearanceProvider.");
+  return appearance;
 }

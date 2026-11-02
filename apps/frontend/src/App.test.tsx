@@ -2562,9 +2562,17 @@ describe("local operating workbench", () => {
     const theme = screen.getByRole("group", { name: "Theme" });
     expect(within(theme).getByRole("radio", { name: "Match Windows" })).toBeChecked();
 
-    await user.click(within(theme).getByRole("radio", { name: "Light" }));
+    await user.click(within(theme).getByRole("radio", { name: "Bright" }));
     expect(document.documentElement.dataset.theme).toBe("light");
     expect(window.localStorage.getItem("ens:appearance:theme")).toBe("light");
+    expect(screen.getByRole("button", { name: "Bright theme" })).toHaveAttribute("aria-pressed", "true");
+
+    const readsBeforeTheme = vi.mocked(api.settings).mock.calls.length;
+    await user.click(screen.getByRole("button", { name: "Dark theme" }));
+    expect(within(theme).getByRole("radio", { name: "Dark" })).toBeChecked();
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(api.settings).toHaveBeenCalledTimes(readsBeforeTheme);
+    expect(api.updateSettings).not.toHaveBeenCalled();
 
     await user.click(within(screen.getByRole("group", { name: "Density" })).getByRole("radio", { name: /Compact/ }));
     expect(document.documentElement.dataset.density).toBe("compact");

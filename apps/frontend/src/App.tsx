@@ -51,6 +51,8 @@ import {
   type TemplateUpdate,
 } from "./api";
 import { AssistantLauncher } from "./components/AssistantLauncher";
+import { AppearanceControl } from "./components/AppearanceControl";
+import { AppearanceProvider } from "./components/AppearanceProvider";
 import { PendingWorkIndicator } from "./components/PendingWorkIndicator";
 import { PhoneGate } from "./components/PhoneGate";
 import { PhoneMoreSheet, PhoneTabBar } from "./components/PhoneNavigation";
@@ -259,13 +261,15 @@ export default function App() {
       }),
   );
   return (
-    <QueryClientProvider client={queryClient}>
-      {isPhoneMode() ? (
-        <PhoneGate>{(session) => <Workbench phoneSession={session} />}</PhoneGate>
-      ) : (
-        <Workbench />
-      )}
-    </QueryClientProvider>
+    <AppearanceProvider>
+      <QueryClientProvider client={queryClient}>
+        {isPhoneMode() ? (
+          <PhoneGate>{(session) => <Workbench phoneSession={session} />}</PhoneGate>
+        ) : (
+          <Workbench />
+        )}
+      </QueryClientProvider>
+    </AppearanceProvider>
   );
 }
 
@@ -1661,6 +1665,7 @@ function Workbench({ phoneSession }: { phoneSession?: MobileSession }) {
         </div>
         {phoneLayout ? <p className="phone-header-title">{SECTION_LABELS[activeSection]}</p> : null}
         <div className="header-actions">
+          <AppearanceControl />
           <button
             className="header-search"
             type="button"

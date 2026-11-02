@@ -3,7 +3,7 @@
   --ens-surface-1: #0d1d2a;
   --ens-surface-2: #142838;
   --ens-surface-3: #1a3042;
-  --ens-surface-header: #091722;
+  --ens-surface-header: #0a1824;
   --ens-surface-hover: rgb(76 100 124 / 24%);
   --ens-surface-selected: rgb(76 100 124 / 46%);
   --ens-surface-disabled: rgb(124 124 107 / 14%);
@@ -94,38 +94,38 @@
 }
 
 /*
- * Light theme (UX redesign E2): the same brand colours on warm paper. Every text colour
- * meets WCAG AA (4.5:1) on every surface; dark text on the gold buttons is 9.3:1.
+ * Light theme (UX redesign E2): the same brand colours on warm paper. Semantic colours align with the shared EnS Bright palette.
+ * Rendered controls and interaction states still require visual contrast review.
  * It follows the system setting unless the operator chose a theme in Settings.
  */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --ens-app-background: #f6f2ec;
+    --ens-app-background: #f4f1ea;
     --ens-surface-1: #ffffff;
-    --ens-surface-2: #f1ebe2;
-    --ens-surface-3: #e8dfd2;
-    --ens-surface-header: #fbf8f3;
+    --ens-surface-2: #f3f0e9;
+    --ens-surface-3: #e9e6e0;
+    --ens-surface-header: #fbfaf7;
     --ens-surface-hover: rgb(76 100 124 / 10%);
     --ens-surface-selected: rgb(76 100 124 / 16%);
     --ens-surface-disabled: rgb(124 124 107 / 12%);
     --ens-border-subtle: rgb(20 33 45 / 10%);
     --ens-border-default: rgb(20 33 45 / 18%);
     --ens-border-strong: rgb(133 97 43 / 45%);
-    --ens-border-active: #85612b;
-    --ens-text-primary: #14212d;
-    --ens-text-secondary: #3d4b57;
-    --ens-text-muted: #5c6873;
-    --ens-text-accent: #85612b;
-    --ens-text-on-accent: #14212d;
-    --ens-action-primary: #ddbf93;
+    --ens-border-active: #85632d;
+    --ens-text-primary: #0d1d2a;
+    --ens-text-secondary: #33475a;
+    --ens-text-muted: #52606d;
+    --ens-text-accent: #85632d;
+    --ens-text-on-accent: #0d1d2a;
+    --ens-action-primary: #d9b884;
     --ens-action-primary-hover: #d3b282;
     --ens-action-primary-pressed: #c9a46e;
     --ens-action-secondary: #4c647c;
-    --ens-success: #2c7350;
+    --ens-success: #2f7d55;
     --ens-success-soft: rgb(44 115 80 / 10%);
-    --ens-warning: #8a5d14;
+    --ens-warning: #9a6714;
     --ens-warning-soft: rgb(212 168 92 / 18%);
-    --ens-error: #a93636;
+    --ens-error: #b03e3e;
     --ens-error-soft: rgb(169 54 54 / 8%);
     --ens-error-hover: rgb(169 54 54 / 14%);
     --ens-error-border: rgb(169 54 54 / 30%);
@@ -138,32 +138,32 @@
 }
 
 :root[data-theme="light"] {
-  --ens-app-background: #f6f2ec;
+  --ens-app-background: #f4f1ea;
   --ens-surface-1: #ffffff;
-  --ens-surface-2: #f1ebe2;
-  --ens-surface-3: #e8dfd2;
-  --ens-surface-header: #fbf8f3;
+  --ens-surface-2: #f3f0e9;
+  --ens-surface-3: #e9e6e0;
+  --ens-surface-header: #fbfaf7;
   --ens-surface-hover: rgb(76 100 124 / 10%);
   --ens-surface-selected: rgb(76 100 124 / 16%);
   --ens-surface-disabled: rgb(124 124 107 / 12%);
   --ens-border-subtle: rgb(20 33 45 / 10%);
   --ens-border-default: rgb(20 33 45 / 18%);
   --ens-border-strong: rgb(133 97 43 / 45%);
-  --ens-border-active: #85612b;
-  --ens-text-primary: #14212d;
-  --ens-text-secondary: #3d4b57;
-  --ens-text-muted: #5c6873;
-  --ens-text-accent: #85612b;
-  --ens-text-on-accent: #14212d;
-  --ens-action-primary: #ddbf93;
+  --ens-border-active: #85632d;
+  --ens-text-primary: #0d1d2a;
+  --ens-text-secondary: #33475a;
+  --ens-text-muted: #52606d;
+  --ens-text-accent: #85632d;
+  --ens-text-on-accent: #0d1d2a;
+  --ens-action-primary: #d9b884;
   --ens-action-primary-hover: #d3b282;
   --ens-action-primary-pressed: #c9a46e;
   --ens-action-secondary: #4c647c;
-  --ens-success: #2c7350;
+  --ens-success: #2f7d55;
   --ens-success-soft: rgb(44 115 80 / 10%);
-  --ens-warning: #8a5d14;
+  --ens-warning: #9a6714;
   --ens-warning-soft: rgb(212 168 92 / 18%);
-  --ens-error: #a93636;
+  --ens-error: #b03e3e;
   --ens-error-soft: rgb(169 54 54 / 8%);
   --ens-error-hover: rgb(169 54 54 / 14%);
   --ens-error-border: rgb(169 54 54 / 30%);
@@ -393,6 +393,60 @@ h3 {
   min-width: 0;
   justify-content: flex-end;
   gap: var(--ens-space-3);
+}
+
+/* Shared EnS appearance control: one stable header location in both themes. */
+.appearance-control {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.appearance-segments {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--ens-border-default);
+  border-radius: var(--ens-radius-md);
+  background: var(--ens-surface-1);
+}
+
+.appearance-segments button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--ens-radius-sm);
+  background: transparent;
+  color: var(--ens-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.appearance-segments button:hover {
+  background: var(--ens-surface-hover);
+  color: var(--ens-text-primary);
+}
+
+.appearance-segments button[aria-pressed="true"] {
+  background: var(--ens-action-primary);
+  color: var(--ens-text-on-accent);
+}
+
+.appearance-system {
+  width: 38px;
+  visibility: hidden;
+  color: var(--ens-text-muted);
+  font-size: var(--ens-type-xs);
+}
+
+.appearance-system[data-following="true"] {
+  visibility: visible;
 }
 
 .connection-badge {
@@ -6886,4 +6940,66 @@ kbd {
   .phone-access__pairing {
     justify-content: center;
   }
+}
+
+/* EnS family header fit: retain search, run/service status and appearance. */
+.brand-lockup img {
+  width: 34px;
+  height: 34px;
+}
+
+.brand-lockup strong {
+  font-size: 17px;
+}
+
+.header-context {
+  min-width: 120px;
+}
+
+.header-actions > .run-indicator {
+  min-width: 0;
+  max-width: 180px;
+  flex: 0 1 auto;
+}
+
+.run-indicator > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1440px) {
+  .header-search { min-width: 150px; }
+  .application-header { gap: 16px; }
+  .header-actions { gap: 8px; }
+}
+
+@media (max-width: 1180px) {
+  .application-header { grid-template-columns: auto minmax(0, 1fr); }
+  .header-context { display: none; }
+}
+
+@media (max-width: 900px) {
+  .header-search { min-width: 36px; }
+  .header-actions > .run-indicator { max-width: 130px; }
+}
+
+@media (max-width: 760px) {
+  .brand-lockup { min-width: 0; }
+  .brand-lockup strong { font-size: 15px; }
+  .appearance-system { width: 0; overflow: hidden; }
+  .header-actions > .run-indicator { max-width: 100px; }
+}
+
+@media (max-width: 680px) {
+  .application-frame { grid-template-rows: auto auto minmax(0, 1fr); }
+  .application-header {
+    min-height: 56px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .header-actions { flex-wrap: wrap; justify-content: flex-start; }
+  .brand-lockup img { width: 30px; height: 30px; }
 }

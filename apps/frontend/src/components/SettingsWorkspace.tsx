@@ -494,7 +494,7 @@ export function SettingsWorkspace({
                   {(
                     [
                       ["system", "Match Windows"],
-                      ["light", "Light"],
+                      ["light", "Bright"],
                       ["dark", "Dark"],
                     ] as [ThemeChoice, string][]
                   ).map(([value, label]) => (
