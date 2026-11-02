@@ -95,6 +95,7 @@ export interface WorkspaceActions {
   createProduct: (data: ProductInput) => Promise<boolean>;
   updateProduct: (productId: string, data: ProductUpdate) => Promise<boolean>;
   importShopifyCsv: (filename: string, content: string) => Promise<ShopifyImportResult | null>;
+  syncShopify: (options?: JobOptions) => Promise<ShopifyImportResult | null>;
   importEnrichment: (
     filename: string,
     content: string,

@@ -54,6 +54,13 @@ vi.mock("./api", () => {
     PHONE_NOT_PAIRED: "PHONE_NOT_PAIRED",
     onPhoneUnpaired: () => () => undefined,
     api: {
+      shopifyConnection: vi.fn(() =>
+        Promise.resolve({ configured: false, store_domain: null, api_version: null, method: null }),
+      ),
+      saveShopifyConnection: vi.fn(),
+      removeShopifyConnection: vi.fn(),
+      testShopifyConnection: vi.fn(),
+      syncShopify: vi.fn(),
       health: vi.fn(),
       campaigns: vi.fn(),
       leads: vi.fn(),
@@ -2433,7 +2440,7 @@ describe("local operating workbench", () => {
     render(<App />);
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
-    await user.click(screen.getByRole("tab", { name: "Import catalogue" }));
+    await user.click(screen.getByRole("tab", { name: "Update from Shopify" }));
     const file = new File(
       ["Handle,Title\npersonalised-topper,Personalised Topper"],
       "products_export.csv",
@@ -2455,6 +2462,51 @@ describe("local operating workbench", () => {
     expect(await screen.findByText("Shopify CSV processed")).toBeInTheDocument();
   });
 
+  it("syncs the catalogue straight from Shopify when it is connected", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.shopifyConnection).mockResolvedValue({
+      configured: true,
+      store_domain: "example-store.myshopify.com",
+      api_version: "2026-04",
+      method: "client_credentials",
+    });
+    vi.mocked(api.syncShopify).mockResolvedValue({
+      filename: "Shopify (live)",
+      rows_read: 123,
+      products_created: 2,
+      products_updated: 121,
+      products_skipped: 0,
+      products_deactivated: 1,
+      issues: [],
+    });
+    render(<App />);
+    await screen.findByText("Service connected");
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    await user.click(screen.getByRole("tab", { name: "Update from Shopify" }));
+    await user.click(await screen.findByRole("button", { name: "Sync from Shopify" }));
+    expect(api.syncShopify).toHaveBeenCalled();
+    expect(await screen.findByText("Synced from Shopify")).toBeInTheDocument();
+    expect(screen.getByText(/123 products · 2 created · 121 updated/)).toHaveTextContent(
+      "1 no longer in Shopify",
+    );
+  });
+
+  it("offers Shopify sync only once Shopify is connected", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.shopifyConnection).mockResolvedValue({
+      configured: false,
+      store_domain: null,
+      api_version: null,
+      method: null,
+    });
+    render(<App />);
+    await screen.findByText("Service connected");
+    await user.click(screen.getByRole("link", { name: /Catalogue/ }));
+    await user.click(screen.getByRole("tab", { name: "Update from Shopify" }));
+    expect(await screen.findByText(/Connect Shopify in Settings/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sync from Shopify" })).toBeDisabled();
+  });
+
   it("imports the product knowledge pack from the catalogue screen", async () => {
     const user = userEvent.setup();
     vi.mocked(api.importEnrichment).mockResolvedValue({
@@ -2474,7 +2526,7 @@ describe("local operating workbench", () => {
     render(<App />);
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
-    await user.click(screen.getByRole("tab", { name: "Import catalogue" }));
+    await user.click(screen.getByRole("tab", { name: "Update from Shopify" }));
 
     const file = new File(['{"products":[]}'], "product_enrichment.json", {
       type: "application/json",
@@ -2503,7 +2555,7 @@ describe("local operating workbench", () => {
     render(<App />);
     await screen.findByText("Service connected");
     await user.click(screen.getByRole("link", { name: /Catalogue/ }));
-    await user.click(screen.getByRole("tab", { name: "Import catalogue" }));
+    await user.click(screen.getByRole("tab", { name: "Update from Shopify" }));
     expect(await screen.findByText(/Catalogue last imported/)).toBeInTheDocument();
   });
 

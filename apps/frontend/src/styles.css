@@ -7003,3 +7003,18 @@ kbd {
   .header-actions { flex-wrap: wrap; justify-content: flex-start; }
   .brand-lockup img { width: 30px; height: 30px; }
 }
+
+/* Catalogue > Update from Shopify (ADR-026): the sync button above the CSV fallback. */
+.shopify-sync {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ens-space-3);
+  margin-bottom: var(--ens-space-5);
+  padding-bottom: var(--ens-space-5);
+  border-bottom: 1px solid var(--ens-border-subtle);
+}
+
+.shopify-sync .form-hint {
+  margin: 0;
+}

@@ -50,7 +50,10 @@ import type {
   ScoreRun,
   ScoringProfile,
   ScoringWeights,
+  ShopifyConnection,
+  ShopifyConnectionInput,
   ShopifyImportResult,
+  ShopifyTestResult,
   TailscaleStatus,
   Shortlist,
   StalledLeadDigest,
@@ -705,6 +708,19 @@ export const api = {
       jsonBody("POST", { filename, content }),
     ),
   enrichmentStatus: () => request<EnrichmentStatus>("/catalogue/enrichment/status"),
+  // Catalogue sync from Shopify (ADR-026): a background job, followed to its result.
+  syncShopify: (options?: JobOptions) =>
+    runJob<ShopifyImportResult>(
+      request<BackgroundJob>("/catalogue/shopify/sync", jsonBody("POST", {})),
+      options,
+    ),
+  shopifyConnection: () => request<ShopifyConnection>("/system/providers/shopify"),
+  saveShopifyConnection: (data: ShopifyConnectionInput) =>
+    request<ShopifyConnection>("/system/providers/shopify", jsonBody("PUT", data)),
+  removeShopifyConnection: () =>
+    request<ShopifyConnection>("/system/providers/shopify", { method: "DELETE" }),
+  testShopifyConnection: () =>
+    request<ShopifyTestResult>("/system/providers/shopify/test", jsonBody("POST", {})),
   runEnrichment: (includeStale: boolean, options?: JobOptions) =>
     runJob<EnrichmentRunResult>(
       request<BackgroundJob>(

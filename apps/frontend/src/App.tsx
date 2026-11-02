@@ -1079,6 +1079,24 @@ function Workbench({ phoneSession }: { phoneSession?: MobileSession }) {
     );
   }
 
+  // A background job, like enrichment: the rest of the workspace stays usable meanwhile.
+  async function syncShopify(options?: JobOptions): Promise<ShopifyImportResult | null> {
+    setSuccess(null);
+    setError(null);
+    try {
+      const result = await api.syncShopify(options);
+      await refreshDomains(["products", "knowledge", "summary"]);
+      setSuccess(
+        `Catalogue synced from Shopify: ${result.products_created} added, ${result.products_updated} updated` +
+          (result.products_deactivated ? `, ${result.products_deactivated} no longer in Shopify.` : "."),
+      );
+      return result;
+    } catch (caught) {
+      setError(errorMessage(caught));
+      return null;
+    }
+  }
+
   async function importEnrichment(
     filename: string,
     content: string,
@@ -1474,6 +1492,7 @@ function Workbench({ phoneSession }: { phoneSession?: MobileSession }) {
     createProduct,
     updateProduct,
     importShopifyCsv,
+    syncShopify,
     importEnrichment,
     runEnrichment,
     updateKnowledgeNote,

@@ -958,3 +958,24 @@ export interface TailscaleStatus {
   serving: boolean;
   install_url: string;
 }
+
+/** The Shopify Admin API connection for the catalogue sync (ADR-026). No secrets come back. */
+export interface ShopifyConnection {
+  configured: boolean;
+  store_domain: string | null;
+  api_version: string | null;
+  method: "client_credentials" | "access_token" | null;
+}
+
+export interface ShopifyConnectionInput {
+  store_domain: string;
+  api_version?: string;
+  client_id?: string;
+  client_secret?: string;
+  access_token?: string;
+}
+
+export interface ShopifyTestResult {
+  shop_name: string;
+  store_domain: string;
+}

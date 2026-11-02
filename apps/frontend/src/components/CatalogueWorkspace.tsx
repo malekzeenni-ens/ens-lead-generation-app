@@ -6,6 +6,7 @@ import {
   Layers,
   ListTree,
   PackagePlus,
+  RefreshCw,
   Save,
   Search,
   SlidersHorizontal,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import type { ProductInput } from "../api";
+import { api, type ProductInput } from "../api";
 import { formatDate, humanize } from "../domain";
 import { usePagination } from "../pagination";
 import type {
@@ -193,6 +194,7 @@ export function CatalogueWorkspace({
     loading,
     busy,
     importShopifyCsv: onImport,
+    syncShopify: onSyncShopify,
     importEnrichment: onImportEnrichment,
     runEnrichment: onRunEnrichment,
     updateKnowledgeNote: onUpdateNote,
@@ -262,6 +264,28 @@ export function CatalogueWorkspace({
       ? `${importResult.filename}-${importResult.products_created}-${importResult.products_updated}`
       : "",
   );
+
+  // Whether a Shopify connection exists decides if Sync is offered (ADR-026).
+  const [shopifyConnected, setShopifyConnected] = useState<boolean | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  useEffect(() => {
+    if (readOnly) return;
+    api
+      .shopifyConnection()
+      .then((connection) => setShopifyConnected(connection.configured))
+      .catch(() => setShopifyConnected(null));
+  }, [readOnly]);
+
+  async function syncFromShopify(): Promise<void> {
+    setSyncing(true);
+    setImportResult(null);
+    try {
+      const result = await onSyncShopify();
+      if (result) setImportResult(result);
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function submitImport(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -368,7 +392,7 @@ export function CatalogueWorkspace({
           items={[
             { id: "products", label: "Products", count: products.length },
             { id: "create", label: "Add product" },
-            { id: "import", label: "Import catalogue" },
+            { id: "import", label: "Update from Shopify" },
             { id: "knowledge", label: "Knowledge", count: knowledgeNotes.length },
             { id: "scoring", label: "Scoring model", count: scoringProfile?.version },
             { id: "families", label: "Product families", count: productFamilies.length },
@@ -435,10 +459,28 @@ export function CatalogueWorkspace({
         <section className="workspace-section" aria-labelledby="shopify-import-heading">
           <SectionHeading
             id="shopify-import-heading"
-            title="Import from Shopify"
-            description="Upload a Shopify product export. Products are matched by handle and updated in place."
+            title="Update from Shopify"
+            description="Sync straight from your store, or upload a product export. Products are matched by handle and updated in place."
             icon={FileSpreadsheet}
           />
+          <div className="shopify-sync">
+            <button
+              type="button"
+              className="primary-action"
+              disabled={syncing || shopifyConnected === false}
+              onClick={() => void syncFromShopify()}
+            >
+              <RefreshCw size={17} aria-hidden="true" className={syncing ? "spin" : undefined} />
+              {syncing ? "Syncing from Shopify…" : "Sync from Shopify"}
+            </button>
+            {shopifyConnected === false ? (
+              <p className="form-hint">Connect Shopify in Settings → Connections to sync directly.</p>
+            ) : (
+              <p className="form-hint">
+                Reads every product from your store. Wording you wrote or improved with AI is kept.
+              </p>
+            )}
+          </div>
           {enrichmentStatus?.catalogue_imported_at ? (
             <p className="form-hint" role="status">
               Catalogue last imported: {formatDate(enrichmentStatus.catalogue_imported_at)}
@@ -480,10 +522,16 @@ export function CatalogueWorkspace({
           </form>
           {importResult ? (
             <div className="import-summary" role="status">
-              <strong>Shopify CSV processed</strong>
+              <strong>{importResult.filename === "Shopify (live)" ? "Synced from Shopify" : "Shopify CSV processed"}</strong>
               <p>
-                {importResult.rows_read} rows · {importResult.products_created} created ·{" "}
-                {importResult.products_updated} updated · {importResult.products_skipped} skipped
+                {importResult.filename === "Shopify (live)"
+                  ? `${importResult.rows_read} products`
+                  : `${importResult.rows_read} rows`}{" "}
+                · {importResult.products_created} created · {importResult.products_updated} updated ·{" "}
+                {importResult.products_skipped} skipped
+                {importResult.products_deactivated
+                  ? ` · ${importResult.products_deactivated} no longer in Shopify`
+                  : ""}
               </p>
               {issuePages.items.map((issue) => (
                 <small key={`${issue.handle}-${issue.message}`}>
@@ -1000,7 +1048,7 @@ export function CatalogueWorkspace({
                 <div className="records-heading">
                   <div>
                     <h3>{product.name}</h3>
-                    <p>{product.category} · {product.source === "shopify_csv" ? "Shopify CSV" : "Manual"}</p>
+                    <p>{product.category} · {product.source === "shopify_csv" ? "Shopify" : "Manual"}</p>
                   </div>
                   <span className={`status-badge${product.active ? " status-badge--success" : ""}`}>
                     {product.active ? "Active" : "Inactive"}

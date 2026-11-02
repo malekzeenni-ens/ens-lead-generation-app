@@ -44,6 +44,7 @@ import {
   type StatusTone,
 } from "./DesignSystem";
 import { PhoneAccessPanel } from "./PhoneAccessPanel";
+import { ShopifyConnectionPanel } from "./ShopifyConnectionPanel";
 
 type SettingsSection = "general" | "outreach" | "ai" | "connections" | "phone" | "data" | "about";
 
@@ -277,6 +278,7 @@ export function SettingsWorkspace({
                 );
               })}
             </ul>
+            <ShopifyConnectionPanel />
             <section className="form-panel settings-grid__wide" aria-labelledby="meta-settings-heading">
               <div className="subsection-heading">
                 <div>
