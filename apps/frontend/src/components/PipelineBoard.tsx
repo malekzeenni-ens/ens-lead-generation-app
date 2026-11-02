@@ -2,6 +2,7 @@ import { ArrowRightLeft, CalendarClock, ShieldOff } from "lucide-react";
 import { type DragEvent, type FormEvent, useState } from "react";
 
 import { PIPELINE_GROUPS, formatDate, humanize } from "../domain";
+import { useRememberedState } from "../remembered";
 import type { Lead, ScoreRun } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
 import { Drawer, StatusPill } from "./DesignSystem";
@@ -10,6 +11,8 @@ interface PipelineBoardProps {
   leads: Lead[];
   scores: ScoreRun[];
   onOpen: (leadId: string) => void;
+  /** Phone: one stage group at a time, chosen from chips, and no dragging on touch. */
+  stacked?: boolean;
 }
 
 /** Suppression is set from the lead's Privacy tab, never by moving a card. */
@@ -38,7 +41,16 @@ interface PendingMove {
 }
 
 /** The pipeline as columns of cards. Moving a card uses the same stage change and rules as the lead's own form. */
-export function PipelineBoard({ leads, scores, onOpen }: PipelineBoardProps) {
+export function PipelineBoard({ leads, scores, onOpen, stacked = false }: PipelineBoardProps) {
+  const [chosenGroup, setChosenGroup] = useRememberedState<string>("pipeline:stage-group", "");
+  const countFor = (stages: readonly string[]) =>
+    leads.filter((lead) => stages.includes(lead.pipeline_stage)).length;
+  // Until one is chosen, open on the first group that has leads in it.
+  const shownGroup =
+    PIPELINE_GROUPS.find((group) => group.label === chosenGroup)?.label ??
+    PIPELINE_GROUPS.find((group) => countFor(group.stages) > 0)?.label ??
+    PIPELINE_GROUPS[0]?.label;
+
   const { busy, changeLeadStage } = useWorkspaceActions();
   const [dragLeadId, setDragLeadId] = useState<string | null>(null);
   const [dropGroup, setDropGroup] = useState<string | null>(null);
@@ -71,8 +83,24 @@ export function PipelineBoard({ leads, scores, onOpen }: PipelineBoardProps) {
 
   return (
     <>
-      <div className="pipeline-board" aria-label="Pipeline board">
-        {PIPELINE_GROUPS.map((group) => {
+      {stacked ? (
+        <div className="stage-chips" role="group" aria-label="Pipeline stage">
+          {PIPELINE_GROUPS.map((group) => (
+            <button
+              key={group.label}
+              type="button"
+              className="stage-chip"
+              aria-pressed={shownGroup === group.label}
+              onClick={() => setChosenGroup(group.label)}
+            >
+              {group.label}
+              <span>{countFor(group.stages)}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div className={`pipeline-board${stacked ? " pipeline-board--stacked" : ""}`} aria-label="Pipeline board">
+        {PIPELINE_GROUPS.filter((group) => !stacked || group.label === shownGroup).map((group) => {
           const columnLeads = leads.filter((lead) =>
             (group.stages as readonly string[]).includes(lead.pipeline_stage),
           );
@@ -105,7 +133,7 @@ export function PipelineBoard({ leads, scores, onOpen }: PipelineBoardProps) {
                       <article
                         key={lead.id}
                         className={`board-card${dragLeadId === lead.id ? " board-card--dragging" : ""}`}
-                        draggable={!lead.suppressed && !busy}
+                        draggable={!stacked && !lead.suppressed && !busy}
                         onDragStart={(event) => {
                           event.dataTransfer.setData("text/plain", lead.id);
                           event.dataTransfer.effectAllowed = "move";

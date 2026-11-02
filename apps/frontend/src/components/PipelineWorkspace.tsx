@@ -1,4 +1,5 @@
 import {
+  ArrowLeft,
   AtSign,
   CalendarCheck,
   Check,
@@ -49,6 +50,7 @@ import type {
   Template,
 } from "../types";
 import { useWorkspaceActions } from "../WorkspaceActionsContext";
+import { PHONE_QUERY, useMediaQuery } from "../layout";
 import { useRememberedState } from "../remembered";
 import { PipelineBoard } from "./PipelineBoard";
 import {
@@ -127,20 +129,25 @@ function outreachActivityText(
   }
 }
 
+/** Changes made from a paired phone say so in the history (ADR-025). */
+function fromPhone(actor: string): string {
+  return actor.startsWith("phone:") ? " · from your phone" : "";
+}
+
 function timelineFor(lead: Lead): TimelineItem[] {
   return [
     ...lead.stage_events.map((event) => ({
       id: event.id,
       type: "Stage",
       title: humanize(event.new_stage),
-      detail: event.reason ?? "Pipeline stage changed",
+      detail: `${event.reason ?? "Pipeline stage changed"}${fromPhone(event.actor)}`,
       createdAt: event.created_at,
     })),
     ...lead.notes.map((note) => ({
       id: note.id,
       type: "Note",
       title: "Note added",
-      detail: note.content,
+      detail: `${note.content}${fromPhone(note.actor)}`,
       createdAt: note.created_at,
     })),
     ...lead.follow_ups.map((followUp) => ({
@@ -205,7 +212,12 @@ export function PipelineWorkspace({
   } = useWorkspaceActions();
   const [activeTask, setActiveTask] = useRememberedState("pipeline:tab", "overview");
   const [leadQuery, setLeadQuery] = useRememberedState("pipeline:query", "");
-  const [view, setView] = useRememberedState<"list" | "board">("pipeline:view", "list");
+  const phoneLayout = useMediaQuery(PHONE_QUERY);
+  // On a phone the stage chips are the way in; a lead then opens on its own screen.
+  const [view, setView] = useRememberedState<"list" | "board">(
+    "pipeline:view",
+    phoneLayout ? "board" : "list",
+  );
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [briefing, setBriefing] = useState<LeadBriefing | null>(null);
   const [briefingLeadId, setBriefingLeadId] = useState<string | null>(null);
@@ -457,6 +469,7 @@ export function PipelineWorkspace({
           </div>
         ) : view === "board" ? (
           <PipelineBoard
+            stacked={phoneLayout}
             leads={leads}
             scores={scores}
             onOpen={(leadId) => {
@@ -465,7 +478,12 @@ export function PipelineWorkspace({
             }}
           />
         ) : (
-          <div className="pipeline-layout">
+          <div className={`pipeline-layout${phoneLayout && selectedLead ? " pipeline-layout--lead-open" : ""}`}>
+            {phoneLayout ? (
+              <button type="button" className="tertiary-action phone-back" onClick={() => setView("board")}>
+                <ArrowLeft size={16} aria-hidden="true" /> All stages
+              </button>
+            ) : null}
             <aside className="lead-selector" aria-label="Pipeline leads">
               <label>
                 <span className="visually-hidden">Search pipeline leads</span>
