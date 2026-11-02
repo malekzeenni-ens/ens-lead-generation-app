@@ -19,6 +19,7 @@ This is an engineering control register, not legal advice. A qualified UK legal/
 | CMP-013 | Credential access, revocation, incident, and breach handling | Google key is backend environment-only; Meta credentials/tokens use current-user DPAPI with disconnect/remove controls | Token rotation/revocation and incident-runbook exercise |
 | CMP-014 | Backup access, retention, off-device copy, and restore testing | Technical backup implemented | Owner-selected protected location and recovery drill |
 | CMP-015 | Data-quality correction and duplicate/merge evidence | Provider/exact website/name matches link; fuzzy names are staged for audited operator decision; general merge remains unimplemented | Discovery integration tests; richer resolution/merge tests |
+| CMP-016 | Phone access is opt-in, limited to paired devices and to the daily workflow; exports, backups and credentials stay on the PC | Implemented (ADR-025): off by default, revocable pairing, desktop-only route policy, phone actions attributed in the audit log | Gateway, pairing and route-policy tests; real-phone check recorded in the delivery log |
 
 ## Hard stop
 

@@ -1,7 +1,7 @@
 # Security model
 
 **Status:** Local-core and encrypted Meta credential controls implemented; outbound-feature controls pending  
-**Updated:** 19 July 2026
+**Updated:** 2 November 2026
 
 ## Assets and trust boundaries
 
@@ -21,6 +21,12 @@ Protected assets are prospect research, source evidence, classifications, future
 | Data loss during restore | Live database restore blocked; isolated restore requires explicit replacement | Backup service tests |
 | Secret disclosure | Meta App secret and OAuth tokens use a current-user DPAPI vault; no secret response fields, browser storage or SQLite values; generated session secret is not logged | DPAPI/API tests and manual secret scan |
 | OAuth interception/forgery | Fixed HTTP callback binds only to `127.0.0.1`; exact redirect URI, random one-time state and ten-minute expiry; no token in browser URL after exchange | Meta connection service tests |
+| Phone access exposes the API | Opt-in gateway on a fixed loopback port; Tailscale provides the network path and TLS; nothing binds beyond loopback (ADR-025) | Gateway listener tests |
+| Unpaired device or stolen code | One-time 8-character pairing code, 5-minute expiry, 5-attempt lockout, constant-time compare; QR code carries it in the URL fragment | Pairing service tests |
+| Stolen or lost phone | `HttpOnly; Secure; SameSite=Strict` device cookie, hashed at rest, 30-day inactivity expiry, revoke one or all from the desktop; phone cannot manage pairing | Device authentication and revocation tests |
+| DNS rebinding and CSRF against the gateway | `Host` allowlist (Tailscale name and loopback), `Origin` match plus `X-ENS-Request` header on every change | Gateway rejection tests |
+| Sensitive operations from a phone | `DesktopOnly` dependency on connections, keys, backups, exports, settings changes, diagnostics, shutdown, schema, catalogue and template changes; route-walk test | Route policy test |
+| Lead data left on a phone | No service worker; `Cache-Control: no-store` on API responses; nothing written to browser storage except display preferences | Gateway header tests |
 
 Runtime data is stored in local AppData, not the synchronised source tree. Logs contain operational messages and correlation IDs; session tokens and request payloads are not logged. Audit summaries deliberately avoid raw evidence payloads.
 
