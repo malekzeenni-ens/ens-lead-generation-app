@@ -17,6 +17,7 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 import { type FormEvent, useState } from "react";
@@ -42,14 +43,16 @@ import {
   StatusPill,
   type StatusTone,
 } from "./DesignSystem";
+import { PhoneAccessPanel } from "./PhoneAccessPanel";
 
-type SettingsSection = "general" | "outreach" | "ai" | "connections" | "data" | "about";
+type SettingsSection = "general" | "outreach" | "ai" | "connections" | "phone" | "data" | "about";
 
 const SECTIONS: { id: SettingsSection; label: string; icon: LucideIcon }[] = [
   { id: "general", label: "General", icon: SlidersHorizontal },
   { id: "outreach", label: "Outreach", icon: MailCheck },
   { id: "ai", label: "AI and models", icon: Bot },
   { id: "connections", label: "Connections", icon: PlugZap },
+  { id: "phone", label: "Phone access", icon: Smartphone },
   { id: "data", label: "Data and privacy", icon: Database },
   { id: "about", label: "About", icon: Info },
 ];
@@ -255,6 +258,8 @@ export function SettingsWorkspace({
         ) : (
           <div key={activeTask} className="page-enter">
           <div className={`settings-grid${activeTask === "data" ? "" : " settings-grid--single"}`}>
+            {activeTask === "phone" ? <PhoneAccessPanel /> : null}
+
             {activeTask === "connections" ? (
             <>
             <ul className="connection-cards" aria-label="Connection status">
