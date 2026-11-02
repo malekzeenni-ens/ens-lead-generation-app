@@ -10,6 +10,8 @@ $workDirectory = Join-Path $buildRoot "build"
 $specDirectory = Join-Path $buildRoot "spec"
 $alembicConfig = Join-Path $backendDirectory "alembic.ini"
 $migrationsDirectory = Join-Path $backendDirectory "migrations"
+# Phones are served the same built frontend (ADR-025), bundled beside the backend.
+$frontendDistDirectory = Join-Path $repoRoot "appsrontenddist"
 
 $resolvedRepoRoot = [IO.Path]::GetFullPath($repoRoot)
 $resolvedSidecarDirectory = [IO.Path]::GetFullPath($sidecarDirectory)
@@ -18,6 +20,17 @@ if (-not $resolvedSidecarDirectory.StartsWith($resolvedRepoRoot, [StringComparis
 }
 
 try {
+    Push-Location $repoRoot
+    try {
+        & npm.cmd run frontend:build
+        if ($LASTEXITCODE -ne 0) {
+            throw "Frontend build for the phone gateway failed with exit code $LASTEXITCODE"
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
     New-Item -ItemType Directory -Path $specDirectory -Force | Out-Null
     Push-Location $backendDirectory
     try {
@@ -35,6 +48,7 @@ try {
             --specpath $specDirectory `
             --add-data "$alembicConfig;." `
             --add-data "$migrationsDirectory;migrations" `
+            --add-data "$frontendDistDirectory;frontend" `
             --collect-all uvicorn `
             --exclude-module mypy `
             app\cli.py

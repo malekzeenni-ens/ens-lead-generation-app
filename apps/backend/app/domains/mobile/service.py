@@ -36,6 +36,7 @@ class MobileAccessService:
             phone_url=f"https://{config.public_host}/" if config.public_host else None,
             error=self.manager.last_error,
             paired_devices=len(self.registry.list_devices(session)),
+            phone_app_ready=self.manager.gateway.frontend_ready,
         )
 
     def update(
@@ -62,6 +63,7 @@ class MobileAccessService:
 
     def apply(self, config: MobileAccessConfig) -> None:
         """Make the listener match the saved switch. A port clash is reported in the status."""
+        self.manager.gateway.public_host = config.public_host
         if config.enabled:
             with suppress(GatewayStartError):
                 self.manager.start()

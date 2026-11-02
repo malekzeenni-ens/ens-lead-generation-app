@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     # The phone gateway (ADR-025): a second loopback listener that Tailscale forwards to. It is
     # fixed so the `tailscale serve` mapping survives restarts; it only runs when switched on.
     mobile_gateway_port: int = Field(default=8770, ge=1024, le=65535)
+    # The built frontend served to phones. Unset: bundled beside the packaged backend, or the
+    # repository's apps/frontend/dist in development.
+    mobile_frontend_directory: Path | None = None
     session_token: SecretStr = Field(
         default_factory=lambda: SecretStr(secrets.token_urlsafe(32)), min_length=24
     )

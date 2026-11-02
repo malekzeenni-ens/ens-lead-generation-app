@@ -142,7 +142,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     device_registry = DeviceRegistry()
     mobile_gateway_manager = MobileGatewayManager(
-        PhoneGateway(app, database, device_registry), runtime_settings
+        PhoneGateway(app, database, device_registry, runtime_settings), runtime_settings
     )
     mobile_access_service = MobileAccessService(mobile_gateway_manager, device_registry)
     app.state.mobile_access_service = mobile_access_service

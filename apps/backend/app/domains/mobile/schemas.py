@@ -43,6 +43,7 @@ class MobileAccessStatus(BaseModel):
     phone_url: str | None
     error: str | None
     paired_devices: int
+    phone_app_ready: bool
 
 
 class PairingCodeRead(BaseModel):
