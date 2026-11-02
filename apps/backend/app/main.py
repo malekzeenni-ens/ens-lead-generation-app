@@ -40,6 +40,7 @@ from app.domains.automation.scheduler import WeeklyScheduler
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.campaign_assistant.service import CampaignAssistantService
 from app.domains.catalogue.pack_autoload import apply_pack_if_changed
+from app.domains.catalogue.shopify_connection import ShopifyConnectionService
 from app.domains.mobile.devices import DeviceRegistry
 from app.domains.mobile.gateway import MobileGatewayManager, PhoneGateway
 from app.domains.mobile.service import MobileAccessService
@@ -89,6 +90,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     secret_store = build_secret_store(runtime_settings.database_path.parent)
     meta_connection_service = MetaConnectionService(runtime_settings, secret_store)
     cloud_polish_configuration_service = CloudPolishConfigurationService(secret_store)
+    shopify_connection_service = ShopifyConnectionService(secret_store)
     instagram_provider = MetaInstagramProvider(runtime_settings, meta_connection_service)
     campaign_run_manager = CampaignRunManager(
         database, runtime_settings, instagram_provider=instagram_provider
@@ -157,9 +159,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         job_manager,
         manager=lambda: cast(CampaignAssistantManager, app.state.campaign_assistant_manager),
         settings=runtime_settings,
+        shopify=shopify_connection_service,
     )
     app.state.meta_connection_service = meta_connection_service
     app.state.cloud_polish_configuration_service = cloud_polish_configuration_service
+    app.state.shopify_connection_service = shopify_connection_service
 
     app.add_middleware(
         CORSMiddleware,

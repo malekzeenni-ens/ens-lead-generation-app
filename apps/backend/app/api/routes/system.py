@@ -6,6 +6,12 @@ from fastapi import APIRouter, Request, status
 from app.api.dependencies import DESKTOP_ONLY, Authenticated, DatabaseSession
 from app.core.config import Settings
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
+from app.domains.catalogue.shopify_connection import (
+    ShopifyConnectionRead,
+    ShopifyConnectionService,
+    ShopifyConnectionWrite,
+    ShopifyTestResult,
+)
 from app.domains.system.cloud_polish import CloudPolishConfigurationService
 from app.domains.system.cloud_polish_schemas import (
     CloudPolishConfigurationWrite,
@@ -105,6 +111,36 @@ def remove_cloud_polish(
     request: Request, _: Authenticated, session: DatabaseSession
 ) -> CloudPolishStatusRead:
     return _cloud_polish(request).remove(service.get_settings(session))
+
+
+def _shopify(request: Request) -> ShopifyConnectionService:
+    return cast(ShopifyConnectionService, request.app.state.shopify_connection_service)
+
+
+@router.get("/providers/shopify", response_model=ShopifyConnectionRead)
+def get_shopify_connection(request: Request, _: Authenticated) -> ShopifyConnectionRead:
+    return _shopify(request).status()
+
+
+@router.put("/providers/shopify", dependencies=[DESKTOP_ONLY], response_model=ShopifyConnectionRead)
+def configure_shopify_connection(
+    data: ShopifyConnectionWrite, request: Request, _: Authenticated
+) -> ShopifyConnectionRead:
+    return _shopify(request).configure(data)
+
+
+@router.delete(
+    "/providers/shopify", dependencies=[DESKTOP_ONLY], response_model=ShopifyConnectionRead
+)
+def remove_shopify_connection(request: Request, _: Authenticated) -> ShopifyConnectionRead:
+    return _shopify(request).remove()
+
+
+@router.post(
+    "/providers/shopify/test", dependencies=[DESKTOP_ONLY], response_model=ShopifyTestResult
+)
+def test_shopify_connection(request: Request, _: Authenticated) -> ShopifyTestResult:
+    return _shopify(request).test()
 
 
 @router.put("/providers/meta", dependencies=[DESKTOP_ONLY], response_model=MetaConnectionRead)

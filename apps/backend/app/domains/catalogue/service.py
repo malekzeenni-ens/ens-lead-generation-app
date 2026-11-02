@@ -48,6 +48,7 @@ from app.domains.catalogue.schemas import (
     ShopifyCsvImport,
     ShopifyImportResult,
 )
+from app.domains.catalogue.shopify_admin import ShopifyProduct
 from app.domains.system.schemas import WorkspaceSettings
 
 
@@ -347,7 +348,81 @@ class CatalogueService:
             raise DomainError(
                 "SHOPIFY_CSV_INVALID", "The CSV contains invalid row data.", status_code=422
             ) from exc
+        result = self._apply_shopify_products(session, grouped)
+        record_audit_event(
+            session,
+            action="catalogue.shopify_csv_imported",
+            entity_type="catalogue",
+            entity_id="shopify_csv",
+            correlation_id=correlation_id,
+            summary={
+                "filename": data.filename,
+                "rows_read": rows_read,
+                "created": result.products_created,
+                "updated": result.products_updated,
+                "skipped": result.products_skipped,
+                "deactivated": result.products_deactivated,
+            },
+        )
+        session.commit()
+        return result.model_copy(update={"filename": data.filename, "rows_read": rows_read})
 
+    def sync_shopify(
+        self,
+        session: Session,
+        products: list[ShopifyProduct],
+        correlation_id: str,
+    ) -> ShopifyImportResult:
+        """Apply products fetched from the Shopify Admin API (ADR-026).
+
+        The same rules as a CSV import, because the products go through the same code: matched on
+        handle, CSV-owned fields refreshed, hand-written and AI wording kept, and products no longer
+        in Shopify retired.
+        """
+        grouped: dict[str, dict[str, Any]] = {}
+        for product in products:
+            handle = product.handle.strip().casefold()
+            if not handle:
+                continue
+            prices: set[Decimal] = set()
+            for variant in product.variants:
+                if variant.price:
+                    with suppress(InvalidOperation):
+                        prices.add(Decimal(variant.price))
+            grouped[handle] = {
+                "rows": max(1, len(product.variants)),
+                "title": product.title,
+                "description": product.body_html,
+                "type": product.product_type,
+                "product_category": product.product_category,
+                "seo_description": product.seo_description,
+                "image": product.image_urls[0] if product.image_urls else "",
+                "status": product.status.casefold(),
+                "tags": {tag.strip() for tag in product.tags if tag.strip()},
+                "prices": prices,
+            }
+        result = self._apply_shopify_products(session, grouped)
+        record_audit_event(
+            session,
+            action="catalogue.shopify_synced",
+            entity_type="catalogue",
+            entity_id="shopify_api",
+            correlation_id=correlation_id,
+            summary={
+                "products_fetched": len(products),
+                "created": result.products_created,
+                "updated": result.products_updated,
+                "skipped": result.products_skipped,
+                "deactivated": result.products_deactivated,
+            },
+        )
+        session.commit()
+        return result.model_copy(update={"filename": "Shopify (live)", "rows_read": len(products)})
+
+    def _apply_shopify_products(
+        self, session: Session, grouped: dict[str, dict[str, Any]]
+    ) -> ShopifyImportResult:
+        """Create or update products from Shopify data grouped by handle. Does not commit."""
         created = 0
         updated = 0
         skipped = 0
@@ -421,26 +496,9 @@ class CatalogueService:
                 updated += 1
 
         deactivated = self.repository.deactivate_missing_shopify(session, set(grouped))
-
-        record_audit_event(
-            session,
-            action="catalogue.shopify_csv_imported",
-            entity_type="catalogue",
-            entity_id="shopify_csv",
-            correlation_id=correlation_id,
-            summary={
-                "filename": data.filename,
-                "rows_read": rows_read,
-                "created": created,
-                "updated": updated,
-                "skipped": skipped,
-                "deactivated": deactivated,
-            },
-        )
-        session.commit()
         return ShopifyImportResult(
-            filename=data.filename,
-            rows_read=rows_read,
+            filename="",
+            rows_read=0,
             products_created=created,
             products_updated=updated,
             products_skipped=skipped,

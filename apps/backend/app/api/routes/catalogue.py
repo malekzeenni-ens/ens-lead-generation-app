@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query, Request, status
 from app.api.dependencies import DESKTOP_ONLY, Authenticated, DatabaseSession
 from app.api.routes.jobs import job_manager
 from app.core.config import Settings
+from app.core.errors import DomainError
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.catalogue.pack_autoload import apply_pack_if_changed
 from app.domains.catalogue.schemas import (
@@ -26,8 +27,9 @@ from app.domains.catalogue.schemas import (
     ShopifyImportResult,
 )
 from app.domains.catalogue.service import CatalogueService
+from app.domains.catalogue.shopify_connection import ShopifyConnectionService
 from app.domains.system.service import SystemService
-from app.jobs.kinds import CATALOGUE_ENRICHMENT
+from app.jobs.kinds import CATALOGUE_ENRICHMENT, CATALOGUE_SHOPIFY_SYNC
 from app.jobs.schemas import BackgroundJobRead
 
 router = APIRouter(prefix="/catalogue", tags=["catalogue"])
@@ -205,3 +207,29 @@ def update_proven_fit(
     session: DatabaseSession,
 ) -> ProvenFitRead:
     return service.update_fit(session, fit_id, data, request.state.correlation_id)
+
+
+@router.post(
+    "/shopify/sync",
+    dependencies=[DESKTOP_ONLY],
+    response_model=BackgroundJobRead,
+    status_code=202,
+)
+def sync_from_shopify(
+    request: Request, _: Authenticated, session: DatabaseSession
+) -> BackgroundJobRead:
+    """Queue a catalogue sync from the Shopify Admin API (ADR-026); poll the job for the result."""
+    shopify = cast(ShopifyConnectionService, request.app.state.shopify_connection_service)
+    if not shopify.status().configured:
+        raise DomainError(
+            "SHOPIFY_NOT_CONFIGURED",
+            "Connect Shopify in Settings → Connections first.",
+            status_code=409,
+        )
+    return job_manager(request).submit(
+        session,
+        CATALOGUE_SHOPIFY_SYNC,
+        {},
+        request.state.correlation_id,
+        one_at_a_time=True,
+    )

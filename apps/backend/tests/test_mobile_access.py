@@ -278,6 +278,10 @@ DESKTOP_ONLY_ROUTES = {
     ("POST", "/api/v1/mobile/devices/{device_id}/revoke"),
     ("GET", "/api/v1/openapi.json"),
     ("GET", "/api/v1/mobile/tailscale"),
+    ("POST", "/api/v1/catalogue/shopify/sync"),
+    ("PUT", "/api/v1/system/providers/shopify"),
+    ("DELETE", "/api/v1/system/providers/shopify"),
+    ("POST", "/api/v1/system/providers/shopify/test"),
     ("POST", "/api/v1/mobile/tailscale/serve"),
     ("DELETE", "/api/v1/mobile/tailscale/serve"),
 }
