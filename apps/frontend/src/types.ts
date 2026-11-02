@@ -466,6 +466,28 @@ export interface ApiErrorShape {
   correlation_id: string;
 }
 
+export interface ShopifyVariant {
+  legacy_resource_id: string;
+  title: string;
+  sku: string;
+  price: string;
+  selected_options: Record<string, string>;
+  image_url: string;
+  inventory_tracked: boolean | null;
+  inventory_quantity: number | null;
+}
+
+export interface ShopifyDetails {
+  vendor: string;
+  product_type: string;
+  status: string;
+  tags: string[];
+  image_urls: string[];
+  description: string;
+  seo_description: string;
+  variants: ShopifyVariant[];
+}
+
 export interface Product {
   id: string;
   shopify_handle: string | null;
@@ -480,6 +502,7 @@ export interface Product {
   sample_eligible: boolean;
   source: string;
   variant_count: number;
+  shopify_details?: ShopifyDetails | null;
   summary: string | null;
   materials: string[];
   occasions: string[];

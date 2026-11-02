@@ -94,11 +94,23 @@ class _PlainTextParser(HTMLParser):
         if value:
             self.parts.append(value)
 
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"p", "div", "br", "li", "h1", "h2", "h3", "h4", "tr"}:
+            self.parts.append("\n")
+        if tag == "li":
+            self.parts.append("• ")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"p", "div", "li", "h1", "h2", "h3", "h4", "tr"}:
+            self.parts.append("\n")
+
 
 def _plain_text(value: str) -> str:
     parser = _PlainTextParser()
     parser.feed(value)
-    return " ".join(parser.parts)[:20_000]
+    return "\n\n".join(
+        " ".join(line.split()) for line in " ".join(parser.parts).splitlines() if line.strip()
+    )[:20_000]
 
 
 def _normalise_row(row: dict[str | None, str | None]) -> dict[str, str]:
@@ -307,7 +319,7 @@ class CatalogueService:
             )
 
         grouped: dict[str, dict[str, Any]] = defaultdict(
-            lambda: {"rows": 0, "tags": set(), "prices": set()}
+            lambda: {"rows": 0, "tags": set(), "prices": set(), "variants": [], "images": []}
         )
         rows_read = 0
         try:
@@ -334,6 +346,7 @@ class CatalogueService:
                     ("image src", "image"),
                     ("status", "status"),
                     ("published", "published"),
+                    ("vendor", "vendor"),
                 ):
                     if row.get(source) and not item.get(target):
                         item[target] = row[source]
@@ -344,10 +357,39 @@ class CatalogueService:
                 if price:
                     with suppress(InvalidOperation):
                         item["prices"].add(Decimal(price))
+                image = row.get("image src", "")
+                if image and image not in item["images"]:
+                    item["images"].append(image)
+                options = {
+                    row[f"option{index} name"]: row.get(f"option{index} value", "")
+                    for index in range(1, 4)
+                    if row.get(f"option{index} name") and row.get(f"option{index} value")
+                }
+                if price or row.get("variant sku") or options:
+                    item["variants"].append(
+                        {
+                            "title": " / ".join(options.values()),
+                            "sku": row.get("variant sku", ""),
+                            "price": price,
+                            "selected_options": options,
+                            "image_url": row.get("variant image", ""),
+                        }
+                    )
         except csv.Error as exc:
             raise DomainError(
                 "SHOPIFY_CSV_INVALID", "The CSV contains invalid row data.", status_code=422
             ) from exc
+        for item in grouped.values():
+            item["shopify"] = {
+                "vendor": item.get("vendor", ""),
+                "product_type": item.get("type", ""),
+                "status": item.get("status", ""),
+                "tags": sorted(item["tags"]),
+                "image_urls": item["images"],
+                "description": _plain_text(item.get("description", "")),
+                "seo_description": item.get("seo_description", ""),
+                "variants": item["variants"],
+            }
         result = self._apply_shopify_products(session, grouped)
         record_audit_event(
             session,
@@ -400,6 +442,16 @@ class CatalogueService:
                 "status": product.status.casefold(),
                 "tags": {tag.strip() for tag in product.tags if tag.strip()},
                 "prices": prices,
+                "shopify": {
+                    "vendor": product.vendor,
+                    "product_type": product.product_type,
+                    "status": product.status.casefold(),
+                    "tags": product.tags,
+                    "image_urls": product.image_urls,
+                    "description": _plain_text(product.body_html),
+                    "seo_description": product.seo_description,
+                    "variants": [variant.__dict__ for variant in product.variants],
+                },
             }
         result = self._apply_shopify_products(session, grouped)
         record_audit_event(
@@ -495,6 +547,15 @@ class CatalogueService:
                 product.source_hash = fresh_hash
                 updated += 1
 
+            if "shopify" in item:
+                product.attributes = {**(product.attributes or {}), "shopify": item["shopify"]}
+            elif product.shopify_details is not None:
+                # A CSV has no stock levels and may contain image-only rows. Do not present an
+                # older API snapshot as the variants for this newer import.
+                product.attributes = {
+                    key: value for key, value in product.attributes.items() if key != "shopify"
+                }
+
         deactivated = self.repository.deactivate_missing_shopify(session, set(grouped))
         return ShopifyImportResult(
             filename="",
@@ -579,7 +640,7 @@ class CatalogueService:
             product.bulk_ready = item.bulk_ready
             product.product_url = item.url or product.product_url
             # Fields the Product model has no column for still reach the assistant through here.
-            product.attributes = {
+            pack_attributes = {
                 key: value
                 for key, value in {
                     "listing_status": item.listing_status,
@@ -591,6 +652,7 @@ class CatalogueService:
                 }.items()
                 if value
             }
+            product.attributes = {**(product.attributes or {}), **pack_attributes}
             product.enrichment_source = "seed"
             # Staleness means "the listing changed after we enriched it here", so baseline
             # against this database's current fingerprint. The pack's own hash was computed from

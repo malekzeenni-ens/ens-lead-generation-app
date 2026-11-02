@@ -1,4 +1,5 @@
 import {
+  ArrowUpRight,
   BookOpen,
   Edit3,
   FileSpreadsheet,
@@ -17,6 +18,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, type ProductInput } from "../api";
 import { formatDate, humanize } from "../domain";
+import { productImageUrl } from "../productImages";
 import { usePagination } from "../pagination";
 import type {
   EnrichmentImportResult,
@@ -45,6 +47,8 @@ import {
   TaskPanel,
   TaskTabs,
 } from "./DesignSystem";
+
+import { ProductDetails, ProductImage } from "./ProductDetails";
 
 /** Missing or outdated sales knowledge, which the assistant and emails rely on. */
 function knowledgeGap(product: Product): string | null {
@@ -210,6 +214,7 @@ export function CatalogueWorkspace({
   const activeTask = readOnly ? "products" : rememberedTask;
   const [query, setQuery] = useRememberedState("catalogue:query", "");
   const [catalogueView, setCatalogueView] = useRememberedState<"cards" | "groups">("catalogue:view", "cards");
+  const [viewingProductId, setViewingProductId] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ShopifyImportResult | null>(null);
@@ -246,6 +251,7 @@ export function CatalogueWorkspace({
         .includes(search),
     );
   }, [products, query]);
+  const viewingProduct = products.find((product) => product.id === viewingProductId) ?? null;
   const editingProduct = products.find((product) => product.id === editingProductId) ?? null;
   const groups = useMemo(() => {
     const byCategory = new Map<string, Product[]>();
@@ -1023,7 +1029,7 @@ export function CatalogueWorkspace({
                     {items.map((product) => (
                       <li key={product.id}>
                         <span className="catalogue-rows__name">
-                          <strong>{product.name}</strong>
+                          <button type="button" className="catalogue-rows__open" onClick={() => setViewingProductId(product.id)}>{product.name}</button>
                           <small>{product.variant_count} {product.variant_count === 1 ? "variant" : "variants"}</small>
                         </span>
                         {knowledgeGap(product) ? <StatusPill tone="warning">{knowledgeGap(product)}</StatusPill> : <StatusPill tone="success">Ready</StatusPill>}
@@ -1045,44 +1051,30 @@ export function CatalogueWorkspace({
             <div className="catalogue-grid">
             {productPages.items.map((product) => (
               <article className="catalogue-card" key={product.id}>
-                <div className="records-heading">
-                  <div>
-                    <h3>{product.name}</h3>
-                    <p>{product.category} · {product.source === "shopify_csv" ? "Shopify" : "Manual"}</p>
-                  </div>
-                  <span className={`status-badge${product.active ? " status-badge--success" : ""}`}>
-                    {product.active ? "Active" : "Inactive"}
-                  </span>
-                </div>
-                {knowledgeGap(product) ? <StatusPill tone="warning">{knowledgeGap(product)}</StatusPill> : null}
-                <p>{product.description || "No description supplied."}</p>
-                <dl className="record-details">
-                  <div><dt>Pricing</dt><dd>{product.pricing_guidance ?? "Not set"}</dd></div>
-                  <div><dt>Variants</dt><dd>{product.variant_count}</dd></div>
-                  <div><dt>Segments</dt><dd>{product.target_segments.join(", ") || "Not set"}</dd></div>
-                  <div><dt>Sample</dt><dd>{product.sample_eligible ? "Eligible" : "Not eligible"}</dd></div>
-                  <div>
-                    <dt>Sales knowledge</dt>
-                    <dd>
-                      {product.enrichment_source === "manual"
-                        ? "Yours"
-                        : product.enrichment_source === "seed"
-                          ? "From the knowledge pack"
-                          : product.enrichment_source === "ai"
-                            ? "Written locally by AI"
-                            : "None yet"}
-                      {product.stale_enrichment ? " · listing changed since" : ""}
-                    </dd>
-                  </div>
-                  {product.b2b_relevant ? (
-                    <div><dt>Business buyers</dt><dd>{product.bulk_ready ? "Suits bulk runs" : "Suits business orders"}</dd></div>
-                  ) : null}
-                </dl>
-                {readOnly ? null : (
-                  <button type="button" className="tertiary-action" onClick={() => setEditingProductId(product.id)}>
-                    <Edit3 size={15} aria-hidden="true" /> Edit product
+                <div className="catalogue-card__intro">
+                  <button type="button" className="catalogue-card__image" aria-label={`View ${product.name}`} onClick={() => setViewingProductId(product.id)}>
+                    <ProductImage src={productImageUrl(product.image_reference)} name={product.name} />
                   </button>
-                )}
+                  <div className="catalogue-card__identity">
+                    <span className="catalogue-card__category">{product.category.split(">").pop()?.trim()}</span>
+                    <h3><button type="button" onClick={() => setViewingProductId(product.id)}>{product.name}</button></h3>
+                    <StatusPill tone={product.active ? "success" : "neutral"}>{product.active ? "Active" : "Inactive"}</StatusPill>
+                  </div>
+                </div>
+                <p className="catalogue-card__excerpt">{product.summary || product.description || "No description supplied."}</p>
+                <dl className="catalogue-card__facts">
+                  <div><dt>Price</dt><dd>{product.pricing_guidance ?? "Not supplied"}</dd></div>
+                  <div><dt>Variants</dt><dd>{product.variant_count}</dd></div>
+                </dl>
+                <div className="catalogue-card__labels">
+                  <span>{product.source === "shopify_csv" ? "Shopify" : "Manual"}</span>
+                  {product.b2b_relevant ? <span>{product.bulk_ready ? "Bulk orders" : "Business orders"}</span> : null}
+                  {knowledgeGap(product) ? <StatusPill tone="warning">{knowledgeGap(product)}</StatusPill> : null}
+                </div>
+                <div className="catalogue-card__actions">
+                  <button type="button" className="secondary-action" onClick={() => setViewingProductId(product.id)}>View details <ArrowUpRight size={16} aria-hidden="true" /></button>
+                  {readOnly ? null : <button type="button" className="tertiary-action" onClick={() => setEditingProductId(product.id)}><Edit3 size={15} aria-hidden="true" /> Edit product</button>}
+                </div>
               </article>
             ))}
             </div>
@@ -1098,6 +1090,16 @@ export function CatalogueWorkspace({
           </>
         )}
       </section>
+      <Drawer
+        open={viewingProduct !== null}
+        wide
+        title={viewingProduct?.name ?? "Product details"}
+        description="Description, variants and listing details"
+        onClose={() => setViewingProductId(null)}
+        footer={viewingProduct && !readOnly ? <button type="button" className="secondary-action" onClick={() => { setEditingProductId(viewingProduct.id); setViewingProductId(null); }}><Edit3 size={16} aria-hidden="true" /> Edit product</button> : undefined}
+      >
+        {viewingProduct ? <ProductDetails key={viewingProduct.id} product={viewingProduct} readOnly={readOnly} /> : null}
+      </Drawer>
       <Drawer
         open={editingProduct !== null}
         wide

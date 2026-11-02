@@ -5,6 +5,28 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class ShopifyVariantRead(BaseModel):
+    legacy_resource_id: str = ""
+    title: str = ""
+    sku: str = ""
+    price: str = ""
+    selected_options: dict[str, str] = Field(default_factory=dict)
+    image_url: str = ""
+    inventory_tracked: bool | None = None
+    inventory_quantity: int | None = None
+
+
+class ShopifyDetailsRead(BaseModel):
+    vendor: str = ""
+    product_type: str = ""
+    status: str = ""
+    tags: list[str] = Field(default_factory=list)
+    image_urls: list[str] = Field(default_factory=list)
+    description: str = ""
+    seo_description: str = ""
+    variants: list[ShopifyVariantRead] = Field(default_factory=list)
+
+
 class ProductRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -21,6 +43,7 @@ class ProductRead(BaseModel):
     sample_eligible: bool
     source: str
     variant_count: int
+    shopify_details: ShopifyDetailsRead | None = None
     summary: str | None
     materials: list[str]
     occasions: list[str]

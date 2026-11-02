@@ -653,6 +653,11 @@ class Product(Base):
     )
 
     @property
+    def shopify_details(self) -> dict[str, Any] | None:
+        details = (self.attributes or {}).get("shopify")
+        return details if isinstance(details, dict) else None
+
+    @property
     def stale_enrichment(self) -> bool:
         """True when the listing changed after its sales knowledge was written."""
         if not self.enrichment_source or self.enriched_hash is None:

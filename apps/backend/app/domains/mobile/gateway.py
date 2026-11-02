@@ -25,10 +25,11 @@ from app.domains.mobile.devices import COOKIE_NAME, DeviceRegistry
 logger = logging.getLogger(__name__)
 
 
-# The phone loads only this app's own files and talks only to this origin.
+# Scripts and API calls stay on this origin; product images may use Shopify's CDN.
 CONTENT_SECURITY_POLICY = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-    "img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; "
+    "img-src 'self' data: blob: https://cdn.shopify.com https://*.shopify.com; "
+    "font-src 'self' data:; connect-src 'self'; "
     "manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; "
     "form-action 'self'"
 )

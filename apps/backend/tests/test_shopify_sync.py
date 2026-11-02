@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 from collections.abc import Iterator
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -112,7 +114,8 @@ def _sync(client: TestClient) -> dict[str, Any]:
 
 
 def _catalogue(client: TestClient) -> dict[str, dict[str, Any]]:
-    ignored = {"id", "created_at", "updated_at", "last_seen_import_at"}
+    # The API also retains listing and variant details that a CSV snapshot may omit.
+    ignored = {"id", "created_at", "updated_at", "last_seen_import_at", "shopify_details"}
     return {
         product["shopify_handle"]: {
             key: value for key, value in product.items() if key not in ignored
@@ -267,3 +270,69 @@ def test_the_client_reads_the_extra_fields_and_pages_five_at_a_time(
     assert products[0].seo_description == "Engraved slate coasters"
     assert calls[0]["variables"] == {"first": 5, "after": None}
     assert calls[1]["variables"] == {"first": 5, "after": "c1"}
+
+
+def test_sync_retains_listing_and_variants_through_knowledge_pack_import(
+    client: TestClient, connected: list[ShopifyProduct]
+) -> None:
+    connected[:] = [
+        replace(
+            connected[0],
+            vendor="Etch N Shine",
+            body_html="<h2>Made for you</h2><p>Full description.</p><ul><li>Easy to fit</li></ul>",
+            variants=[
+                ShopifyVariant(
+                    legacy_resource_id="123",
+                    title="Black / Large",
+                    sku="SIGN-B-L",
+                    price="39.00",
+                    selected_options={"Colour": "Black", "Size": "Large"},
+                    inventory_tracked=True,
+                    inventory_quantity=7,
+                )
+            ],
+        )
+    ]
+    _sync(client)
+    product = client.get("/api/v1/catalogue/products").json()[0]
+    details = product["shopify_details"]
+    assert details["vendor"] == "Etch N Shine"
+    assert details["variants"][0]["selected_options"] == {"Colour": "Black", "Size": "Large"}
+    assert details["variants"][0]["sku"] == "SIGN-B-L"
+    assert details["variants"][0]["inventory_quantity"] == 7
+    assert "Made for you\n\nFull description." in product["description"]
+    assert "<h2>" not in product["description"]
+    pack = {"products": [{"handle": connected[0].handle, "summary": "Made for businesses"}]}
+    imported = client.post(
+        "/api/v1/catalogue/import/enrichment",
+        json={"filename": "knowledge.json", "content": json.dumps(pack)},
+    )
+    assert imported.status_code == 200
+    enriched = client.get("/api/v1/catalogue/products").json()[0]
+    assert enriched["summary"] == "Made for businesses"
+    assert enriched["shopify_details"] == details
+    # Refresh the stored snapshot, rather than leaving stale stock or adding duplicate variants.
+    connected[:] = [
+        replace(connected[0], variants=[replace(connected[0].variants[0], inventory_quantity=2)])
+    ]
+    _sync(client)
+    refreshed = client.get("/api/v1/catalogue/products").json()[0]["shopify_details"]
+    assert len(refreshed["variants"]) == 1
+    assert refreshed["variants"][0]["inventory_quantity"] == 2
+
+
+def test_csv_retains_variant_options_and_does_not_invent_stock(client: TestClient) -> None:
+    content = (
+        "Handle,Title,Vendor,Option1 Name,Option1 Value,Variant SKU,Variant Price,Image Src\n"
+        "sign,Office sign,Etch N Shine,Size,Small,SIGN-S,17.00,https://cdn.shopify.com/sign.jpg\n"
+        "sign,,,Size,Large,SIGN-L,39.00,\n"
+    )
+    response = client.post(
+        "/api/v1/catalogue/import/shopify", json={"filename": "variants.csv", "content": content}
+    )
+    assert response.status_code == 200
+    product = client.get("/api/v1/catalogue/products").json()[0]
+    variants = product["shopify_details"]["variants"]
+    assert [variant["sku"] for variant in variants] == ["SIGN-S", "SIGN-L"]
+    assert variants[1]["selected_options"] == {"Size": "Large"}
+    assert variants[0]["inventory_quantity"] is None
