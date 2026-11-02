@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, status
 
-from app.api.dependencies import Authenticated, DatabaseSession
+from app.api.dependencies import DESKTOP_ONLY, Authenticated, DatabaseSession
 from app.domains.templates.schemas import TemplateCreate, TemplateRead, TemplateUpdate
 from app.domains.templates.service import TemplateService
 
@@ -13,7 +13,12 @@ def list_templates(_: Authenticated, session: DatabaseSession) -> list[TemplateR
     return service.list(session)
 
 
-@router.post("", response_model=TemplateRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    dependencies=[DESKTOP_ONLY],
+    response_model=TemplateRead,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_template(
     data: TemplateCreate,
     request: Request,
@@ -23,7 +28,7 @@ def create_template(
     return service.create(session, data, request.state.correlation_id)
 
 
-@router.patch("/{template_id}", response_model=TemplateRead)
+@router.patch("/{template_id}", dependencies=[DESKTOP_ONLY], response_model=TemplateRead)
 def update_template(
     template_id: str,
     data: TemplateUpdate,
@@ -34,7 +39,9 @@ def update_template(
     return service.update(session, template_id, data, request.state.correlation_id)
 
 
-@router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{template_id}", dependencies=[DESKTOP_ONLY], status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_template(
     template_id: str,
     request: Request,

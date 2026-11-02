@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 
-from app.api.dependencies import Authenticated, DatabaseSession
+from app.api.dependencies import DESKTOP_ONLY, Authenticated, DatabaseSession
 from app.domains.qualification.schemas import (
     ScoreCalculate,
     ScoreOverride,
@@ -31,7 +31,9 @@ def get_scoring_profile_history(
     return service.profile_history(session, segment)
 
 
-@router.patch("/scoring/profiles/{segment}", response_model=ScoringProfileRead)
+@router.patch(
+    "/scoring/profiles/{segment}", dependencies=[DESKTOP_ONLY], response_model=ScoringProfileRead
+)
 def update_scoring_profile(
     segment: str,
     data: ScoringProfileUpdate,

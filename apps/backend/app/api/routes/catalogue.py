@@ -2,7 +2,7 @@ from typing import Annotated, cast
 
 from fastapi import APIRouter, Query, Request, status
 
-from app.api.dependencies import Authenticated, DatabaseSession
+from app.api.dependencies import DESKTOP_ONLY, Authenticated, DatabaseSession
 from app.api.routes.jobs import job_manager
 from app.core.config import Settings
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
@@ -40,7 +40,10 @@ def list_product_families(_: Authenticated, session: DatabaseSession) -> list[Pr
 
 
 @router.post(
-    "/product-families", response_model=ProductFamilyRead, status_code=status.HTTP_201_CREATED
+    "/product-families",
+    dependencies=[DESKTOP_ONLY],
+    response_model=ProductFamilyRead,
+    status_code=status.HTTP_201_CREATED,
 )
 def create_product_family(
     data: ProductFamilyCreate,
@@ -51,7 +54,9 @@ def create_product_family(
     return service.create_family(session, data, request.state.correlation_id)
 
 
-@router.patch("/product-families/{family_id}", response_model=ProductFamilyRead)
+@router.patch(
+    "/product-families/{family_id}", dependencies=[DESKTOP_ONLY], response_model=ProductFamilyRead
+)
 def update_product_family(
     family_id: str,
     data: ProductFamilyUpdate,
@@ -62,7 +67,11 @@ def update_product_family(
     return service.update_family(session, family_id, data, request.state.correlation_id)
 
 
-@router.delete("/product-families/{family_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/product-families/{family_id}",
+    dependencies=[DESKTOP_ONLY],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_product_family(
     family_id: str,
     request: Request,
@@ -82,7 +91,12 @@ def list_products(
     return service.list(session, query=query, active=active)
 
 
-@router.post("/products", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/products",
+    dependencies=[DESKTOP_ONLY],
+    response_model=ProductRead,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_product(
     data: ProductCreate,
     request: Request,
@@ -92,7 +106,7 @@ def create_product(
     return service.create(session, data, request.state.correlation_id)
 
 
-@router.patch("/products/{product_id}", response_model=ProductRead)
+@router.patch("/products/{product_id}", dependencies=[DESKTOP_ONLY], response_model=ProductRead)
 def update_product(
     product_id: str,
     data: ProductUpdate,
@@ -103,7 +117,7 @@ def update_product(
     return service.update(session, product_id, data, request.state.correlation_id)
 
 
-@router.post("/import/shopify", response_model=ShopifyImportResult)
+@router.post("/import/shopify", dependencies=[DESKTOP_ONLY], response_model=ShopifyImportResult)
 def import_shopify_csv(
     data: ShopifyCsvImport,
     request: Request,
@@ -118,7 +132,9 @@ def import_shopify_csv(
     return result
 
 
-@router.post("/import/enrichment", response_model=EnrichmentImportResult)
+@router.post(
+    "/import/enrichment", dependencies=[DESKTOP_ONLY], response_model=EnrichmentImportResult
+)
 def import_enrichment_pack(
     data: EnrichmentImport,
     request: Request,
@@ -133,7 +149,12 @@ def get_enrichment_status(_: Authenticated, session: DatabaseSession) -> Enrichm
     return service.enrichment_status(session)
 
 
-@router.post("/enrichment/run", response_model=BackgroundJobRead, status_code=202)
+@router.post(
+    "/enrichment/run",
+    dependencies=[DESKTOP_ONLY],
+    response_model=BackgroundJobRead,
+    status_code=202,
+)
 def run_enrichment(
     data: EnrichmentRunRequest,
     request: Request,
@@ -157,7 +178,9 @@ def list_knowledge_notes(_: Authenticated, session: DatabaseSession) -> list[Kno
     return service.list_notes(session)
 
 
-@router.patch("/knowledge-notes/{note_id}", response_model=KnowledgeNoteRead)
+@router.patch(
+    "/knowledge-notes/{note_id}", dependencies=[DESKTOP_ONLY], response_model=KnowledgeNoteRead
+)
 def update_knowledge_note(
     note_id: str,
     data: KnowledgeNoteUpdate,
@@ -173,7 +196,7 @@ def list_proven_fits(_: Authenticated, session: DatabaseSession) -> list[ProvenF
     return service.list_fits(session)
 
 
-@router.patch("/proven-fits/{fit_id}", response_model=ProvenFitRead)
+@router.patch("/proven-fits/{fit_id}", dependencies=[DESKTOP_ONLY], response_model=ProvenFitRead)
 def update_proven_fit(
     fit_id: str,
     data: ProvenFitUpdate,

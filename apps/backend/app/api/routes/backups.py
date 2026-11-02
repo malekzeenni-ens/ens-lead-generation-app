@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, status
 
-from app.api.dependencies import Authenticated, DatabaseSession
+from app.api.dependencies import DESKTOP_ONLY, Authenticated, DatabaseSession
 from app.domains.backups.schemas import (
     BackupCreate,
     BackupResult,
@@ -9,7 +9,7 @@ from app.domains.backups.schemas import (
 )
 from app.domains.backups.service import BackupService
 
-router = APIRouter(prefix="/backups", tags=["backups"])
+router = APIRouter(prefix="/backups", tags=["backups"], dependencies=[DESKTOP_ONLY])
 
 
 @router.post("", response_model=BackupResult, status_code=status.HTTP_201_CREATED)

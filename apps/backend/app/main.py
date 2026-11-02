@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.dependencies import Authenticated
+from app.api.dependencies import DESKTOP_ONLY, Authenticated
 from app.api.routes import (
     assistant,
     automation,
@@ -217,7 +217,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             status_code=500,
         )
 
-    @app.get("/api/v1/openapi.json", include_in_schema=False)
+    @app.get("/api/v1/openapi.json", include_in_schema=False, dependencies=[DESKTOP_ONLY])
     async def openapi_schema(_: Authenticated) -> dict[str, Any]:
         return app.openapi()
 

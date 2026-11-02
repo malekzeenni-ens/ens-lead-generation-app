@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 
-from app.api.dependencies import Authenticated, DatabaseSession
+from app.api.dependencies import DESKTOP_ONLY, Authenticated, DatabaseSession
 from app.domains.leads.repository import LeadFilters
 from app.domains.leads.schemas import (
     CommunicationCreate,
@@ -52,7 +52,7 @@ def list_leads(
     )
 
 
-@router.get("/export")
+@router.get("/export", dependencies=[DESKTOP_ONLY])
 def export_leads(
     _: Authenticated,
     session: DatabaseSession,
@@ -218,7 +218,7 @@ def lift_lead_suppression(
     return service.lift_suppression(session, lead_id, request.state.correlation_id)
 
 
-@router.delete("/{lead_id}", response_model=LeadDeleteResult)
+@router.delete("/{lead_id}", dependencies=[DESKTOP_ONLY], response_model=LeadDeleteResult)
 def delete_lead(
     lead_id: str,
     request: Request,

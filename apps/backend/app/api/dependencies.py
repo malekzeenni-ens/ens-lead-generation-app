@@ -51,4 +51,6 @@ def get_session(request: Request) -> Iterator[Session]:
 
 Authenticated = Annotated[None, Depends(require_session_token)]
 DesktopOnly = Annotated[None, Depends(require_desktop)]
+# For route decorators and whole routers: `dependencies=[DESKTOP_ONLY]`.
+DESKTOP_ONLY = Depends(require_desktop)
 DatabaseSession = Annotated[Session, Depends(get_session)]

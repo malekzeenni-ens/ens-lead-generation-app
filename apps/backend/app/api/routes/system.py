@@ -3,7 +3,7 @@ from typing import Any, cast
 
 from fastapi import APIRouter, Request, status
 
-from app.api.dependencies import Authenticated, DatabaseSession
+from app.api.dependencies import DESKTOP_ONLY, Authenticated, DatabaseSession
 from app.core.config import Settings
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.system.cloud_polish import CloudPolishConfigurationService
@@ -46,7 +46,7 @@ def get_settings(_: Authenticated, session: DatabaseSession) -> WorkspaceSetting
     return service.get_settings(session)
 
 
-@router.patch("/settings", response_model=WorkspaceSettings)
+@router.patch("/settings", dependencies=[DESKTOP_ONLY], response_model=WorkspaceSettings)
 def update_settings(
     data: WorkspaceSettingsUpdate,
     request: Request,
@@ -63,7 +63,7 @@ def update_settings(
     return updated
 
 
-@router.get("/diagnostics", response_model=DiagnosticsRead)
+@router.get("/diagnostics", dependencies=[DESKTOP_ONLY], response_model=DiagnosticsRead)
 def get_diagnostics(
     request: Request, _: Authenticated, session: DatabaseSession
 ) -> DiagnosticsRead:
@@ -88,7 +88,7 @@ def get_cloud_polish(
     return _cloud_polish(request).status(service.get_settings(session))
 
 
-@router.put("/cloud-polish", response_model=CloudPolishStatusRead)
+@router.put("/cloud-polish", dependencies=[DESKTOP_ONLY], response_model=CloudPolishStatusRead)
 def configure_cloud_polish(
     data: CloudPolishConfigurationWrite,
     request: Request,
@@ -100,27 +100,28 @@ def configure_cloud_polish(
     )
 
 
-@router.delete("/cloud-polish", response_model=CloudPolishStatusRead)
+@router.delete("/cloud-polish", dependencies=[DESKTOP_ONLY], response_model=CloudPolishStatusRead)
 def remove_cloud_polish(
     request: Request, _: Authenticated, session: DatabaseSession
 ) -> CloudPolishStatusRead:
     return _cloud_polish(request).remove(service.get_settings(session))
 
 
-@router.put("/providers/meta", response_model=MetaConnectionRead)
+@router.put("/providers/meta", dependencies=[DESKTOP_ONLY], response_model=MetaConnectionRead)
 def configure_meta(
     data: MetaConfigurationWrite, request: Request, _: Authenticated
 ) -> MetaConnectionRead:
     return _meta(request).configure(data)
 
 
-@router.delete("/providers/meta", response_model=MetaConnectionRead)
+@router.delete("/providers/meta", dependencies=[DESKTOP_ONLY], response_model=MetaConnectionRead)
 def remove_meta_configuration(request: Request, _: Authenticated) -> MetaConnectionRead:
     return _meta(request).remove_configuration()
 
 
 @router.post(
     "/providers/meta/authorize",
+    dependencies=[DESKTOP_ONLY],
     response_model=MetaAuthorizationStartRead,
     status_code=status.HTTP_202_ACCEPTED,
 )
@@ -128,19 +129,23 @@ def start_meta_authorization(request: Request, _: Authenticated) -> MetaAuthoriz
     return _meta(request).start_authorization()
 
 
-@router.post("/providers/meta/account", response_model=MetaConnectionRead)
+@router.post(
+    "/providers/meta/account", dependencies=[DESKTOP_ONLY], response_model=MetaConnectionRead
+)
 def select_meta_account(
     data: MetaAccountSelect, request: Request, _: Authenticated
 ) -> MetaConnectionRead:
     return _meta(request).select_account(data.page_id)
 
 
-@router.post("/providers/meta/disconnect", response_model=MetaConnectionRead)
+@router.post(
+    "/providers/meta/disconnect", dependencies=[DESKTOP_ONLY], response_model=MetaConnectionRead
+)
 def disconnect_meta(request: Request, _: Authenticated) -> MetaConnectionRead:
     return _meta(request).disconnect()
 
 
-@router.post("/shutdown", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/shutdown", dependencies=[DESKTOP_ONLY], status_code=status.HTTP_202_ACCEPTED)
 def request_shutdown(request: Request, _: Authenticated) -> dict[str, bool]:
     """Let the desktop host stop the backend cleanly, so lifespan shutdown runs before exit.
 
