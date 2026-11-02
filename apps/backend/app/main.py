@@ -22,6 +22,7 @@ from app.api.routes import (
     jobs,
     lead_assistant,
     leads,
+    mobile,
     outreach,
     qualification,
     system,
@@ -39,6 +40,8 @@ from app.domains.automation.scheduler import WeeklyScheduler
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.campaign_assistant.service import CampaignAssistantService
 from app.domains.catalogue.pack_autoload import apply_pack_if_changed
+from app.domains.mobile.gateway import MobileGatewayManager, PhoneGateway
+from app.domains.mobile.service import MobileAccessService
 from app.domains.system.cloud_polish import CloudPolishConfigurationService
 from app.domains.system.meta import MetaConnectionService
 from app.domains.system.service import SystemService
@@ -109,14 +112,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
             campaign_assistant_manager.set_preferred_model(workspace_settings.local_ai_model)
             apply_pack_if_changed(session, runtime_settings, "startup-knowledge-pack")
+            mobile_config = mobile_access_service.config(session)
         campaign_assistant_manager.start()
         if runtime_settings.weekly_scheduler_enabled:
             weekly_scheduler.start()
+        mobile_access_service.apply(mobile_config)
         try:
             yield
         finally:
             logger.info("Etch N Shine local backend shutdown started")
             weekly_scheduler.stop()
+            mobile_gateway_manager.stop()
             job_manager.shutdown()
             campaign_assistant_manager.shutdown()
             campaign_run_manager.shutdown()
@@ -133,6 +139,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # isn't fetchable without the session token.
         openapi_url=None,
     )
+    mobile_gateway_manager = MobileGatewayManager(PhoneGateway(app), runtime_settings)
+    mobile_access_service = MobileAccessService(mobile_gateway_manager)
+    app.state.mobile_access_service = mobile_access_service
     app.state.settings = runtime_settings
     app.state.database = database
     app.state.campaign_run_manager = campaign_run_manager
@@ -223,4 +232,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(system.router, prefix=prefix)
     app.include_router(templates.router, prefix=prefix)
     app.include_router(outreach.router, prefix=prefix)
+    app.include_router(mobile.router, prefix=prefix)
     return app

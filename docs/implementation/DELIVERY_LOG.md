@@ -695,3 +695,20 @@ Phase gate after D7: `npm run quality` passed (frontend 140, backend 271, Rust 3
 - The light theme is the same brand on warm paper: navy text, gold actions, and a darker gold for accent text. Measured contrast: every text colour is at least 4.7:1 on every light surface (WCAG AA is 4.5:1), and dark text on the gold buttons is 9.3:1. Following Windows is the default; `color-scheme` is set so native controls and scrollbars match.
 - Compact density lowers control heights (44/38/32 px to 36/32/28 px) and tightens the spacing scale; type sizes stay the same, for legibility.
 - Verification: 1 new test (theme and density applied, stored, and "Match Windows" clearing the choice); the test setup now clears local storage and the appearance attributes between tests; 142 frontend tests pass; TypeScript and ESLint pass.
+
+## 2 November 2026 — Mobile access (ADR-025)
+
+Plan: `docs/implementation/MOBILE_ACCESS_PLAN.md`. Branch `mobile/access`, one commit per item. At the operator's request (2 November), full gates run at the end of each phase rather than after every item; items in between get lint, type checks and their own tests.
+
+### M0 - Decision record
+
+- ADR-025 records phone access through a second loopback listener reached over Tailscale, keeping ADR-015 intact. The security model gains six threat rows; the control register gains CMP-016.
+
+### M1 - Second listener
+
+- `ENS_MOBILE_GATEWAY_PORT` (default 8770, loopback, 1024-65535). The phone gateway is an ASGI wrapper around the same app that marks each request's scope as the phone channel; it runs in its own uvicorn server and thread, so there is still one scheduler, job manager and database writer.
+- The on/off switch and the Tailscale name are kept in `app_setting` (`mobile_access`), off by default, and applied at startup and whenever they change. A port clash leaves the switch on and reports "Port 8770 is already in use on this PC." in the status instead of failing.
+- On the phone channel the session token is never accepted; until pairing exists every authenticated route answers `401 PHONE_NOT_PAIRED`. A `DesktopOnly` dependency answers `403 DESKTOP_ONLY` there; the new `/mobile/status` and `/mobile/config` routes use it.
+- Deviation from the plan: one wrapper over the shared app instead of a second FastAPI app with dependency overrides. Same effect, and the channel mark cannot come from request data.
+- Logs: `mobile_gateway_started`, `mobile_gateway_stopped`, `mobile_gateway_start_failed` with the port only.
+- Verification: 6 new tests (off by default; switching on serves on loopback and refuses the session token; switching off stops it and leaves the desktop API up; the switch survives a restart; a port clash is reported; the Tailscale name is validated). Full backend suite: 276 passed, 1 skipped; ruff and mypy pass.

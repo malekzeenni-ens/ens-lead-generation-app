@@ -32,6 +32,9 @@ class Settings(BaseSettings):
 
     host: str = "127.0.0.1"
     port: int = Field(default=8765, ge=1024, le=65535)
+    # The phone gateway (ADR-025): a second loopback listener that Tailscale forwards to. It is
+    # fixed so the `tailscale serve` mapping survives restarts; it only runs when switched on.
+    mobile_gateway_port: int = Field(default=8770, ge=1024, le=65535)
     session_token: SecretStr = Field(
         default_factory=lambda: SecretStr(secrets.token_urlsafe(32)), min_length=24
     )
