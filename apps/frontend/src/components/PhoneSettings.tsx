@@ -29,6 +29,7 @@ export function PhoneSettings({ session }: { session: MobileSession }) {
             <div><h3>Appearance</h3><p>Applies straight away, on this phone only.</p></div>
             <Palette size={19} aria-hidden="true" />
           </div>
+          <div className="form-grid">
           <fieldset className="choice-group">
             <legend>Theme</legend>
             {(
@@ -58,6 +59,7 @@ export function PhoneSettings({ session }: { session: MobileSession }) {
               </label>
             ))}
           </fieldset>
+          </div>
         </section>
 
         <section className="form-panel">
@@ -68,11 +70,13 @@ export function PhoneSettings({ session }: { session: MobileSession }) {
             </div>
             <Smartphone size={19} aria-hidden="true" />
           </div>
-          <p className="supporting-copy">
-            Signing out removes this phone from your PC. To use it again, pair it from Settings on the PC.
-          </p>
-          <DangerConfirm intensity="two-step" label="Sign out this phone" onConfirm={() => void signOut()} />
-          {error ? <p className="form-error" role="alert">{error}</p> : null}
+          <div className="form-grid">
+            <p className="supporting-copy">
+              Signing out removes this phone from your PC. To use it again, pair it from Settings on the PC.
+            </p>
+            <DangerConfirm intensity="two-step" label="Sign out this phone" onConfirm={() => void signOut()} />
+            {error ? <p className="form-error" role="alert">{error}</p> : null}
+          </div>
         </section>
 
         <section className="form-panel">
