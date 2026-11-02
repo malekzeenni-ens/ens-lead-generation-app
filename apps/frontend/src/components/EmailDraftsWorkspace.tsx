@@ -1,4 +1,5 @@
 import {
+  ChevronLeft,
   AlertTriangle,
   Check,
   CheckCircle2,
@@ -16,7 +17,9 @@ import {
 } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useMemo, useRef, useState } from "react";
 
+import { isPhoneMode } from "../connection";
 import { emailAddressFor } from "../contact";
+import { PHONE_QUERY, useMediaQuery } from "../layout";
 import { ApiError, api } from "../api";
 import { classificationLabel, formatDateTime, humanize, todayIso } from "../domain";
 import type {
@@ -117,6 +120,10 @@ function DraftEditor({ draft, cloudPolishStatus }: DraftEditorProps) {
   const rejected = draft.review_status === "rejected";
   const openedInZoho = draft.sync_status === "opened_in_zoho";
   const sentConfirmed = draft.sync_status === "user_confirmed_sent";
+  // A phone hands the email to its own mail app; it then asks once whether it went (ADR-025).
+  const phone = isPhoneMode();
+  const [notYet, setNotYet] = useState(false);
+  const mailApp = phone ? "your mail app" : "Zoho";
 
   async function save(): Promise<boolean> {
     if (!dirty) return true;
@@ -174,6 +181,27 @@ function DraftEditor({ draft, cloudPolishStatus }: DraftEditorProps) {
 
   return (
     <article className="draft-editor" aria-labelledby="draft-editor-heading">
+      {phone && openedInZoho && draft.review_status === "approved" && !dirty && !notYet ? (
+        <section className="sent-prompt" aria-labelledby="sent-prompt-heading">
+          <h3 id="sent-prompt-heading">Did you send it?</h3>
+          <p>
+            You opened this email in your mail app. It's only recorded as sent when you say so.
+          </p>
+          <div className="sent-prompt__actions">
+            <button type="button" className="secondary-action" onClick={() => setNotYet(true)}>
+              Not yet
+            </button>
+            <button
+              type="button"
+              className="primary-action"
+              disabled={busy}
+              onClick={() => void confirmOutreachDraftSent(draft.id)}
+            >
+              <CheckCircle2 size={17} aria-hidden="true" /> Yes, sent
+            </button>
+          </div>
+        </section>
+      ) : null}
       <div className="draft-editor__header">
         <div>
           <p className="eyebrow">Personalise and decide</p>
@@ -342,10 +370,15 @@ function DraftEditor({ draft, cloudPolishStatus }: DraftEditorProps) {
                 type="button"
                 disabled={busy}
                 title="Log this handoff, copy the body and open the approved version in your default email app"
-                onClick={() => void openOutreachDraftInZoho(draft.id)}
+                onClick={() => {
+                  setNotYet(false);
+                  void openOutreachDraftInZoho(draft.id);
+                }}
               >
                 <ExternalLink size={17} aria-hidden="true" />
-                {openedInZoho ? "Open in Zoho again" : "Open in Zoho to send"}
+                {openedInZoho
+                  ? `Open in ${phone ? "mail" : "Zoho"} again`
+                  : `Open in ${phone ? "mail" : "Zoho"} to send`}
               </button>
             ) : null}
             {openedInZoho && draft.review_status === "approved" && !dirty ? (
@@ -353,11 +386,11 @@ function DraftEditor({ draft, cloudPolishStatus }: DraftEditorProps) {
                 className="primary-action"
                 type="button"
                 disabled={busy}
-                title="Use only after the approved email has actually been sent in Zoho"
+                title={`Use only after the approved email has actually been sent in ${mailApp}`}
                 onClick={() => {
                   if (
                     window.confirm(
-                      "Confirm only after you have sent this email in Zoho. Mark it as sent?",
+                      `Confirm only after you have sent this email in ${mailApp}. Mark it as sent?`,
                     )
                   ) {
                     void confirmOutreachDraftSent(draft.id);
@@ -568,6 +601,10 @@ export function EmailDraftsWorkspace({
     selectedBatch?.drafts.find((draft) => draft.id === selectedDraftId) ??
     selectedBatch?.drafts[0] ??
     null;
+  const phoneLayout = useMediaQuery(PHONE_QUERY);
+  const [phoneDraftOpen, setPhoneDraftOpen] = useState(false);
+  const showQueue = !phoneLayout || !phoneDraftOpen;
+  const showEditor = !phoneLayout || phoneDraftOpen;
   const approvalIds = selectedApprovalIds.filter((draftId) =>
     selectedBatch?.drafts.some(
       (draft) => draft.id === draftId && draft.review_status === "pending_review",
@@ -1105,6 +1142,7 @@ export function EmailDraftsWorkspace({
                 })()}
 
                 <div className="draft-review-layout">
+                  {showQueue ? (
                   <div
                     className="draft-queue"
                     aria-label="Draft review queue"
@@ -1128,7 +1166,10 @@ export function EmailDraftsWorkspace({
                         />
                         <button
                           type="button"
-                          onClick={() => setSelectedDraftId(draft.id)}
+                          onClick={() => {
+                            setSelectedDraftId(draft.id);
+                            setPhoneDraftOpen(true);
+                          }}
                         >
                           <span>
                             <strong>{draft.business_name}</strong>
@@ -1142,7 +1183,16 @@ export function EmailDraftsWorkspace({
                       </div>
                     ))}
                   </div>
-                  {selectedDraft ? (
+                  ) : null}
+                  {phoneLayout && phoneDraftOpen ? (
+                    <button type="button" className="tertiary-action phone-back" onClick={() => setPhoneDraftOpen(false)}>
+                      <ChevronLeft size={16} aria-hidden="true" /> All drafts
+                      {selectedDraft
+                        ? ` · ${selectedBatch.drafts.indexOf(selectedDraft) + 1} of ${selectedBatch.drafts.length}`
+                        : ""}
+                    </button>
+                  ) : null}
+                  {selectedDraft && showEditor ? (
                     <DraftEditor
                       key={`${selectedDraft.id}-${selectedDraft.current_version}-${selectedDraft.review_status}-${selectedDraft.sync_status}`}
                       draft={selectedDraft}
