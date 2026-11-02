@@ -59,6 +59,8 @@ interface CatalogueWorkspaceProps {
   enrichmentStatus: EnrichmentStatus | null;
   knowledgeNotes: KnowledgeNote[];
   provenFits: ProvenFit[];
+  /** On a phone the catalogue can be browsed but not changed (ADR-025). */
+  readOnly?: boolean;
 }
 
 interface ProductPickerFieldsProps {
@@ -185,6 +187,7 @@ export function CatalogueWorkspace({
   enrichmentStatus,
   knowledgeNotes,
   provenFits,
+  readOnly = false,
 }: CatalogueWorkspaceProps) {
   const {
     loading,
@@ -201,7 +204,8 @@ export function CatalogueWorkspace({
     updateProductFamily: onUpdateFamily,
     deleteProductFamily: onDeleteFamily,
   } = useWorkspaceActions();
-  const [activeTask, setActiveTask] = useRememberedState("catalogue:tab", "products");
+  const [rememberedTask, setActiveTask] = useRememberedState("catalogue:tab", "products");
+  const activeTask = readOnly ? "products" : rememberedTask;
   const [query, setQuery] = useRememberedState("catalogue:query", "");
   const [catalogueView, setCatalogueView] = useRememberedState<"cards" | "groups">("catalogue:view", "cards");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -353,20 +357,24 @@ export function CatalogueWorkspace({
         description="Your products, what they suit, and how leads are scored."
       />
 
-      <TaskTabs
-        id="catalogue-tasks"
-        label="Catalogue tasks"
-        activeId={activeTask}
-        onChange={setActiveTask}
-        items={[
-          { id: "products", label: "Products", count: products.length },
-          { id: "create", label: "Add product" },
-          { id: "import", label: "Import catalogue" },
-          { id: "knowledge", label: "Knowledge", count: knowledgeNotes.length },
-          { id: "scoring", label: "Scoring model", count: scoringProfile?.version },
-          { id: "families", label: "Product families", count: productFamilies.length },
-        ]}
-      />
+      {readOnly ? (
+        <p className="read-only-note">View only on a phone. Change products on your PC.</p>
+      ) : (
+        <TaskTabs
+          id="catalogue-tasks"
+          label="Catalogue tasks"
+          activeId={activeTask}
+          onChange={setActiveTask}
+          items={[
+            { id: "products", label: "Products", count: products.length },
+            { id: "create", label: "Add product" },
+            { id: "import", label: "Import catalogue" },
+            { id: "knowledge", label: "Knowledge", count: knowledgeNotes.length },
+            { id: "scoring", label: "Scoring model", count: scoringProfile?.version },
+            { id: "families", label: "Product families", count: productFamilies.length },
+          ]}
+        />
+      )}
 
       {activeTask === "create" ? (
         <TaskPanel id="catalogue-tasks" tabId="create">
@@ -972,9 +980,11 @@ export function CatalogueWorkspace({
                         </span>
                         {knowledgeGap(product) ? <StatusPill tone="warning">{knowledgeGap(product)}</StatusPill> : <StatusPill tone="success">Ready</StatusPill>}
                         {product.active ? null : <StatusPill>Inactive</StatusPill>}
-                        <button type="button" className="tertiary-action" onClick={() => setEditingProductId(product.id)}>
-                          <Edit3 size={15} aria-hidden="true" /> Edit
-                        </button>
+                        {readOnly ? null : (
+                          <button type="button" className="tertiary-action" onClick={() => setEditingProductId(product.id)}>
+                            <Edit3 size={15} aria-hidden="true" /> Edit
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -1020,9 +1030,11 @@ export function CatalogueWorkspace({
                     <div><dt>Business buyers</dt><dd>{product.bulk_ready ? "Suits bulk runs" : "Suits business orders"}</dd></div>
                   ) : null}
                 </dl>
-                <button type="button" className="tertiary-action" onClick={() => setEditingProductId(product.id)}>
-                  <Edit3 size={15} aria-hidden="true" /> Edit product
-                </button>
+                {readOnly ? null : (
+                  <button type="button" className="tertiary-action" onClick={() => setEditingProductId(product.id)}>
+                    <Edit3 size={15} aria-hidden="true" /> Edit product
+                  </button>
+                )}
               </article>
             ))}
             </div>

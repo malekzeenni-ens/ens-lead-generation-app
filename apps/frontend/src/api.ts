@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { isPhoneMode } from "./connection";
+import { beginPending } from "./pendingWork";
+
 import type {
   ApiErrorShape,
   AssistantAttachmentInput,
@@ -30,7 +33,11 @@ import type {
   LeadPage,
   MetaAuthorizationStart,
   MetaConnection,
+  MobileAccessStatus,
+  MobileDevice,
+  MobileSession,
   OperationsSummary,
+  PairingCode,
   OutreachBatch,
   OutreachDraft,
   OutreachDraftRefineInput,
@@ -44,6 +51,7 @@ import type {
   ScoringProfile,
   ScoringWeights,
   ShopifyImportResult,
+  TailscaleStatus,
   Shortlist,
   StalledLeadDigest,
   Template,
@@ -86,9 +94,32 @@ const UNREACHABLE: ApiErrorShape = {
   correlation_id: "",
 };
 
+export const PC_UNREACHABLE = "PC_UNREACHABLE";
+
+const PC_UNREACHABLE_ERROR: ApiErrorShape = {
+  code: PC_UNREACHABLE,
+  message:
+    "Your PC isn't reachable. Check it's switched on, awake and running Etch N Shine, then try again.",
+  details: {},
+  correlation_id: "",
+};
+
+/** The phone's pairing has gone (revoked, expired or never made); the app asks it to pair. */
+export const PHONE_NOT_PAIRED = "PHONE_NOT_PAIRED";
+const unpairedListeners = new Set<() => void>();
+
+export function onPhoneUnpaired(listener: () => void): () => void {
+  unpairedListeners.add(listener);
+  return () => unpairedListeners.delete(listener);
+}
+
 let connectionPromise: Promise<BackendConnection> | undefined;
 
 async function resolveConnection(): Promise<BackendConnection> {
+  if (isPhoneMode()) {
+    // Served by the phone gateway: same origin, and the device cookie instead of a token.
+    return { baseUrl: "/api/v1", sessionToken: "" };
+  }
   if (window.__TAURI_INTERNALS__) {
     try {
       return await invoke<BackendConnection>("backend_connection");
@@ -137,6 +168,11 @@ async function rawRequest(path: string, init?: RequestInit): Promise<Response> {
     throw caught;
   });
   const connection = await connectionPromise;
+  const phone = isPhoneMode();
+  const method = (init?.method ?? "GET").toUpperCase();
+  const isAi = AI_PATH.test(path);
+  // On a phone every change, and every AI answer, shows that the PC is working on it.
+  const pending = phone && (isAi || method !== "GET") ? beginPending(isAi ? "ai" : "change") : null;
   const timeout = new AbortController();
   const timer = setTimeout(
     () => timeout.abort(),
@@ -149,17 +185,29 @@ async function rawRequest(path: string, init?: RequestInit): Promise<Response> {
       ...init,
       headers: {
         "Content-Type": "application/json",
-        "X-Session-Token": connection.sessionToken,
+        // The gateway refuses a change without this header (ADR-025); the desktop ignores it.
+        ...(phone ? { "X-ENS-Request": "1" } : { "X-Session-Token": connection.sessionToken }),
         ...init?.headers,
       },
     });
   } catch {
-    throw new ApiError(timeout.signal.aborted ? TIMED_OUT : UNREACHABLE);
+    throw new ApiError(
+      timeout.signal.aborted ? TIMED_OUT : phone ? PC_UNREACHABLE_ERROR : UNREACHABLE,
+    );
   } finally {
     clearTimeout(timer);
+    pending?.end();
   }
   if (!response.ok) {
-    throw new ApiError(await errorShape(response));
+    const shape = await errorShape(response);
+    if (phone && shape.code === PHONE_NOT_PAIRED) {
+      for (const listener of unpairedListeners) listener();
+    }
+    // Tailscale answers 502 while the PC's app is closed but Tailscale itself is up.
+    if (phone && (response.status === 502 || response.status === 504)) {
+      throw new ApiError(PC_UNREACHABLE_ERROR);
+    }
+    throw new ApiError(shape);
   }
   return response;
 }
@@ -215,10 +263,24 @@ function delay(milliseconds: number): Promise<void> {
 
 /** Start a background job, follow it to the end, and resolve with its result. */
 async function runJob<T>(start: Promise<BackgroundJob>, options: JobOptions = {}): Promise<T> {
-  let job = await start;
+  const pending = isPhoneMode() ? beginPending("job") : null;
+  try {
+    return await followJob<T>(await start, options, pending?.progress);
+  } finally {
+    pending?.end();
+  }
+}
+
+async function followJob<T>(
+  started: BackgroundJob,
+  options: JobOptions,
+  reportProgress?: (current: number, total: number) => void,
+): Promise<T> {
+  let job = started;
   let cancelRequested = false;
   for (;;) {
     options.onProgress?.(job.progress_current, job.progress_total);
+    reportProgress?.(job.progress_current, job.progress_total);
     if (job.status === "succeeded") return job.result as T;
     if (job.status === "cancelled") {
       throw new ApiError({
@@ -791,4 +853,22 @@ export const api = {
       `/outreach/drafts/${draftId}/sent-confirmed`,
       jsonBody("POST", {}),
     ),
+  // Phone access (ADR-025). The first group is used on the PC, the second on the phone.
+  mobileStatus: () => request<MobileAccessStatus>("/mobile/status"),
+  updateMobileConfig: (data: { enabled?: boolean; public_host?: string }) =>
+    request<MobileAccessStatus>("/mobile/config", jsonBody("PATCH", data)),
+  issuePairingCode: () => request<PairingCode>("/mobile/pairing-codes", jsonBody("POST", {})),
+  mobileDevices: () => request<MobileDevice[]>("/mobile/devices"),
+  revokeMobileDevice: (deviceId: string) =>
+    request<void>(`/mobile/devices/${deviceId}/revoke`, jsonBody("POST", {})),
+  revokeAllMobileDevices: () =>
+    request<{ revoked: number }>("/mobile/devices/revoke-all", jsonBody("POST", {})),
+  tailscaleStatus: () => request<TailscaleStatus>("/mobile/tailscale"),
+  startTailscaleServe: () =>
+    request<TailscaleStatus>("/mobile/tailscale/serve", jsonBody("POST", {})),
+  stopTailscaleServe: () => request<TailscaleStatus>("/mobile/tailscale/serve", { method: "DELETE" }),
+  pairPhone: (code: string, name: string, label: string) =>
+    request<MobileSession>("/mobile/pair", jsonBody("POST", { code, name, label })),
+  mobileSession: () => request<MobileSession>("/mobile/session"),
+  signOutPhone: () => request<void>("/mobile/sign-out", jsonBody("POST", {})),
 };

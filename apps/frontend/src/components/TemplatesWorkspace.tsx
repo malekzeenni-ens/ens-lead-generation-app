@@ -20,6 +20,8 @@ import {
 interface TemplatesWorkspaceProps {
   templates: Template[];
   productFamilies: ProductFamily[];
+  /** On a phone templates can be read but not changed (ADR-025). */
+  readOnly?: boolean;
 }
 
 interface FamilyPickerFieldsProps {
@@ -121,7 +123,11 @@ function templateFromForm(form: FormData): TemplateInput {
   };
 }
 
-export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWorkspaceProps) {
+export function TemplatesWorkspace({
+  templates,
+  productFamilies,
+  readOnly = false,
+}: TemplatesWorkspaceProps) {
   const {
     loading,
     busy,
@@ -129,7 +135,8 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
     updateTemplate: onUpdate,
     deleteTemplate: onDelete,
   } = useWorkspaceActions();
-  const [activeTask, setActiveTask] = useRememberedState("templates:tab", "templates");
+  const [rememberedTask, setActiveTask] = useRememberedState("templates:tab", "templates");
+  const activeTask = readOnly ? "templates" : rememberedTask;
   const [query, setQuery] = useRememberedState("templates:query", "");
   const filtered = useMemo(() => {
     const search = query.toLocaleLowerCase();
@@ -168,16 +175,20 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
         description="Reusable messages, filled in for each lead. Nothing is sent automatically."
       />
 
-      <TaskTabs
-        id="template-tasks"
-        label="Template tasks"
-        activeId={activeTask}
-        onChange={setActiveTask}
-        items={[
-          { id: "templates", label: "Templates", count: templates.length },
-          { id: "create", label: "Add template" },
-        ]}
-      />
+      {readOnly ? (
+        <p className="read-only-note">View only on a phone. Change templates on your PC.</p>
+      ) : (
+        <TaskTabs
+          id="template-tasks"
+          label="Template tasks"
+          activeId={activeTask}
+          onChange={setActiveTask}
+          items={[
+            { id: "templates", label: "Templates", count: templates.length },
+            { id: "create", label: "Add template" },
+          ]}
+        />
+      )}
 
       <details className="template-token-guide">
         <summary>Available template fields</summary>
@@ -278,6 +289,8 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
                           })}
                         </div>
                       ) : null}
+                      {readOnly ? null : (
+                      <>
                       <details>
                         <summary>Edit template</summary>
                         <form
@@ -302,6 +315,8 @@ export function TemplatesWorkspace({ templates, productFamilies }: TemplatesWork
                         disabled={busy}
                         onConfirm={() => void onDelete(template.id)}
                       />
+                      </>
+                      )}
                     </article>
                   ))}
                 </div>

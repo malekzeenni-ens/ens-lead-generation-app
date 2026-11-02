@@ -919,3 +919,42 @@ export interface StalledLeadDigest {
   generated_at: string;
   items: StalledLeadSuggestion[];
 }
+
+/** Phone access (ADR-025). */
+export interface MobileAccessStatus {
+  enabled: boolean;
+  running: boolean;
+  port: number;
+  public_host: string;
+  phone_url: string | null;
+  error: string | null;
+  paired_devices: number;
+  phone_app_ready: boolean;
+}
+
+export interface PairingCode {
+  code: string;
+  expires_at: string;
+  pair_url: string | null;
+}
+
+export interface MobileDevice {
+  id: string;
+  name: string;
+  label: string;
+  created_at: string;
+  last_seen_at: string;
+}
+
+export interface MobileSession {
+  channel: "desktop" | "phone";
+  device: MobileDevice | null;
+}
+
+export interface TailscaleStatus {
+  installed: boolean;
+  running: boolean;
+  dns_name: string;
+  serving: boolean;
+  install_url: string;
+}
