@@ -800,3 +800,34 @@ Plan: `docs/implementation/MOBILE_ACCESS_PLAN.md`. Branch `mobile/access`, one c
 
 - `npm audit --audit-level=high` fails on Vite's dev-server advisory that `main` already has (see M17); not introduced here and left for a separate Vite upgrade.
 - Every other `quality.ps1` step passes: `uv lock --check`; ESLint, TypeScript, Vitest (164 passed) and the production build; ruff, ruff format and mypy (172 files); pytest (309 passed, 1 skipped); `cargo fmt --check`, `cargo test` (3 passed) and Clippy with warnings denied.
+
+## 2 November 2026 — Catalogue sync from Shopify (ADR-026)
+
+Operator request: reuse the Shopify-to-Etsy app's sync and its connection rather than build anew, and test against the live store. Branch `catalogue/shopify-sync`.
+
+### S1 - Decision record
+
+- ADR-026; a security model row; CMP-013 now names the Shopify credentials.
+
+### S2 - Shopify client, copied
+
+- `app/domains/catalogue/shopify_admin.py` is the Shopify-to-Etsy app's `admin_api.py`, with the classes and functions this app uses taken verbatim by a script: the product and variant records, the paging client with its cursor and nested-page safeguards, `post_json` with its 429/5xx retries, the client-credentials token exchange, and the parsers. Changes: product category and SEO description read, five products per page, file writers left out. The four `urlopen` calls are marked for the linter, as every URL is `https://<validated store>.myshopify.com`.
+
+### S3 - One apply step
+
+- `import_shopify` now reads the CSV and hands its grouped products to `_apply_shopify_products`; `sync_shopify` maps Admin API products to the same shape and hands them to the same step. Audit events: `catalogue.shopify_csv_imported` and `catalogue.shopify_synced`, counts only.
+
+### S4 - Sync job and connection
+
+- `POST /catalogue/shopify/sync` queues the `catalogue_shopify_sync` job (one at a time), which fetches, applies and re-applies the knowledge pack. A failed fetch changes nothing and says why. `GET/PUT/DELETE /system/providers/shopify` and `POST .../test` manage the connection in the DPAPI vault; secrets never come back. All but the status are desktop-only and listed in the phone route-walk test.
+
+### S5 - Screens
+
+- Catalogue → **Update from Shopify** (renamed from Import catalogue): **Sync from Shopify** first, with the result, and the CSV upload below as before. Without a connection the button is disabled and points to Settings. Product cards say "Shopify" instead of "Shopify CSV".
+- Settings → Connections → **Shopify**: status, store, API version and method; Save and test, Test connection, Remove; an access token can be used instead of the client ID and secret.
+
+### S6 - Verification
+
+- 8 backend tests (`test_shopify_sync.py`): a sync of the same products leaves the catalogue identical to a CSV import of the fixture; a first sync creates everything and a later one retires a removed product but never a manual one; no connection gives 409; a failed fetch changes nothing; secrets never in responses; store and credential validation; the copied client reads the two new fields and pages five at a time. 4 frontend tests (sync result, disabled without a connection, save and test, failed test and remove).
+- Live, on a copy of the real database (deleted afterwards): the same custom app's client ID and secret were exchanged for a token, the test call answered "Etch 'N' Shine", and the sync read 132 products in 8.6 seconds: 13 created (3 drafts, stored inactive), 119 updated, 4 retired whose handles changed in Shopify, 80 reworded titles, no issues, and every active product with a category. The real app's vault was then given the same credentials, and its test call answered.
+- Seen, not changed: the 7 Globo `option-set-...` helper products, already present from the CSV export; one category arrives as `Decorative Plaques &amp; Signs` from Shopify's product type.

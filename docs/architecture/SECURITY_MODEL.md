@@ -27,6 +27,7 @@ Protected assets are prospect research, source evidence, classifications, future
 | DNS rebinding and CSRF against the gateway | `Host` allowlist (Tailscale name and loopback), `Origin` match plus `X-ENS-Request` header on every change | Gateway rejection tests |
 | Sensitive operations from a phone | `DesktopOnly` dependency on connections, keys, backups, exports, settings changes, diagnostics, shutdown, schema, catalogue and template changes; route-walk test | Route policy test |
 | Lead data left on a phone | No service worker; `Cache-Control: no-store` on API responses; nothing written to browser storage except display preferences | Gateway header tests |
+| Shopify credential disclosure or misuse | Same custom app as the Shopify-to-Etsy app; values in the DPAPI vault, never returned or logged; read access only; sync, set-up and test are desktop-only (ADR-026) | Shopify sync tests |
 
 Runtime data is stored in local AppData, not the synchronised source tree. Logs contain operational messages and correlation IDs; session tokens and request payloads are not logged. Audit summaries deliberately avoid raw evidence payloads.
 
