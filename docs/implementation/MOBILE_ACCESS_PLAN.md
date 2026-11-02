@@ -2,7 +2,7 @@
 
 **Plan date:** 2 November 2026
 **Source:** Operator request: "run it on my machine, then open it from my phone".
-**Status:** Proposed. Not started. Operator agreed on 2 November 2026 that some areas can be read-only on the phone (section 4.3); the transport choice (2.1) is still open.
+**Status:** Delivered on branch `mobile/access`, 2 November 2026 (see the delivery log). Transport decided: Tailscale. Read-only Catalogue and Templates on the phone agreed. Outstanding: the operator's real-phone check over Tailscale.
 **Branch:** `mobile/access`, one commit per item.
 **Scope:** An opt-in way to use the app from a phone's browser while the PC runs it, and a phone layout for the daily workflow screens. The desktop app, its loopback binding and its per-run session token (ADR-015) stay exactly as they are. No scoring, campaign, outreach or data-model changes beyond one table for paired phones.
 

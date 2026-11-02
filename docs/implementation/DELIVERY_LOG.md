@@ -751,3 +751,52 @@ Plan: `docs/implementation/MOBILE_ACCESS_PLAN.md`. Branch `mobile/access`, one c
 
 - 33 new tests in `test_mobile_access.py` (pairing, single use, replacement, expiry, five-attempt cancel, lockout, gateway-only pairing, revoke one and all, 30-day expiry, sign-out, forged cookie, the route walk, desktop-only refusals, phone reads, foreign host, four origin and header cases, no-store and policy headers, file serving, path traversal, missing build, attribution, three Tailscale cases) plus the 6 in `test_mobile_gateway.py`.
 - Full backend suite: 309 passed, 1 skipped; ruff, ruff format and mypy pass.
+
+### M8 + M9 - Phone connection and pairing
+
+- `connection.ts` decides the mode: inside Tauri or with Vite's API env it is the desktop; a production build without them (what the gateway serves) is the phone. On a phone `api.ts` calls `/api/v1` on the same origin with `X-ENS-Request: 1` and no session token, says "Your PC isn't reachable" when the request can't get through or Tailscale answers 502/504, and tells the app when the PC answers `PHONE_NOT_PAIRED`.
+- `PhoneGate` shows the workspace only once `/mobile/session` answers; otherwise the pairing form (code read from the `/pair#…` fragment, the phone named from its browser) or the "Your PC isn't reachable" screen with **Try again**. A revoked phone returns to pairing mid-session.
+- Phone Settings: Appearance for this phone, "Signed in as …", **Sign out this phone** (revokes it), and a list of what stays on the PC. Catalogue and Templates take `readOnly` and show only the list with a "View only on a phone" note. The phone never asks for diagnostics.
+
+### M6 + M7 (frontend) - Settings > Phone access on the PC
+
+- A new Settings section: status pill (Off, On with phones paired, or Needs attention with the reason), the on/off switch, the phone address step (install Tailscale, sign in, **Set up phone address**, or the address itself), **Pair a phone** with a QR code, the code and a countdown (it closes itself when the phone pairs), and the paired phones with **Remove** and **Remove all phones**.
+- QR codes come from `qrcode-generator@2.0.4` (exact version, no dependencies), drawn as SVG squares rather than injected markup. Outside links go through a shared `openExternalUrl`, which on a phone follows `mailto:` links in place because phones block windows opened after waiting on the PC.
+
+### M10-M12 - Phone layout and the waiting indicator
+
+- Below 600 px: a compact header (logo, screen title, search, connection dot), bottom tabs (Today, Shortlist, Pipeline, Drafts with the same gold badges, More), a More sheet (Campaigns, All leads, Catalogue and Templates marked view only, Settings) that closes on Esc or the backdrop, the AI button above the tabs, full-screen drawers, assistant and search, 44 px targets, 16 px fields, and safe-area padding. Today, Shortlist and All leads use their existing stacked and card layouts.
+- The operator asked that a phone always shows when it is waiting on the PC. `pendingWork.ts` tracks every change, every AI request and every followed background job made from a phone; `PendingWorkIndicator` shows one message after 400 ms ("Saving on your PC…", "Thinking on your PC…", "Working on your PC… 3 of 10"), puts AI and jobs ahead of saves, counts the rest, and after 10 seconds adds that the PC carries on (or, for a save, to keep the screen open). A message rather than a full-screen loader, so the phone stays usable.
+- Returning to the phone after 15 seconds away refreshes the workspace.
+
+### M13 - Pipeline
+
+- On a phone the board opens first as stage chips over one column (the chosen group is remembered), with dragging switched off; "Move to…" is unchanged. Opening a lead shows it on its own with **All stages** to go back. History entries for stage changes and notes made from a phone end "· from your phone".
+
+### M14 - Email drafts
+
+- On a phone the queue comes first and a draft opens on its own with "All drafts · 3 of 12". The send button reads **Open in mail to send**. When the approved draft has been opened in the mail app, the draft shows **Did you send it?** with **Not yet** and **Yes, sent**; "sent" is still recorded only by the operator's answer.
+
+### M15 + M15a - Assistant
+
+- If a phone loses an assistant request (locked screen, app switch, timeout), it looks for the saved answer every 3 seconds for up to 4 minutes, showing "Still thinking on your PC…", and does not resend. If the question never reached the PC it says so after two checks. The lead briefing is not saved by the backend, so a lost briefing shows the error and can be asked again.
+
+### M16 - Add to home screen
+
+- `manifest.webmanifest`, icons from the desktop icon set (192, 512, Apple touch 180), theme colours for both themes, `viewport-fit=cover`. No service worker, so nothing about leads is cached on the phone.
+
+### M17 - Verification
+
+- 22 new frontend tests (`phone.test.ts`, `PhoneComponents.test.tsx`): connection mode, same-origin requests without a token, PC unreachable and 502, the unpaired signal, waiting-work tracking for changes and AI but not reads, pairing helpers, the gate (paired, pairing from a QR link, wrong code, unreachable and retry, revoked mid-session), the indicator's delay, order, progress and reassurance, tabs and More sheet, and the Phone access panel (switch on, Tailscale missing, QR code and noticing the new phone, removing a phone). Full frontend: 164 passed; ESLint and TypeScript pass; production build passes.
+- Real run on a throwaway database (scratchpad only): backend with the gateway on port 8771, a headless browser at 390×844 opened the pairing link, paired, and went through Today, Pipeline stage chips, a lead, the More sheet and Settings. A note added through the phone session was stored with actor `phone:209f871b…`; lead export from the phone answered 403. Fixed during the run: the phone Settings choices and sign-out button sat against the panel edge.
+- Not checked here, for the operator: a real phone over Tailscale (Tailscale is not installed on this PC), the mail app handoff, and Add to Home Screen.
+- `npm.cmd run quality` stops at its first step, `npm audit --audit-level=high`, on a high advisory in Vite's dev server that is also on `main` (13 advisories, 1 high, same as before this work). The remaining gate steps were run directly; results below.
+
+### M18 - Runbook
+
+- `docs/operations/MOBILE_ACCESS.md`: set-up, daily use, what stays on the PC, troubleshooting, a lost phone, switching off. `Start Etch N Shine.cmd` now rebuilds the phone app files when the frontend source is newer than the build, and refuses to while a local `.env` file exists (Vite would copy its values into the files phones load).
+
+### Phase gate (all of mobile access)
+
+- `npm audit --audit-level=high` fails on Vite's dev-server advisory that `main` already has (see M17); not introduced here and left for a separate Vite upgrade.
+- Every other `quality.ps1` step passes: `uv lock --check`; ESLint, TypeScript, Vitest (164 passed) and the production build; ruff, ruff format and mypy (172 files); pytest (309 passed, 1 skipped); `cargo fmt --check`, `cargo test` (3 passed) and Clippy with warnings denied.
