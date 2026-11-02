@@ -517,6 +517,8 @@ export const api = {
     request<CampaignAssistantStatus>("/campaign-assistant/status"),
   assistantConversations: () =>
     request<AssistantConversation[]>("/assistant/conversations"),
+  assistantConversation: (conversationId: string) =>
+    request<AssistantConversation>(`/assistant/conversations/${encodeURIComponent(conversationId)}`),
   createAssistantConversation: (title?: string) =>
     request<AssistantConversation>(
       "/assistant/conversations",

@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { api, ApiError } from "../api";
+import { api, ApiError, PC_UNREACHABLE } from "../api";
+import { isPhoneMode } from "../connection";
 import type {
   AssistantAttachment,
   AssistantAttachmentInput,
@@ -45,6 +46,12 @@ interface GeneralAssistantPanelProps {
 interface ContextOption extends AssistantContextSelection {
   label: string;
 }
+
+
+// How long a phone keeps looking for an answer it lost, and how often it looks.
+const RECOVERY_WINDOW_MS = 240_000;
+const RECOVERY_POLL_MS = 3_000;
+const RECOVERABLE_CODES = new Set([PC_UNREACHABLE, "REQUEST_TIMEOUT", "BACKEND_UNREACHABLE"]);
 
 function contextValue(context: AssistantContextSelection): string {
   return `${context.kind}:${context.id ?? ""}`;
@@ -105,6 +112,7 @@ export function GeneralAssistantPanel({
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState(false);
   const [context, setContext] = useState<AssistantContextSelection>(initialContext);
   const contextOptions = useMemo<ContextOption[]>(
     () => [
@@ -170,20 +178,65 @@ export function GeneralAssistantPanel({
     setError(null);
   }
 
+  /**
+   * A phone can lose a slow request (screen locked, app switched) while the PC carries on: the
+   * question is saved before the model runs and the answer after it. So instead of asking again,
+   * the phone waits for the answer to appear in the saved conversation (mobile plan M15a).
+   */
+  async function awaitSavedAnswer(
+    conversationId: string,
+    countBefore: number,
+  ): Promise<AssistantConversation | null> {
+    const deadline = Date.now() + RECOVERY_WINDOW_MS;
+    let questionMissing = 0;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, RECOVERY_POLL_MS));
+      try {
+        const saved = await api.assistantConversation(conversationId);
+        const last = saved.messages[saved.messages.length - 1];
+        if (saved.messages.length > countBefore + 1 && last?.role === "assistant") return saved;
+        if (saved.messages.length <= countBefore) {
+          // The question never reached the PC; twice in a row rules out a slow arrival.
+          questionMissing += 1;
+          if (questionMissing >= 2) return null;
+        }
+      } catch {
+        // Still out of reach; keep waiting until the window closes.
+      }
+    }
+    return null;
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const content = instruction.trim();
     if (!content || working || !ready) return;
     setWorking(true);
     setError(null);
+    let current: AssistantConversation | null = conversation;
     try {
-      const current = conversation ?? (await api.createAssistantConversation());
+      current = conversation ?? (await api.createAssistantConversation());
       const attachments = await Promise.all(files.map(fileInput));
       setConversation(await api.sendAssistantMessage(current.id, content, attachments, context));
       setInstruction("");
       setFiles([]);
     } catch (caught) {
-      setError(errorMessage(caught));
+      const lost =
+        caught instanceof ApiError && RECOVERABLE_CODES.has(caught.details.code) && current !== null;
+      if (isPhoneMode() && lost && current) {
+        setRecovering(true);
+        const saved = await awaitSavedAnswer(current.id, current.messages.length);
+        setRecovering(false);
+        if (saved) {
+          setConversation(saved);
+          setInstruction("");
+          setFiles([]);
+        } else {
+          setError("The answer didn't come through. Check your PC is reachable, then ask again.");
+        }
+      } else {
+        setError(errorMessage(caught));
+      }
     } finally {
       setWorking(false);
     }
@@ -383,7 +436,16 @@ export function GeneralAssistantPanel({
             </div>
           ))
         )}
-        {working ? <div className="assistant-thinking"><span /> Working locally…</div> : null}
+        {working ? (
+          <div className="assistant-thinking" role="status">
+            <span />{" "}
+            {recovering
+              ? "Still thinking on your PC… The answer will appear here."
+              : isPhoneMode()
+                ? "Thinking on your PC…"
+                : "Working locally…"}
+          </div>
+        ) : null}
       </div>
 
       <form className="assistant-composer" onSubmit={(event) => void submit(event)}>
