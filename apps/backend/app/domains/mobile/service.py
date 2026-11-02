@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AppSetting
 from app.domains.audit.service import record_audit_event
+from app.domains.mobile.devices import DeviceRegistry
 from app.domains.mobile.gateway import GatewayStartError, MobileGatewayManager
 from app.domains.mobile.schemas import (
     MobileAccessConfig,
@@ -17,8 +18,9 @@ _CONFIG_KEY = "mobile_access"
 
 
 class MobileAccessService:
-    def __init__(self, manager: MobileGatewayManager) -> None:
+    def __init__(self, manager: MobileGatewayManager, registry: DeviceRegistry) -> None:
         self.manager = manager
+        self.registry = registry
 
     def config(self, session: Session) -> MobileAccessConfig:
         stored = session.get(AppSetting, _CONFIG_KEY)
@@ -33,6 +35,7 @@ class MobileAccessService:
             public_host=config.public_host,
             phone_url=f"https://{config.public_host}/" if config.public_host else None,
             error=self.manager.last_error,
+            paired_devices=len(self.registry.list_devices(session)),
         )
 
     def update(

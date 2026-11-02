@@ -40,6 +40,7 @@ from app.domains.automation.scheduler import WeeklyScheduler
 from app.domains.campaign_assistant.manager import CampaignAssistantManager
 from app.domains.campaign_assistant.service import CampaignAssistantService
 from app.domains.catalogue.pack_autoload import apply_pack_if_changed
+from app.domains.mobile.devices import DeviceRegistry
 from app.domains.mobile.gateway import MobileGatewayManager, PhoneGateway
 from app.domains.mobile.service import MobileAccessService
 from app.domains.system.cloud_polish import CloudPolishConfigurationService
@@ -139,8 +140,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # isn't fetchable without the session token.
         openapi_url=None,
     )
-    mobile_gateway_manager = MobileGatewayManager(PhoneGateway(app), runtime_settings)
-    mobile_access_service = MobileAccessService(mobile_gateway_manager)
+    device_registry = DeviceRegistry()
+    mobile_gateway_manager = MobileGatewayManager(
+        PhoneGateway(app, database, device_registry), runtime_settings
+    )
+    mobile_access_service = MobileAccessService(mobile_gateway_manager, device_registry)
     app.state.mobile_access_service = mobile_access_service
     app.state.settings = runtime_settings
     app.state.database = database

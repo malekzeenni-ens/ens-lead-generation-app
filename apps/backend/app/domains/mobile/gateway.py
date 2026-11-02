@@ -5,22 +5,50 @@ from __future__ import annotations
 import logging
 import socket
 import threading
+from http.cookies import SimpleCookie
 from typing import Any
 
+import anyio
 import uvicorn
+from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.core.channel import CHANNEL_SCOPE_KEY, PHONE_CHANNEL
+from app.core.channel import CHANNEL_SCOPE_KEY, DEVICE_SCOPE_KEY, PHONE_CHANNEL, current_actor
 from app.core.config import Settings
+from app.db.session import Database
+from app.domains.mobile.devices import COOKIE_NAME, DeviceRegistry
 
 logger = logging.getLogger(__name__)
 
 
-class PhoneGateway:
-    """Marks every request as coming from a phone, then hands it to the shared app."""
+def _device_cookie(headers: Headers) -> str | None:
+    raw = headers.get("cookie")
+    if not raw:
+        return None
+    cookie: SimpleCookie = SimpleCookie()
+    try:
+        cookie.load(raw)
+    except Exception:
+        return None
+    morsel = cookie.get(COOKIE_NAME)
+    return morsel.value if morsel else None
 
-    def __init__(self, app: ASGIApp) -> None:
+
+class PhoneGateway:
+    """Marks every request as coming from a phone, recognises a paired device by its cookie,
+    then hands the request to the shared app."""
+
+    def __init__(self, app: ASGIApp, database: Database, registry: DeviceRegistry) -> None:
         self.app = app
+        self.database = database
+        self.registry = registry
+
+    def _device_id(self, cookie_value: str | None) -> str | None:
+        if cookie_value is None:
+            return None
+        with self.database.session_factory() as session:
+            device = self.registry.authenticate(session, cookie_value)
+            return device.id if device else None
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "lifespan":
@@ -34,7 +62,14 @@ class PhoneGateway:
                     return
         if scope["type"] != "http":
             return
-        await self.app({**scope, CHANNEL_SCOPE_KEY: PHONE_CHANNEL}, receive, send)
+        headers = Headers(scope=scope)
+        device_id = await anyio.to_thread.run_sync(self._device_id, _device_cookie(headers))
+        marked = {**scope, CHANNEL_SCOPE_KEY: PHONE_CHANNEL, DEVICE_SCOPE_KEY: device_id}
+        token = current_actor.set(f"phone:{device_id}" if device_id else "phone:unpaired")
+        try:
+            await self.app(marked, receive, send)
+        finally:
+            current_actor.reset(token)
 
 
 class GatewayStartError(Exception):

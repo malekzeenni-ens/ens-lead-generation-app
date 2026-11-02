@@ -1,9 +1,20 @@
 from typing import cast
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 
 from app.api.dependencies import Authenticated, DatabaseSession, DesktopOnly
-from app.domains.mobile.schemas import MobileAccessConfigUpdate, MobileAccessStatus
+from app.core.channel import is_phone, phone_device_id
+from app.core.errors import DomainError
+from app.db.models import MobileDevice
+from app.domains.mobile.devices import COOKIE_MAX_AGE, COOKIE_NAME
+from app.domains.mobile.schemas import (
+    MobileAccessConfigUpdate,
+    MobileAccessStatus,
+    MobileDeviceRead,
+    MobileSessionRead,
+    PairingCodeRead,
+    PairRequest,
+)
 from app.domains.mobile.service import MobileAccessService
 
 router = APIRouter(prefix="/mobile", tags=["mobile"])
@@ -29,3 +40,96 @@ def update_config(
     session: DatabaseSession,
 ) -> MobileAccessStatus:
     return _service(request).update(session, data, request.state.correlation_id)
+
+
+@router.post("/pairing-codes", response_model=PairingCodeRead, status_code=201)
+def issue_pairing_code(
+    request: Request, _: Authenticated, __: DesktopOnly, session: DatabaseSession
+) -> PairingCodeRead:
+    service = _service(request)
+    issued = service.registry.issue_code(session, request.state.correlation_id)
+    host = service.config(session).public_host
+    return PairingCodeRead(
+        code=issued.code,
+        expires_at=issued.expires_at,
+        # The code goes in the fragment, which browsers never send to a server.
+        pair_url=f"https://{host}/pair#{issued.code}" if host else None,
+    )
+
+
+@router.get("/devices", response_model=list[MobileDeviceRead])
+def list_devices(
+    request: Request, _: Authenticated, __: DesktopOnly, session: DatabaseSession
+) -> list[MobileDevice]:
+    return _service(request).registry.list_devices(session)
+
+
+@router.post("/devices/revoke-all", status_code=200)
+def revoke_all_devices(
+    request: Request, _: Authenticated, __: DesktopOnly, session: DatabaseSession
+) -> dict[str, int]:
+    count = _service(request).registry.revoke_all(session, request.state.correlation_id)
+    return {"revoked": count}
+
+
+@router.post("/devices/{device_id}/revoke", status_code=204)
+def revoke_device(
+    device_id: str,
+    request: Request,
+    _: Authenticated,
+    __: DesktopOnly,
+    session: DatabaseSession,
+) -> Response:
+    _service(request).registry.revoke(session, device_id, request.state.correlation_id)
+    return Response(status_code=204)
+
+
+@router.post("/pair", response_model=MobileSessionRead, status_code=201)
+def pair_phone(
+    data: PairRequest, request: Request, response: Response, session: DatabaseSession
+) -> MobileSessionRead:
+    """The one route a phone may call before it is paired. It exists only on the gateway."""
+    if not is_phone(request):
+        raise DomainError("PHONE_ONLY", "Pairing is done from the phone.", status_code=404)
+    paired = _service(request).registry.pair(
+        session,
+        code=data.code,
+        name=data.name,
+        label=data.label,
+        correlation_id=request.state.correlation_id,
+    )
+    response.set_cookie(
+        COOKIE_NAME,
+        paired.cookie_value,
+        max_age=COOKIE_MAX_AGE,
+        path="/api",
+        secure=True,
+        httponly=True,
+        samesite="strict",
+    )
+    return MobileSessionRead(channel="phone", device=MobileDeviceRead.model_validate(paired.device))
+
+
+@router.get("/session", response_model=MobileSessionRead)
+def get_session(request: Request, _: Authenticated, session: DatabaseSession) -> MobileSessionRead:
+    """Which phone this is, so the app can say "Signed in as …". 401 means "pair first"."""
+    device_id = phone_device_id(request)
+    if device_id is None:
+        return MobileSessionRead(channel="desktop", device=None)
+    device = session.get(MobileDevice, device_id)
+    return MobileSessionRead(
+        channel="phone",
+        device=MobileDeviceRead.model_validate(device) if device else None,
+    )
+
+
+@router.post("/sign-out", status_code=204)
+def sign_out(request: Request, _: Authenticated, session: DatabaseSession) -> Response:
+    """Forget this phone: its credential is revoked, not only the cookie removed."""
+    device_id = phone_device_id(request)
+    if device_id is None:
+        raise DomainError("PHONE_ONLY", "Signing out is done from the phone.", status_code=404)
+    _service(request).registry.revoke(session, device_id, request.state.correlation_id)
+    response = Response(status_code=204)
+    response.delete_cookie(COOKIE_NAME, path="/api", secure=True, httponly=True, samesite="strict")
+    return response
