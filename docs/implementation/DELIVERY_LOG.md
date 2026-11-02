@@ -712,3 +712,42 @@ Plan: `docs/implementation/MOBILE_ACCESS_PLAN.md`. Branch `mobile/access`, one c
 - Deviation from the plan: one wrapper over the shared app instead of a second FastAPI app with dependency overrides. Same effect, and the channel mark cannot come from request data.
 - Logs: `mobile_gateway_started`, `mobile_gateway_stopped`, `mobile_gateway_start_failed` with the port only.
 - Verification: 6 new tests (off by default; switching on serves on loopback and refuses the session token; switching off stops it and leaves the desktop API up; the switch survives a restart; a port clash is reported; the Tailscale name is validated). Full backend suite: 276 passed, 1 skipped; ruff and mypy pass.
+
+### M2 - Paired devices
+
+- Migration `0020_mobile_devices` adds `mobile_device` (name, label, secret hash, last seen, revoked) and `mobile_pairing_code` (hash, attempts, expiry, closed).
+- Settings on the PC issue an 8-character code (no I, L, O, 0, 1), shown as `K7QM-4T9X`, valid 5 minutes; a new code closes any earlier one. The pair link carries it after `#`, so it never appears in a request line. Five wrong codes cancel it; twenty failures across codes in ten minutes refuse pairing (`429 PAIRING_LOCKED`).
+- Pairing (`POST /mobile/pair`, gateway only) returns a 256-bit secret in an `HttpOnly; Secure; SameSite=Strict; Path=/api` cookie. Only its SHA-256 hash is stored. A device unused for 30 days must pair again; last-seen is written at most every five minutes.
+- The gateway reads the cookie on every API request and marks the request with the device. `GET /mobile/session` says which phone this is; `POST /mobile/sign-out` revokes this phone. On the PC: list devices, revoke one, revoke all, each audited.
+- Logs: `mobile_pairing_code_issued`, `mobile_pairing_succeeded`, `mobile_pairing_failed` (reason, attempt count), `mobile_device_revoked`. Codes, cookies and secrets are never logged.
+
+### M3 - Route policy
+
+- `dependencies=[DESKTOP_ONLY]` on 35 routes: backups, catalogue and template changes (read-only on the phone, as agreed), lead export and privacy deletion, scoring profile changes, Meta and cloud polish set-up, workspace settings changes, diagnostics, shutdown, the API schema, and phone access management itself.
+- Privacy deletion of a lead was not in the plan's table; it is irreversible and type-to-confirm, so it stays on the PC. Reading settings stays allowed, because the phone needs the follow-up window and limits.
+- A test walks every registered route and compares the desktop-only set with an explicit list, so a new route must be classified.
+
+### M4 - Gateway hardening and the phone app files
+
+- `Host` must be the Tailscale name or loopback on the gateway port (`421 HOST_NOT_ALLOWED`), which stops DNS rebinding. Every change needs a matching `Origin` and `X-ENS-Request: 1` (`403 ORIGIN_REJECTED`).
+- Every response gets a strict content-security policy, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, HSTS and a permissions policy; API responses get `Cache-Control: no-store`.
+- The gateway serves the built frontend: hashed assets are cached for a year, the page is `no-cache`, screen paths such as `/pair` fall back to the page, and paths outside the build folder are refused. Content types are fixed in code, because the Windows registry can serve `.js` as text. If the build is missing, phones see a page saying to run `npm run frontend:build`, and the status reports `phone_app_ready: false`.
+- `ENS_MOBILE_FRONTEND_DIRECTORY` overrides the folder; the packaged backend now bundles `apps/frontend/dist` (the sidecar build builds the frontend first).
+
+### M5 - Attribution
+
+- A context variable carries the actor for the request: `phone:<device id>` on the gateway, `local_user` otherwise. Audit events, stage events and notes take it by default, and the five places that wrote `"local_user"` explicitly now use it, so a note added from a phone is recorded as that phone's.
+- Fixed in the same commit: M4's commit had mangled the frontend path in `build-backend-sidecar.ps1`.
+
+### M7 (backend) - Tailscale helper
+
+- `GET /mobile/tailscale` reports installed, signed in, this PC's name and whether the phone address is set up. `POST /mobile/tailscale/serve` runs `tailscale serve --bg --https=443 http://127.0.0.1:<port>` and saves the name as the phone address; `DELETE` runs `tailscale serve --https=443 off`. The command lines are fixed in code. If Tailscale asks for HTTPS to be enabled for the account, its admin link is returned for the button.
+
+### M15a (check) - Assistant answers and a dropped phone request
+
+- Confirmed: `AssistantService.send` commits the question before calling the model and the answer after it. A phone that loses the request can reload the conversation and find the answer, with no resend. The frontend side is part of M15.
+
+### Backend phase gate
+
+- 33 new tests in `test_mobile_access.py` (pairing, single use, replacement, expiry, five-attempt cancel, lockout, gateway-only pairing, revoke one and all, 30-day expiry, sign-out, forged cookie, the route walk, desktop-only refusals, phone reads, foreign host, four origin and header cases, no-store and policy headers, file serving, path traversal, missing build, attribution, three Tailscale cases) plus the 6 in `test_mobile_gateway.py`.
+- Full backend suite: 309 passed, 1 skipped; ruff, ruff format and mypy pass.

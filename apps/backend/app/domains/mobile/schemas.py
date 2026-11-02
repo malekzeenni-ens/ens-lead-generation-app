@@ -73,3 +73,11 @@ class MobileDeviceRead(BaseModel):
 class MobileSessionRead(BaseModel):
     channel: str
     device: MobileDeviceRead | None
+
+
+class TailscaleStatusRead(BaseModel):
+    installed: bool
+    running: bool
+    dns_name: str
+    serving: bool
+    install_url: str

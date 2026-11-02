@@ -43,6 +43,7 @@ from app.domains.catalogue.pack_autoload import apply_pack_if_changed
 from app.domains.mobile.devices import DeviceRegistry
 from app.domains.mobile.gateway import MobileGatewayManager, PhoneGateway
 from app.domains.mobile.service import MobileAccessService
+from app.domains.mobile.tailscale import TailscaleClient
 from app.domains.system.cloud_polish import CloudPolishConfigurationService
 from app.domains.system.meta import MetaConnectionService
 from app.domains.system.service import SystemService
@@ -146,6 +147,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     mobile_access_service = MobileAccessService(mobile_gateway_manager, device_registry)
     app.state.mobile_access_service = mobile_access_service
+    app.state.tailscale_client = TailscaleClient()
     app.state.settings = runtime_settings
     app.state.database = database
     app.state.campaign_run_manager = campaign_run_manager

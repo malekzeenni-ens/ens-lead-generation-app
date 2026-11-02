@@ -14,14 +14,67 @@ from app.domains.mobile.schemas import (
     MobileSessionRead,
     PairingCodeRead,
     PairRequest,
+    TailscaleStatusRead,
 )
 from app.domains.mobile.service import MobileAccessService
+from app.domains.mobile.tailscale import INSTALL_URL, TailscaleClient
 
 router = APIRouter(prefix="/mobile", tags=["mobile"])
 
 
 def _service(request: Request) -> MobileAccessService:
     return cast(MobileAccessService, request.app.state.mobile_access_service)
+
+
+def _tailscale(request: Request) -> TailscaleClient:
+    return cast(TailscaleClient, request.app.state.tailscale_client)
+
+
+def _tailscale_status(request: Request) -> TailscaleStatusRead:
+    state = _tailscale(request).state(_service(request).manager.port)
+    return TailscaleStatusRead(
+        installed=state.installed,
+        running=state.running,
+        dns_name=state.dns_name,
+        serving=state.serving,
+        install_url=INSTALL_URL,
+    )
+
+
+@router.get("/tailscale", response_model=TailscaleStatusRead)
+def get_tailscale(request: Request, _: Authenticated, __: DesktopOnly) -> TailscaleStatusRead:
+    return _tailscale_status(request)
+
+
+@router.post("/tailscale/serve", response_model=TailscaleStatusRead)
+def start_tailscale_serve(
+    request: Request, _: Authenticated, __: DesktopOnly, session: DatabaseSession
+) -> TailscaleStatusRead:
+    """Map this PC's Tailscale HTTPS address to the gateway and remember the name."""
+    service = _service(request)
+    state = _tailscale(request).state(service.manager.port)
+    if not state.running or not state.dns_name:
+        raise DomainError(
+            "TAILSCALE_NOT_RUNNING",
+            "Tailscale is installed but not signed in. Open Tailscale and sign in, then try again.",
+            status_code=409,
+        )
+    _tailscale(request).serve(service.manager.port)
+    if service.config(session).public_host != state.dns_name:
+        service.update(
+            session,
+            MobileAccessConfigUpdate(public_host=state.dns_name),
+            request.state.correlation_id,
+        )
+    return _tailscale_status(request)
+
+
+@router.delete("/tailscale/serve", response_model=TailscaleStatusRead)
+def stop_tailscale_serve(
+    request: Request, _: Authenticated, __: DesktopOnly
+) -> TailscaleStatusRead:
+    _tailscale(request).stop_serving()
+    return _tailscale_status(request)
 
 
 @router.get("/status", response_model=MobileAccessStatus)
