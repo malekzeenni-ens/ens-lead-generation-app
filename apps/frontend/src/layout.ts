@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 /** Below this width the sidebar shows icons only; below 900 px it becomes a top bar. */
 export const NARROW_WINDOW_QUERY = "(max-width: 1180px) and (min-width: 901px)";
 
+/** A phone screen (ADR-025): bottom tabs, full-screen sheets and card lists instead of tables. */
+export const PHONE_QUERY = "(max-width: 599px)";
+
 const SIDEBAR_KEY = "ens:layout:sidebar-collapsed";
 
 /** Whether the operator collapsed the sidebar; kept between sessions. */

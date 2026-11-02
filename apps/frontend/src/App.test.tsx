@@ -50,6 +50,9 @@ vi.mock("./api", () => {
     ApiError: MockApiError,
     BackendUnavailableError: MockBackendUnavailableError,
     JOB_CANCELLED: "JOB_CANCELLED",
+    PC_UNREACHABLE: "PC_UNREACHABLE",
+    PHONE_NOT_PAIRED: "PHONE_NOT_PAIRED",
+    onPhoneUnpaired: () => () => undefined,
     api: {
       health: vi.fn(),
       campaigns: vi.fn(),

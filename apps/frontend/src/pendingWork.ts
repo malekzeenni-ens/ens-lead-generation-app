@@ -51,6 +51,11 @@ function snapshot(): PendingItem[] {
   return items;
 }
 
+/** What is being waited on right now, outside React (tests, diagnostics). */
+export function currentPendingWork(): PendingItem[] {
+  return items;
+}
+
 export function usePendingWork(): PendingItem[] {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }

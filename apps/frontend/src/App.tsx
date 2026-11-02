@@ -23,7 +23,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import brandMarkUrl from "../../desktop/brand-logo.png";
@@ -52,13 +51,24 @@ import {
   type TemplateUpdate,
 } from "./api";
 import { AssistantLauncher } from "./components/AssistantLauncher";
+import { PendingWorkIndicator } from "./components/PendingWorkIndicator";
+import { PhoneGate } from "./components/PhoneGate";
+import { PhoneMoreSheet, PhoneTabBar } from "./components/PhoneNavigation";
+import { PhoneSettings } from "./components/PhoneSettings";
+import { isPhoneMode } from "./connection";
 import { CampaignAssistantTab } from "./components/CampaignAssistantTab";
 import { CommandPalette, type PaletteItem } from "./components/CommandPalette";
 import { CatalogueWorkspace } from "./components/CatalogueWorkspace";
 import { CampaignWorkspace } from "./components/CampaignWorkspace";
 import { ConnectionBadge, type HealthState, NavigationItem } from "./components/DesignSystem";
 import { DashboardWorkspace } from "./components/DashboardWorkspace";
-import { NARROW_WINDOW_QUERY, readSidebarCollapsed, useMediaQuery, writeSidebarCollapsed } from "./layout";
+import {
+  NARROW_WINDOW_QUERY,
+  PHONE_QUERY,
+  readSidebarCollapsed,
+  useMediaQuery,
+  writeSidebarCollapsed,
+} from "./layout";
 import { EmailDraftsWorkspace } from "./components/EmailDraftsWorkspace";
 import { LeadWorkspace } from "./components/LeadWorkspace";
 import { PipelineWorkspace } from "./components/PipelineWorkspace";
@@ -67,6 +77,7 @@ import { ShortlistWorkspace } from "./components/ShortlistWorkspace";
 import { TemplatesWorkspace } from "./components/TemplatesWorkspace";
 import { BAKERY_SEGMENT, type WorkspaceSection } from "./domain";
 import { mailtoUrl } from "./contact";
+import { openExternalUrl } from "./external";
 import { WorkspaceActionsContext, type WorkspaceActions } from "./WorkspaceActionsContext";
 import type {
   AssistantContextSelection,
@@ -80,6 +91,7 @@ import type {
   EnrichmentStatus,
   InstagramProfilePreview,
   MetaConnection,
+  MobileSession,
   OperationsSummary,
   ScoringProfile,
   ScoringWeights,
@@ -87,15 +99,6 @@ import type {
   VerificationResult,
   WorkspaceSettings,
 } from "./types";
-
-async function openExternalUrl(url: string): Promise<void> {
-  if (window.__TAURI_INTERNALS__) {
-    await openUrl(url);
-    return;
-  }
-  const browser = window.open(url, "_blank", "noopener,noreferrer");
-  if (!browser) throw new Error("The browser blocked the external window.");
-}
 
 async function copyTextToClipboard(value: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
@@ -257,12 +260,20 @@ export default function App() {
   );
   return (
     <QueryClientProvider client={queryClient}>
-      <Workbench />
+      {isPhoneMode() ? (
+        <PhoneGate>{(session) => <Workbench phoneSession={session} />}</PhoneGate>
+      ) : (
+        <Workbench />
+      )}
     </QueryClientProvider>
   );
 }
 
-function Workbench() {
+/** On a phone (ADR-025) the session says which paired phone this is; on the PC it is absent. */
+function Workbench({ phoneSession }: { phoneSession?: MobileSession }) {
+  const phone = phoneSession !== undefined;
+  const phoneLayout = useMediaQuery(PHONE_QUERY);
+  const [moreOpen, setMoreOpen] = useState(false);
   const queryClient = useQueryClient();
   const workspaceContentRef = useRef<HTMLElement>(null);
 
@@ -291,9 +302,11 @@ function Workbench() {
   const leadsQuery = useQuery({ queryKey: QUERY_KEYS.leads, queryFn: () => api.leads() });
   const summaryQuery = useQuery({ queryKey: QUERY_KEYS.summary, queryFn: () => api.summary() });
   const settingsQuery = useQuery({ queryKey: QUERY_KEYS.settings, queryFn: () => api.settings() });
+  // Diagnostics stay on the PC; a phone never asks for them.
   const diagnosticsQuery = useQuery({
     queryKey: QUERY_KEYS.diagnostics,
     queryFn: () => api.diagnostics(),
+    enabled: !phone,
   });
   const productsQuery = useQuery({ queryKey: QUERY_KEYS.products, queryFn: () => api.products() });
   const scoresQuery = useQuery({ queryKey: QUERY_KEYS.scores, queryFn: () => api.latestScores() });
@@ -340,7 +353,7 @@ function Workbench() {
     leadsQuery,
     summaryQuery,
     settingsQuery,
-    diagnosticsQuery,
+    ...(phone ? [] : [diagnosticsQuery]),
     productsQuery,
     scoresQuery,
     shortlistsQuery,
@@ -488,6 +501,22 @@ function Workbench() {
       stopListening?.();
     };
   }, [refresh]);
+
+  const closeMore = useCallback(() => setMoreOpen(false), []);
+
+  useEffect(() => {
+    if (!phone) return;
+    let hiddenAt = 0;
+    function onVisibility(): void {
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+      } else if (hiddenAt && Date.now() - hiddenAt > 15_000) {
+        void refresh();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [phone, refresh]);
 
   useEffect(() => {
     if (!success) return;
@@ -1249,7 +1278,7 @@ function Workbench() {
         } catch {
           // The backend already persisted the handoff and failure events.
         }
-        setError(`Zoho could not be opened: ${reason}`);
+        setError(phone ? `Your mail app could not be opened: ${reason}` : `Zoho could not be opened: ${reason}`);
         return false;
       }
 
@@ -1262,9 +1291,11 @@ function Workbench() {
         return true;
       }
       setSuccess(
-        copied
-          ? "Zoho opened with the approved email. The body was also copied; sending is not yet confirmed."
-          : "Zoho opened with the approved email. Clipboard access was unavailable; sending is not yet confirmed.",
+        phone
+          ? "Your mail app opened with the approved email. Come back here to confirm once it's sent."
+          : copied
+            ? "Zoho opened with the approved email. The body was also copied; sending is not yet confirmed."
+            : "Zoho opened with the approved email. Clipboard access was unavailable; sending is not yet confirmed.",
       );
       return true;
     } catch (caught) {
@@ -1512,10 +1543,11 @@ function Workbench() {
         enrichmentStatus={enrichmentStatus}
         knowledgeNotes={knowledgeNotes}
         provenFits={provenFits}
+        readOnly={phone}
       />
     ),
     templates: (
-      <TemplatesWorkspace templates={templates} productFamilies={productFamilies} />
+      <TemplatesWorkspace templates={templates} productFamilies={productFamilies} readOnly={phone} />
     ),
     shortlist: <ShortlistWorkspace campaigns={campaigns} shortlists={shortlists} />,
     pipeline: (
@@ -1539,7 +1571,9 @@ function Workbench() {
         cloudPolishStatus={cloudPolishStatus}
       />
     ),
-    settings: (
+    settings: phoneSession ? (
+      <PhoneSettings session={phoneSession} />
+    ) : (
       <SettingsWorkspace
         settings={settings}
         diagnostics={diagnostics}
@@ -1614,7 +1648,7 @@ function Workbench() {
   }
 
   return (
-    <div className="application-frame">
+    <div className={`application-frame${phoneLayout ? " application-frame--phone" : ""}`}>
       <a className="skip-link" href="#main-content">Skip to main content</a>
 
       <header className="application-header">
@@ -1625,6 +1659,7 @@ function Workbench() {
         <div className="header-context" aria-label="Current workspace">
           <span>Workspace</span><strong>{SECTION_LABELS[activeSection]}</strong>
         </div>
+        {phoneLayout ? <p className="phone-header-title">{SECTION_LABELS[activeSection]}</p> : null}
         <div className="header-actions">
           <button
             className="header-search"
@@ -1634,7 +1669,7 @@ function Workbench() {
           >
             <Search size={16} aria-hidden="true" />
             <span>Search</span>
-            <kbd>Ctrl K</kbd>
+            {phone ? null : <kbd>Ctrl K</kbd>}
           </button>
           <button
             className="secondary-action"
@@ -1661,6 +1696,7 @@ function Workbench() {
       </header>
 
       <div className={`workspace-shell${sidebarCollapsed ? " workspace-shell--collapsed" : ""}`}>
+        {phoneLayout ? null : (
         <aside className={`sidebar${sidebarCollapsed ? " sidebar--collapsed" : ""}`}>
           <nav aria-label="Workspace navigation">
             <p className="navigation-label">Find</p>
@@ -1698,6 +1734,7 @@ function Workbench() {
             </button>
           )}
         </aside>
+        )}
 
         <main
           ref={workspaceContentRef}
@@ -1742,6 +1779,32 @@ function Workbench() {
           </WorkspaceActionsContext.Provider>
         </main>
       </div>
+
+      {phoneLayout ? (
+        <PhoneTabBar
+          active={activeSection}
+          onSelect={(section) => {
+            if (section === "campaigns") setCampaignLandingTask("campaigns");
+            setActiveSection(section);
+          }}
+          moreOpen={moreOpen}
+          onMore={() => setMoreOpen((current) => !current)}
+          shortlistBadge={shortlistAwaitingDecision}
+          followUpBadge={summary ? summary.due_today + summary.overdue : undefined}
+          draftsBadge={draftsAwaitingApproval}
+        />
+      ) : null}
+      {phoneLayout && moreOpen ? (
+        <PhoneMoreSheet
+          active={activeSection}
+          onSelect={(section) => {
+            if (section === "campaigns") setCampaignLandingTask("campaigns");
+            setActiveSection(section);
+          }}
+          onClose={closeMore}
+        />
+      ) : null}
+      {phone ? <PendingWorkIndicator /> : null}
 
       {paletteOpen ? (
         <CommandPalette onClose={() => setPaletteOpen(false)} items={paletteItems()} />
