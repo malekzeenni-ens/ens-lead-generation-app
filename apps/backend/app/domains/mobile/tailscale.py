@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 _WINDOWS_DEFAULT = Path("C:/Program Files/Tailscale/tailscale.exe")
 _TIMEOUT_SECONDS = 15
+# How long to let `tailscale serve` finish before reading the approval link it is waiting on.
+_SERVE_APPROVAL_WAIT_SECONDS = 8
 # Tailscale prints a link when HTTPS certificates must first be switched on for the tailnet.
 _ADMIN_LINK = re.compile(r"https://login\.tailscale\.com/[^\s\"']+")
 INSTALL_URL = "https://tailscale.com/download/windows"
@@ -39,7 +41,15 @@ def _executable() -> str | None:
     return str(_WINDOWS_DEFAULT) if _WINDOWS_DEFAULT.is_file() else None
 
 
-def _run(arguments: list[str]) -> subprocess.CompletedProcess[str]:
+def _text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    return value.decode("utf-8", "replace") if isinstance(value, bytes) else value
+
+
+def _run(
+    arguments: list[str], timeout: float = _TIMEOUT_SECONDS
+) -> subprocess.CompletedProcess[str]:
     executable = _executable()
     if executable is None:
         raise DomainError(
@@ -52,7 +62,7 @@ def _run(arguments: list[str]) -> subprocess.CompletedProcess[str]:
         [executable, *arguments],
         capture_output=True,
         text=True,
-        timeout=_TIMEOUT_SECONDS,
+        timeout=timeout,
         check=False,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
@@ -85,19 +95,31 @@ class TailscaleClient:
 
     def serve(self, gateway_port: int) -> None:
         """Forward https://<this PC>.ts.net to the gateway, in the background."""
-        result = _run(["serve", "--bg", "--https=443", f"http://127.0.0.1:{gateway_port}"])
-        if result.returncode != 0:
+        arguments = ["serve", "--bg", "--https=443", f"http://127.0.0.1:{gateway_port}"]
+        try:
+            result = _run(arguments, timeout=_SERVE_APPROVAL_WAIT_SECONDS)
+            exit_code: int | None = result.returncode
             output = f"{result.stdout}\n{result.stderr}"
+        except subprocess.TimeoutExpired as waiting:
+            # When Serve or HTTPS isn't approved for the tailnet yet, Tailscale prints an
+            # approval link and waits for it instead of exiting.
+            exit_code = None
+            output = f"{_text(waiting.stdout)}\n{_text(waiting.stderr)}"
+        if exit_code != 0:
             link = _ADMIN_LINK.search(output)
             logger.warning(
                 "Tailscale serve did not start",
-                extra={"event": "mobile_tailscale_serve_failed", "exit_code": result.returncode},
+                extra={
+                    "event": "mobile_tailscale_serve_failed",
+                    "exit_code": exit_code,
+                    "approval_needed": link is not None,
+                },
             )
             raise DomainError(
                 "TAILSCALE_SERVE_FAILED",
                 (
-                    "Tailscale needs HTTPS switched on for your account first. Open the link, "
-                    "allow it, then try again."
+                    "Tailscale needs you to approve phone addresses (Serve and HTTPS) for your "
+                    "account first. Open Tailscale settings, approve, then try again."
                     if link
                     else "Tailscale couldn't set up the phone address. Check that Tailscale is "
                     "signed in, then try again."
@@ -111,8 +133,11 @@ class TailscaleClient:
         )
 
     def stop_serving(self) -> None:
-        result = _run(["serve", "--https=443", "off"])
-        if result.returncode != 0:
+        try:
+            result = _run(["serve", "--https=443", "off"])
+        except subprocess.TimeoutExpired:
+            result = None
+        if result is None or result.returncode != 0:
             raise DomainError(
                 "TAILSCALE_SERVE_FAILED",
                 "Tailscale couldn't remove the phone address. Try again.",

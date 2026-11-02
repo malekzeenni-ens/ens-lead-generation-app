@@ -4,6 +4,7 @@ listener is covered in test_mobile_gateway.py."""
 
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -498,3 +499,28 @@ def test_tailscale_status_links_to_the_installer(desktop: TestClient, phone_app:
     body = desktop.get("/api/v1/mobile/tailscale").json()
     assert body["installed"] is False
     assert body["install_url"].startswith("https://tailscale.com/")
+
+
+def test_tailscale_waiting_for_approval_returns_the_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tailscale prints an approval link and waits when Serve isn't enabled; the app must answer
+    with the link instead of failing (found on the operator's PC, 2 November 2026)."""
+    from app.core.errors import DomainError
+    from app.domains.mobile import tailscale
+
+    link = "https://login.tailscale.com/f/serve?node=example123"
+
+    def waiting(*_: object, **__: object) -> object:
+        raise subprocess.TimeoutExpired(
+            cmd="tailscale serve",
+            timeout=8,
+            output=f"Serve is not enabled on your tailnet.\nTo enable, visit:\n{link}\n".encode(),
+        )
+
+    monkeypatch.setattr(tailscale, "_executable", lambda: "tailscale")
+    monkeypatch.setattr(subprocess, "run", waiting)
+    with pytest.raises(DomainError) as raised:
+        tailscale.TailscaleClient().serve(8770)
+    assert raised.value.code == "TAILSCALE_SERVE_FAILED"
+    assert raised.value.details == {"admin_url": link}
